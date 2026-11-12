@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Promote one stage to the next and wait for its GitHub Pages deploy.
 #   promote.sh status               show commits waiting at each step
-#   promote.sh <target> [--dry-run] promote previous stage into <target>
+#   promote.sh <target> [--dry-run] [--notes-file FILE]
+#                                   promote previous stage into <target>;
+#                                   FILE holds human-written release notes
 set -euo pipefail
 
 STAGES=(dev alpha staging main)
@@ -53,8 +55,17 @@ if [[ ${1:-} == status || -z ${1:-} ]]; then
   exit 0
 fi
 
-target=$1; [[ $target == production || $target == prod ]] && target=main
-dry_run=false; [[ ${2:-} == --dry-run ]] && dry_run=true
+target=$1; shift; [[ $target == production || $target == prod ]] && target=main
+dry_run=false; notes_file=
+while (( $# )); do
+  case $1 in
+    --dry-run) dry_run=true ;;
+    --notes-file) notes_file=${2:?--notes-file needs a path}; shift ;;
+    *) die "Unknown option '$1'" ;;
+  esac
+  shift
+done
+[[ -z $notes_file || -s $notes_file ]] || die "Notes file '$notes_file' is missing or empty."
 source=$(previous_stage "$target")
 
 list=$(pending "$source" "$target")
@@ -71,7 +82,17 @@ start_branch=$(git branch --show-current)
 trap 'git checkout -q "$start_branch" 2>/dev/null || true' EXIT
 
 git checkout -q -B "$target" "$REMOTE/$target"
-if ! git merge -q --no-ff "$REMOTE/$source" -m "Promote $source → $target"; then
+msg=$(mktemp)
+{
+  echo "Promote $source → $target"
+  echo
+  if [[ -n $notes_file ]]; then
+    echo "Release notes:"; cat "$notes_file"; echo
+  fi
+  echo "Changes included:"
+  echo "${list:-  (merge commits only)}"
+} > "$msg"
+if ! git merge -q --no-ff "$REMOTE/$source" -F "$msg"; then
   conflicts=$(git diff --name-only --diff-filter=U)
   git merge --abort
   die "Merge conflict promoting $source → $target in: $conflicts"
@@ -88,7 +109,7 @@ for _ in $(seq 1 36); do  # up to ~6 minutes
 import json, sys
 runs = json.load(sys.stdin).get("workflow_runs", [])
 r = runs[0] if runs else {}
-print(r.get("status", "none"), r.get("conclusion") or "-", r.get("html_url", "-"))' || echo "error - -")
+print(r.get("status", "none"), r.get("conclusion") or "-", r.get("html_url", "-"))' 2>/dev/null || echo "unreachable - -")
   if [[ $status == completed ]]; then
     if [[ $conclusion == success ]]; then
       echo "Deploy succeeded: $(stage_url "$target")"; exit 0

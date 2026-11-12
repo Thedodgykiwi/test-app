@@ -32,20 +32,38 @@ the repository root.
 
        .claude/skills/promote/promote.sh <target> --dry-run
 
-   Summarise the commits that will move, then **ask the user to confirm**,
+   Summarise the commits that will move, show your draft release notes
+   (step 4), then **ask the user to confirm**,
    unless they already clearly asked for this specific promotion in their
    current message. Promotion to `main` (Production) always needs an
    explicit "yes" for that promotion, even if they confirmed earlier ones.
 
-4. **Promote.** Run:
+4. **Write release notes.** From the commits in the preview (read the
+   diffs with `git show <sha>` if the subjects are unclear), write short
+   release notes for a non-technical reader: a few bullets, each starting
+   with **Added**, **Changed** or **Fixed**, describing what users will notice,
+   not how it was done. Leave out internal-only changes or group them as one
+   "Behind the scenes" bullet. Show the notes to the user with the
+   confirmation in step 3 so they can edit them, then write the final text
+   to a file in your scratchpad directory.
 
-       .claude/skills/promote/promote.sh <target>
+   Example:
+
+       - Added: a "New in this release" note on the home page
+       - Fixed: pages could show old styling for a few minutes after a release
+       - Behind the scenes: tooling for promoting between stages
+
+5. **Promote.** Run:
+
+       .claude/skills/promote/promote.sh <target> --notes-file <notes file>
 
    The script merges the previous stage into the target with a merge commit
-   ("Promote <source> → <target>"), pushes it, and waits for the deploy
+   whose message is "Promote <source> → <target>", followed by your release
+   notes and the list of commits included. It pushes it, and waits for the deploy
    workflow run for that exact commit. Give it a timeout of at least 6 minutes.
 
-5. **Report.** Tell the user whether the deploy succeeded and give the stage
+6. **Report.** Tell the user whether the deploy succeeded, repeat the release
+   notes, and give the stage
    URL. Remind them a hard refresh (Ctrl+Shift+R) may be needed for up to
    10 minutes, because GitHub Pages caches pages.
 
