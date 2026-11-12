@@ -27,6 +27,23 @@ Any push to one of these branches redeploys the site (`.github/workflows/deploy.
   the user asks for one: fix on a branch from `main`, release it, then merge
   the fix back into `dev` so it isn't lost.
 
+## Concept first (for bigger ideas)
+
+Before building a **new feature or a noticeable change to how the app looks
+or works**, ask the user once whether they'd like a concept mock-up first.
+Offer it when there's more than one reasonable design, or the request is
+vague. Don't offer it for small tweaks ("make the button blue"), bug fixes or
+behind-the-scenes changes; just do those on `dev`.
+
+If they say yes:
+- Build a clickable mock-up as a Claude artifact, **not** in the repo. Show
+  2–3 options side by side when there are real choices, with sample data and
+  a short "Good / Watch out" note for each. Match the app's existing look.
+- Keep iterating on the same artifact until the user picks a direction.
+- Then build the chosen version properly on `dev` and follow the normal flow.
+- If artifacts aren't available in the session, use a standalone HTML file in
+  the scratchpad and show screenshots instead. Never put concept code in the repo.
+
 ## Working on a change
 
 1. Make the change on `dev`.
