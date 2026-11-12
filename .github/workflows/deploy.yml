@@ -62,6 +62,13 @@ jobs:
                 [ -f "$f" ] || continue
                 sed -i "s#icons/app/local/#icons/app/$stage/#g; s#Test App Local#$name#g; s#Test Local#$short#g; s/#495057/$color/g" "$f"
               done
+              # iOS 27 won't download a linked home-screen icon (shows a letter instead),
+              # so embed this stage's icon directly in the page as a data URI.
+              touch_icon="$tmp/icons/app/$stage/apple-touch-icon.png"
+              if [ -f "$touch_icon" ]; then
+                data=$(base64 -w0 "$touch_icon")
+                sed -i "s#href=\"icons/app/$stage/apple-touch-icon\.png[^\"]*\"#href=\"data:image/png;base64,$data\"#" "$tmp/index.html"
+              fi
               mkdir -p "$dest"
               cp -r "$tmp"/. "$dest"/
               echo "window.STAGE = '$stage';" > "$dest/stage.js"
