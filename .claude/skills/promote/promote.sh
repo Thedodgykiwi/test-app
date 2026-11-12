@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Promote one stage to the next and wait for its GitHub Pages deploy.
 #   promote.sh status               show commits waiting at each step
-#   promote.sh <target> [--dry-run] [--notes-file FILE]
-#                                   promote previous stage into <target>;
-#                                   FILE holds human-written release notes
+#   promote.sh <target> [--dry-run] [--notes-file FILE] [--intro-file FILE]
+#       Promote the previous stage into <target>.
+#       --notes-file  release notes to use (required for alpha: dev has none)
+#       --intro-file  optional extra paragraph placed above reused notes
+#   Past alpha, notes are reused automatically from the previous stage.
 set -euo pipefail
 
 STAGES=(dev alpha staging main)
@@ -56,16 +58,18 @@ if [[ ${1:-} == status || -z ${1:-} ]]; then
 fi
 
 target=$1; shift; [[ $target == production || $target == prod ]] && target=main
-dry_run=false; notes_file=
+dry_run=false; notes_file=; intro_file=
 while (( $# )); do
   case $1 in
     --dry-run) dry_run=true ;;
     --notes-file) notes_file=${2:?--notes-file needs a path}; shift ;;
+    --intro-file) intro_file=${2:?--intro-file needs a path}; shift ;;
     *) die "Unknown option '$1'" ;;
   esac
   shift
 done
 [[ -z $notes_file || -s $notes_file ]] || die "Notes file '$notes_file' is missing or empty."
+[[ -z $intro_file || -s $intro_file ]] || die "Intro file '$intro_file' is missing or empty."
 source=$(previous_stage "$target")
 
 list=$(pending "$source" "$target")
@@ -74,6 +78,16 @@ if [[ -z $list ]] && git merge-base --is-ancestor "$REMOTE/$source" "$REMOTE/$ta
 fi
 echo "Promoting $source → $target. Commits:"
 echo "${list:-  (merge commits only)}"
+
+# Past alpha, reuse the notes already written for these changes.
+if [[ -z $notes_file && $target != alpha ]]; then
+  notes_file=$(mktemp)
+  python3 "$(dirname "$0")/combine_notes.py" "$REMOTE/$target" "$REMOTE/$source" \
+    "$target" "$source" ${intro_file:+"$intro_file"} > "$notes_file"
+  [[ -s $notes_file ]] || die "No release notes found on $source to reuse; pass --notes-file."
+  echo; echo "Release notes (reused from $source):"; echo; cat "$notes_file"; echo
+fi
+[[ -n $notes_file || $dry_run == true ]] || die "Release notes are required when promoting to alpha: pass --notes-file."
 $dry_run && { echo "(dry run: nothing changed)"; exit 0; }
 
 [[ -z $(git status --porcelain) ]] || die "Working tree has uncommitted changes; commit or stash them first."
