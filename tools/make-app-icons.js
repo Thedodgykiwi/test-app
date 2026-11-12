@@ -20,8 +20,9 @@ if (!pkg) { console.error('Usage: node tools/make-app-icons.js <phosphor-core-pa
 const glyph = fs.readFileSync(path.join(pkg, 'assets/duotone', `${GLYPH}-duotone.svg`), 'utf8')
   .match(/<svg[^>]*>([\s\S]*)<\/svg>/)[1];
 
-// rounded: transparent corners (browser tabs, Android "any" icons).
-// Full-bleed (iOS and Android "maskable"): the phone applies its own shape.
+// rounded: transparent corners (browser tab icons only).
+// Full-bleed solid squares for every home-screen icon: phones apply their own shape,
+// and some reject or mishandle transparent corners.
 function svg({ from, to, rounded, glyphScale }) {
   const r = rounded ? 56 : 0; // on a 256 canvas
   const g = 256 * glyphScale, o = (256 - g) / 2;
@@ -42,8 +43,8 @@ function svg({ from, to, rounded, glyphScale }) {
     const outputs = [
       ['favicon.svg', null, { rounded: true, glyphScale: 0.66 }],
       ['favicon-32.png', 32, { rounded: true, glyphScale: 0.70 }],
-      ['icon-192.png', 192, { rounded: true, glyphScale: 0.60 }],
-      ['icon-512.png', 512, { rounded: true, glyphScale: 0.60 }],
+      ['icon-192.png', 192, { rounded: false, glyphScale: 0.58 }],
+      ['icon-512.png', 512, { rounded: false, glyphScale: 0.58 }],
       ['icon-maskable-512.png', 512, { rounded: false, glyphScale: 0.50 }], // inside the safe zone
       ['apple-touch-icon.png', 180, { rounded: false, glyphScale: 0.58 }],
     ];

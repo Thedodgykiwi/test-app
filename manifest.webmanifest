@@ -2,6 +2,7 @@
   "name": "Test App Local",
   "short_name": "Test Local",
   "description": "A small to-do app for testing the GitHub build, preview and release workflow.",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
