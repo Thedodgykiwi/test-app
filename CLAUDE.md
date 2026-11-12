@@ -35,6 +35,53 @@ Any push to one of these branches redeploys the site (`.github/workflows/deploy.
 3. Commit with a clear message and push to `dev`; confirm the deploy succeeds.
 4. Ask the user to try it on the Dev URL. Promote only when they're happy.
 
+## Working with the user
+
+- Explain in plain English and briefly define technical terms; don't
+  assume development experience.
+- For visual changes, show a screenshot of the result before pushing.
+- When something is ambiguous, make a sensible choice and say what you
+  chose, rather than asking lots of questions. Ask first for anything
+  hard to undo.
+- Report honestly: say what was tested, what wasn't, and anything that
+  failed.
+- End each piece of work with its status: what changed, whether it's
+  committed and pushed, and where to see it.
+
+## Quality checklist (before pushing)
+
+- The app loads with no errors in the browser console.
+- Existing features still work: counter, adding/toggling to-dos (and that
+  they persist after a reload), the "What's new" panel.
+- Layout works on a phone-sized screen (about 375px wide) as well as desktop.
+- Basic accessibility: buttons and inputs have clear labels, text has good
+  contrast, everything works with the keyboard.
+- Keep changes small and focused; one feature or fix per commit, with a
+  clear message saying what and why.
+
+## Guardrails
+
+- **No secrets in the repo.** It's public: never commit passwords, API keys
+  or personal data.
+- **Ask before adding** external libraries, third-party services, tracking or
+  analytics, or anything that costs money or needs an account.
+- **Don't delete or reset user data** (e.g. saved to-dos in browser storage)
+  without asking; if stored data needs a new format, migrate it.
+- Keep it plain HTML/CSS/JS with no build step unless the user agrees to change that.
+- Never edit `stage.js` by hand for deploys; the workflow sets it per stage.
+
+## Known gotchas
+
+- GitHub Pages caches pages for up to 10 minutes. CSS/JS are cache-busted
+  per deploy, but `index.html` may briefly be stale; a hard refresh
+  (Ctrl/Cmd+Shift+R) fixes it.
+- All stages share one web address, so anything stored in the browser must
+  be keyed per stage (see `storageKey` in `app.js`).
+- Stage branches show as "behind" `main` on GitHub because of promotion
+  merge commits. That's expected; file contents match.
+- When promoting by pull request on GitHub, the default target is `dev`;
+  change the base branch, or use `compare/<destination>...<source>` links.
+
 ## Notes
 
 - `stage.js` is overwritten per stage at deploy time; locally it says `local`.
