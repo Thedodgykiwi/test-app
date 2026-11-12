@@ -4,6 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Test App</title>
+  <!-- Home-screen / install support. The deploy swaps "local" for each stage's
+       icons, name and colour (see .github/workflows/deploy.yml). -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/app/local/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="icons/app/local/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/app/local/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="Test Local" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#495057" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>

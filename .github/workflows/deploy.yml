@@ -49,6 +49,17 @@ jobs:
               rm -rf "$tmp/.git" "$tmp/.github"
               # Cache-busting: make browsers fetch fresh CSS/JS after each deploy
               sed -i -E "s/(href|src)=\"([^\":]+\.(css|js))\"/\1=\"\2?v=$sha\"/g" "$tmp/index.html"
+              # Home-screen app: this stage's icons, name and colour
+              case $stage in
+                main)    name="Test App";         short="Test App";     color="#3b5bdb" ;;
+                staging) name="Test App Staging"; short="Test Staging"; color="#e67700" ;;
+                alpha)   name="Test App Alpha";   short="Test Alpha";   color="#c2255c" ;;
+                dev)     name="Test App Dev";     short="Test Dev";     color="#7048e8" ;;
+              esac
+              for f in "$tmp/index.html" "$tmp/manifest.webmanifest"; do
+                [ -f "$f" ] || continue
+                sed -i "s#icons/app/local/#icons/app/$stage/#g; s#Test App Local#$name#g; s#Test Local#$short#g; s/#495057/$color/g" "$f"
+              done
               mkdir -p "$dest"
               cp -r "$tmp"/. "$dest"/
               echo "window.STAGE = '$stage';" > "$dest/stage.js"
