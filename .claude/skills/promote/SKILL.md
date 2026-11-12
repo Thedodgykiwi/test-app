@@ -32,15 +32,25 @@ the repository root.
 
        .claude/skills/promote/promote.sh <target> --dry-run
 
-   Summarise the commits that will move, show your draft release notes
-   (step 4), then **ask the user to confirm**,
-   unless they already clearly asked for this specific promotion in their
-   current message. Promotion to `main` (Production) always needs an
-   explicit "yes" for that promotion, even if they confirmed earlier ones.
+   Summarise the commits that will move. Then:
+   - **Target `alpha`:** write release notes (step 4) and show the draft.
+   - **Target `staging` or `main`:** the dry run prints release notes the
+     script has **reused** from the previous stage's promotions (combined,
+     grouped by section, duplicates removed). Don't rewrite them — that's
+     what keeps notes identical across stages and saves effort. Show them
+     and ask if the user wants a short extra intro (e.g. "🎉 First public
+     release!"); if so, save it to a file and pass `--intro-file`.
 
-4. **Write release notes.** Write them for someone who has never written
-   code: a tester, a manager, a customer. Read the diffs (`git show <sha>`)
-   so you describe what actually changed, not just the commit subjects.
+   Then **ask the user to confirm**, unless they already clearly asked for
+   this specific promotion in their current message. Promotion to `main`
+   (Production) always needs an explicit "yes" for that promotion, even if
+   they confirmed earlier ones.
+
+4. **Write release notes (alpha only).** Notes are written once, when
+   changes first leave Dev, and reused by every later stage. Write them for
+   someone who has never written code: a tester, a manager, a customer.
+   Read the diffs (`git show <sha>`) so you describe what actually changed,
+   not just the commit subjects.
 
    **Format** (Markdown, in this order, leaving out empty sections):
 
@@ -108,9 +118,10 @@ the repository root.
    Show the draft to the user with the confirmation in step 3 so they can
    edit it, then save the final text to a file in your scratchpad directory.
 
-5. **Promote.** Run:
+5. **Promote.** Run one of:
 
-       .claude/skills/promote/promote.sh <target> --notes-file <notes file>
+       .claude/skills/promote/promote.sh alpha --notes-file <notes file>
+       .claude/skills/promote/promote.sh <staging|main> [--intro-file <intro file>]
 
    The script merges the previous stage into the target with a merge commit
    whose message is "Promote <source> → <target>", followed by your release
