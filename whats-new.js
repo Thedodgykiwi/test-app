@@ -61,7 +61,7 @@
   }
 
   async function open() {
-    document.getElementById('whats-new-title').textContent = `📋 What's new in ${stageName}`;
+    document.getElementById('whats-new-title-text').textContent = `What's new in ${stageName}`;
     body.innerHTML = '<p class="intro">Loading…</p>';
     dialog.showModal();
     try {

@@ -48,7 +48,27 @@ jobs:
               python3 _tools/.github/scripts/release_notes.py "$tmp" "$stage" "$tmp/releases.json"
               rm -rf "$tmp/.git" "$tmp/.github"
               # Cache-busting: make browsers fetch fresh CSS/JS after each deploy
-              sed -i -E "s/(href|src)=\"([^\":]+\.(css|js))\"/\1=\"\2?v=$sha\"/g" "$tmp/index.html"
+              # (also icons and the manifest, so phones don't keep stale home-screen icons)
+              sed -i -E "s/(href|src)=\"([^\":]+\.(css|js|png|svg|webmanifest))\"/\1=\"\2?v=$sha\"/g" "$tmp/index.html"
+              [ -f "$tmp/manifest.webmanifest" ] && sed -i -E "s/(\"src\": \"[^\"]+\.png)\"/\1?v=$sha\"/g" "$tmp/manifest.webmanifest"
+              # Home-screen app: this stage's icons, name and colour
+              case $stage in
+                main)    name="Test App";         short="Test App";     color="#3b5bdb" ;;
+                staging) name="Test App Staging"; short="Test Staging"; color="#e67700" ;;
+                alpha)   name="Test App Alpha";   short="Test Alpha";   color="#c2255c" ;;
+                dev)     name="Test App Dev";     short="Test Dev";     color="#7048e8" ;;
+              esac
+              for f in "$tmp/index.html" "$tmp/manifest.webmanifest"; do
+                [ -f "$f" ] || continue
+                sed -i "s#icons/app/local/#icons/app/$stage/#g; s#Test App Local#$name#g; s#Test Local#$short#g; s/#495057/$color/g" "$f"
+              done
+              # iOS 27 won't download a linked home-screen icon (shows a letter instead),
+              # so embed this stage's icon directly in the page as a data URI.
+              touch_icon="$tmp/icons/app/$stage/apple-touch-icon.png"
+              if [ -f "$touch_icon" ]; then
+                data=$(base64 -w0 "$touch_icon")
+                sed -i "s#href=\"icons/app/$stage/apple-touch-icon\.png[^\"]*\"#href=\"data:image/png;base64,$data\"#" "$tmp/index.html"
+              fi
               mkdir -p "$dest"
               cp -r "$tmp"/. "$dest"/
               echo "window.STAGE = '$stage';" > "$dest/stage.js"
