@@ -27,6 +27,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Check out deploy scripts
+        uses: actions/checkout@v4
+        with:
+          path: _tools
+          sparse-checkout: .github/scripts
       - name: Assemble site from all stage branches
         env:
           REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
@@ -37,8 +42,10 @@ jobs:
             if [ "$stage" = main ]; then dest=_site; else dest=_site/$stage; fi
             if git ls-remote --exit-code --heads "$REPO_URL" "$stage" >/dev/null; then
               tmp=$(mktemp -d)
-              git clone -q --depth 1 --branch "$stage" "$REPO_URL" "$tmp"
+              # Full history (small repo) so release notes can be read from it
+              git clone -q --branch "$stage" "$REPO_URL" "$tmp"
               sha=$(git -C "$tmp" rev-parse --short HEAD)
+              python3 _tools/.github/scripts/release_notes.py "$tmp" "$stage" "$tmp/releases.json"
               rm -rf "$tmp/.git" "$tmp/.github"
               # Cache-busting: make browsers fetch fresh CSS/JS after each deploy
               sed -i -E "s/(href|src)=\"([^\":]+\.(css|js))\"/\1=\"\2?v=$sha\"/g" "$tmp/index.html"

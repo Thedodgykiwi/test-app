@@ -118,7 +118,9 @@ the repository root.
    workflow run for that exact commit. Give it a timeout of at least 6 minutes.
 
 6. **Report.** Tell the user whether the deploy succeeded, repeat the release
-   notes, and give the stage
+   notes, mention they can also read them under **📋 What's new** on that
+   stage's site (built from these promotions by
+   `.github/scripts/release_notes.py` on every deploy), and give the stage
    URL. Remind them a hard refresh (Ctrl+Shift+R) may be needed for up to
    10 minutes, because GitHub Pages caches pages.
 

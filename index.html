@@ -18,9 +18,20 @@
       <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" />
       <button type="submit">Add</button>
     </form>
-    <footer>Build: <span id="build">local</span></footer>
+    <footer>
+      <span>Build: <span id="build">local</span></span>
+      <button type="button" id="whats-new-btn" class="link-btn">📋 What's new</button>
+    </footer>
   </main>
   <script src="stage.js"></script>
+  <dialog id="whats-new" aria-labelledby="whats-new-title">
+    <header>
+      <h2 id="whats-new-title">📋 What's new</h2>
+      <button type="button" id="whats-new-close" class="close-btn" aria-label="Close">✕</button>
+    </header>
+    <div id="whats-new-body"></div>
+  </dialog>
   <script src="app.js"></script>
+  <script src="whats-new.js"></script>
 </body>
 </html>
