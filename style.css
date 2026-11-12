@@ -19,3 +19,12 @@ button:hover { background: #2f4ac0; }
 #todos li { cursor: pointer; }
 #todos li.done { text-decoration: line-through; color: #888; }
 footer { margin-top: 1.5rem; font-size: .8rem; color: #777; }
+
+#stage-banner {
+  position: fixed; top: 0; left: 0; right: 0; padding: .4rem;
+  text-align: center; font-weight: 600; color: #fff; letter-spacing: .05em;
+}
+.stage-alpha   { background: #c2255c; }
+.stage-dev     { background: #7048e8; }
+.stage-staging { background: #e67700; }
+.stage-local   { background: #495057; }

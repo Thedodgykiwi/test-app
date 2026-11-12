@@ -5,9 +5,11 @@ counter.addEventListener('click', () => {
   counter.textContent = `Clicked ${count} time${count === 1 ? '' : 's'}`;
 });
 
-const todos = JSON.parse(localStorage.getItem('todos') || '[]');
+// Stages share one origin on GitHub Pages, so keep each stage's data separate.
+const storageKey = `todos-${window.STAGE || 'local'}`;
+const todos = JSON.parse(localStorage.getItem(storageKey) || '[]');
 const list = document.getElementById('todos');
-const save = () => localStorage.setItem('todos', JSON.stringify(todos));
+const save = () => localStorage.setItem(storageKey, JSON.stringify(todos));
 function render() {
   list.innerHTML = '';
   todos.forEach((t, i) => {
@@ -29,6 +31,11 @@ document.getElementById('todo-form').addEventListener('submit', (e) => {
 });
 render();
 
-if (location.hostname.endsWith('github.io')) {
-  document.getElementById('build').textContent = 'GitHub Pages';
+const stage = window.STAGE || 'local';
+document.getElementById('build').textContent = stage;
+if (stage !== 'main') {
+  const banner = document.getElementById('stage-banner');
+  banner.textContent = `${stage.toUpperCase()} environment`;
+  banner.className = `stage-${stage}`;
+  banner.hidden = false;
 }

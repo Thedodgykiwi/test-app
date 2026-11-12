@@ -1,8 +1,14 @@
 name: Deploy to GitHub Pages
 
+# Every stage branch deploys. Each run rebuilds the whole site from the
+# latest commit of all four branches:
+#   main    -> https://<owner>.github.io/<repo>/
+#   staging -> https://<owner>.github.io/<repo>/staging/
+#   dev     -> https://<owner>.github.io/<repo>/dev/
+#   alpha   -> https://<owner>.github.io/<repo>/alpha/
 on:
   push:
-    branches: [main]
+    branches: [main, staging, dev, alpha]
   workflow_dispatch:
 
 permissions:
@@ -21,10 +27,29 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Assemble site from all stage branches
+        env:
+          REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          set -e
+          mkdir _site
+          for stage in main staging dev alpha; do
+            if [ "$stage" = main ]; then dest=_site; else dest=_site/$stage; fi
+            if git ls-remote --exit-code --heads "$REPO_URL" "$stage" >/dev/null; then
+              tmp=$(mktemp -d)
+              git clone -q --depth 1 --branch "$stage" "$REPO_URL" "$tmp"
+              rm -rf "$tmp/.git" "$tmp/.github"
+              mkdir -p "$dest"
+              cp -r "$tmp"/. "$dest"/
+              echo "window.STAGE = '$stage';" > "$dest/stage.js"
+              echo "Deployed $stage -> $dest"
+            else
+              echo "Branch $stage does not exist yet, skipping"
+            fi
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
