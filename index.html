@@ -13,9 +13,14 @@
     <p>If you can see this, the build &amp; preview pipeline works.</p>
     <p class="new">✨ New in this release: stage promotion test.</p>
     <button id="counter">Clicked 0 times</button>
-    <ul id="todos"></ul>
+    <section id="todo-groups" aria-label="To-dos by priority"></section>
     <form id="todo-form">
-      <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" />
+      <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" />
+      <div class="chips" role="group" aria-label="Priority for new to-do">
+        <button type="button" class="chip high" data-p="high" aria-pressed="false">High</button>
+        <button type="button" class="chip med" data-p="med" aria-pressed="false">Medium</button>
+        <button type="button" class="chip low" data-p="low" aria-pressed="false">Low</button>
+      </div>
       <button type="submit">Add</button>
     </form>
     <footer>

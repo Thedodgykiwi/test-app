@@ -7,27 +7,86 @@ counter.addEventListener('click', () => {
 
 // Stages share one origin on GitHub Pages, so keep each stage's data separate.
 const storageKey = `todos-${window.STAGE || 'local'}`;
-const todos = JSON.parse(localStorage.getItem(storageKey) || '[]');
-const list = document.getElementById('todos');
+
+// Priority levels, highest first. 'none' = no priority set.
+const LEVELS = ['high', 'med', 'low', 'none'];
+const LABELS = { high: 'High', med: 'Medium', low: 'Low', none: 'No priority' };
+
+// Older saved to-dos have no priority: keep them and treat them as 'none'.
+const todos = JSON.parse(localStorage.getItem(storageKey) || '[]')
+  .map((t) => ({ ...t, p: LEVELS.includes(t.p) ? t.p : 'none' }));
 const save = () => localStorage.setItem(storageKey, JSON.stringify(todos));
-function render() {
-  list.innerHTML = '';
-  todos.forEach((t, i) => {
-    const li = document.createElement('li');
-    li.textContent = t.text;
-    li.className = t.done ? 'done' : '';
-    li.title = 'Click to toggle';
-    li.onclick = () => { todos[i].done = !todos[i].done; save(); render(); };
-    list.appendChild(li);
-  });
+
+const groupsEl = document.getElementById('todo-groups');
+let newPriority = 'none';
+
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props);
+  node.append(...children);
+  return node;
 }
+
+function todoRow(t, index) {
+  const id = `todo-${index}`;
+  const checkbox = el('input', { type: 'checkbox', id, checked: t.done });
+  checkbox.addEventListener('change', () => { t.done = checkbox.checked; save(); render(`#${id}`); });
+
+  const level = LEVELS.indexOf(t.p);
+  const move = (delta, dir) => {
+    const btn = el('button', {
+      type: 'button', className: 'icon-btn', textContent: dir === 'up' ? '↑' : '↓',
+      disabled: level + delta < 0 || level + delta >= LEVELS.length,
+      title: dir === 'up' ? 'Raise priority' : 'Lower priority',
+    });
+    btn.setAttribute('aria-label', `${dir === 'up' ? 'Raise' : 'Lower'} priority of “${t.text}”`);
+    btn.dataset.focus = `${dir}-${index}`;
+    btn.addEventListener('click', () => {
+      t.p = LEVELS[level + delta]; save();
+      render(`[data-focus="${dir}-${index}"]:not(:disabled)`);
+    });
+    return btn;
+  };
+
+  return el('li', { className: t.done ? 'todo done' : 'todo' },
+    checkbox,
+    el('label', { htmlFor: id, className: 'text', textContent: t.text }),
+    el('span', { className: 'move' }, move(-1, 'up'), move(1, 'down')));
+}
+
+function render(focusSelector) {
+  groupsEl.replaceChildren();
+  if (!todos.length) {
+    groupsEl.append(el('p', { className: 'empty', textContent: 'No to-dos yet. Add one below.' }));
+  }
+  for (const p of LEVELS) {
+    // Keep each to-do's position in the saved list so its controls stay stable.
+    const items = todos.map((t, i) => [t, i]).filter(([t]) => t.p === p)
+      .sort(([a], [b]) => a.done - b.done);
+    if (!items.length) continue; // hide empty sections
+    const heading = el('h2', {},
+      el('span', { className: `swatch ${p}` }), `${LABELS[p]} · ${items.length}`);
+    groupsEl.append(el('div', { className: `group group-${p}` },
+      heading, el('ul', { className: 'todos' }, ...items.map(([t, i]) => todoRow(t, i)))));
+  }
+  if (focusSelector) groupsEl.querySelector(focusSelector)?.focus();
+}
+
+// Priority chips for new to-dos: tap to select, tap again to clear.
+const chips = document.querySelectorAll('#todo-form .chip');
+chips.forEach((chip) => chip.addEventListener('click', () => {
+  newPriority = newPriority === chip.dataset.p ? 'none' : chip.dataset.p;
+  chips.forEach((c) => c.setAttribute('aria-pressed', c.dataset.p === newPriority));
+}));
+
 document.getElementById('todo-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = document.getElementById('todo-input');
-  if (!input.value.trim()) return;
-  todos.push({ text: input.value.trim(), done: false });
+  const text = input.value.trim();
+  if (!text) return;
+  todos.push({ text, done: false, p: newPriority });
   input.value = '';
   save(); render();
+  input.focus();
 });
 render();
 
