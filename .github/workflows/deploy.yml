@@ -38,7 +38,10 @@ jobs:
             if git ls-remote --exit-code --heads "$REPO_URL" "$stage" >/dev/null; then
               tmp=$(mktemp -d)
               git clone -q --depth 1 --branch "$stage" "$REPO_URL" "$tmp"
+              sha=$(git -C "$tmp" rev-parse --short HEAD)
               rm -rf "$tmp/.git" "$tmp/.github"
+              # Cache-busting: make browsers fetch fresh CSS/JS after each deploy
+              sed -i -E "s/(href|src)=\"([^\":]+\.(css|js))\"/\1=\"\2?v=$sha\"/g" "$tmp/index.html"
               mkdir -p "$dest"
               cp -r "$tmp"/. "$dest"/
               echo "window.STAGE = '$stage';" > "$dest/stage.js"
