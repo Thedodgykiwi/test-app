@@ -28,3 +28,4 @@ footer { margin-top: 1.5rem; font-size: .8rem; color: #777; }
 .stage-dev     { background: #7048e8; }
 .stage-staging { background: #e67700; }
 .stage-local   { background: #495057; }
+.new { background: #ebfbee; color: #2b8a3e; padding: .5rem .75rem; border-radius: 8px; }
