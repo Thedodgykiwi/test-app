@@ -20,6 +20,13 @@ const save = () => localStorage.setItem(storageKey, JSON.stringify(todos));
 const groupsEl = document.getElementById('todo-groups');
 let newPriority = 'none';
 
+// Which sections are collapsed, remembered per stage.
+const collapsedKey = `collapsed-${window.STAGE || 'local'}`;
+let collapsed;
+try { collapsed = new Set(JSON.parse(localStorage.getItem(collapsedKey) || '[]')); }
+catch { collapsed = new Set(); }
+const saveCollapsed = () => localStorage.setItem(collapsedKey, JSON.stringify([...collapsed]));
+
 function el(tag, props = {}, ...children) {
   const node = Object.assign(document.createElement(tag), props);
   node.append(...children);
@@ -42,7 +49,8 @@ function todoRow(t, index) {
     btn.dataset.focus = `${dir}-${index}`;
     btn.addEventListener('click', () => {
       t.p = LEVELS[level + delta]; save();
-      render(`[data-focus="${dir}-${index}"]:not(:disabled)`);
+      // If it moved into a collapsed section, focus that section's heading instead.
+      render(`[data-focus="${dir}-${index}"]:not(:disabled)`, `[data-group="${t.p}"]`);
     });
     return btn;
   };
@@ -53,7 +61,7 @@ function todoRow(t, index) {
     el('span', { className: 'move' }, move(-1, 'up'), move(1, 'down')));
 }
 
-function render(focusSelector) {
+function render(focusSelector, fallbackFocus) {
   groupsEl.replaceChildren();
   if (!todos.length) {
     groupsEl.append(el('p', { className: 'empty', textContent: 'No to-dos yet. Add one below.' }));
@@ -63,12 +71,27 @@ function render(focusSelector) {
     const items = todos.map((t, i) => [t, i]).filter(([t]) => t.p === p)
       .sort(([a], [b]) => a.done - b.done);
     if (!items.length) continue; // hide empty sections
-    const heading = el('h2', {},
-      el('span', { className: `swatch ${p}` }), `${LABELS[p]} · ${items.length}`);
-    groupsEl.append(el('div', { className: `group group-${p}` },
-      heading, el('ul', { className: 'todos' }, ...items.map(([t, i]) => todoRow(t, i)))));
+    const isCollapsed = collapsed.has(p);
+    const listId = `group-list-${p}`;
+    const toggle = el('button', { type: 'button', className: 'group-toggle' },
+      el('span', { className: 'chevron', textContent: isCollapsed ? '▸' : '▾' }),
+      el('span', { className: `swatch ${p}` }),
+      `${LABELS[p]} · ${items.length}`);
+    toggle.dataset.group = p;
+    toggle.setAttribute('aria-expanded', !isCollapsed);
+    toggle.setAttribute('aria-controls', listId);
+    toggle.title = isCollapsed ? 'Show this section' : 'Hide this section';
+    toggle.addEventListener('click', () => {
+      collapsed.has(p) ? collapsed.delete(p) : collapsed.add(p);
+      saveCollapsed(); render(`[data-group="${p}"]`);
+    });
+    const list = el('ul', { className: 'todos', id: listId, hidden: isCollapsed },
+      ...items.map(([t, i]) => todoRow(t, i)));
+    groupsEl.append(el('div', { className: `group group-${p}` }, el('h2', {}, toggle), list));
   }
-  if (focusSelector) groupsEl.querySelector(focusSelector)?.focus();
+  // Focus the first match that's actually visible (not inside a collapsed section).
+  const visible = (sel) => sel && [...groupsEl.querySelectorAll(sel)].find((n) => !n.closest('[hidden]'));
+  (visible(focusSelector) || visible(fallbackFocus))?.focus();
 }
 
 // Priority chips for new to-dos: tap to select, tap again to clear.
@@ -84,6 +107,8 @@ document.getElementById('todo-form').addEventListener('submit', (e) => {
   const text = input.value.trim();
   if (!text) return;
   todos.push({ text, done: false, p: newPriority });
+  // Open the section it went into, so the new to-do is visible.
+  if (collapsed.delete(newPriority)) saveCollapsed();
   input.value = '';
   save(); render();
   input.focus();

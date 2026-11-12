@@ -96,6 +96,9 @@ If they say yes:
   be keyed per stage (see `storageKey` in `app.js`).
 - Stage branches show as "behind" `main` on GitHub because of promotion
   merge commits. That's expected; file contents match.
+- Verify UI changes from a screenshot, not just by reading element state:
+  CSS `display` rules can override the `hidden` attribute (a global
+  `[hidden] { display: none !important; }` rule in `style.css` now guards this).
 - When promoting by pull request on GitHub, the default target is `dev`;
   change the base branch, or use `compare/<destination>...<source>` links.
 
