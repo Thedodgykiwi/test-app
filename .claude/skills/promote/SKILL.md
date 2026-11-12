@@ -37,7 +37,10 @@ the repository root.
    - **Target `staging` or `main`:** the dry run prints release notes the
      script has **reused** from the previous stage's promotions (combined,
      grouped by section, duplicates removed). Don't rewrite them — that's
-     what keeps notes identical across stages and saves effort. Show them
+     what keeps notes identical across stages and saves effort. Skim them
+     for wording that only fits an earlier stage (e.g. "Alpha is pink"); if
+     you find any, save a corrected copy and pass it with `--notes-file`,
+     telling the user exactly what you changed. Show them
      and ask if the user wants a short extra intro (e.g. "🎉 First public
      release!"); if so, save it to a file and pass `--intro-file`.
 
@@ -89,7 +92,10 @@ the repository root.
    - Keep it short: one or two sentences per bullet, friendly and positive,
      no blame. Group tiny related changes into one bullet.
    - Use the stage's display name in the heading: Dev, Alpha, Staging, or
-     Production (for `main`).
+     Production (for `main`). **Only the heading may name a stage.** The
+     notes are reused unchanged for Staging and Production, so bullets must
+     read correctly on every stage: write "each stage has its own colour",
+     not "Alpha is pink"; "in this version", not "now on Alpha".
 
    **Example:**
 
