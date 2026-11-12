@@ -18,7 +18,9 @@ Each stage is a branch and gets its own URL on GitHub Pages:
 | `staging` | https://thedodgykiwi.github.io/test-app/staging/ | Release candidate, final check     |
 | `main`    | https://thedodgykiwi.github.io/test-app/         | Production                         |
 
-Changes are promoted with pull requests: `dev` → `alpha` → `staging` → `main`.
+Changes are promoted one stage at a time: `dev` → `alpha` → `staging` → `main`,
+either with a pull request on GitHub or by asking Claude to run the `promote` skill
+(`.claude/skills/promote/`), e.g. "promote to alpha" or "what's waiting to be promoted?".
 Non-production stages show a coloured banner so they can't be mistaken for production.
 
 ## Deploy
