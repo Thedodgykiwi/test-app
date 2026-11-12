@@ -1,8 +1,8 @@
 let count = 0;
-const counter = document.getElementById('counter');
-counter.addEventListener('click', () => {
+const counterText = document.getElementById('counter-text');
+document.getElementById('counter').addEventListener('click', () => {
   count++;
-  counter.textContent = `Clicked ${count} time${count === 1 ? '' : 's'}`;
+  counterText.textContent = `Clicked ${count} time${count === 1 ? '' : 's'}`;
 });
 
 // Stages share one origin on GitHub Pages, so keep each stage's data separate.
@@ -41,11 +41,12 @@ function todoRow(t, index) {
   const level = LEVELS.indexOf(t.p);
   const move = (delta, dir) => {
     const btn = el('button', {
-      type: 'button', className: 'icon-btn', textContent: dir === 'up' ? '↑' : '↓',
+      type: 'button', className: 'icon-btn',
       disabled: level + delta < 0 || level + delta >= LEVELS.length,
       title: dir === 'up' ? 'Raise priority' : 'Lower priority',
     });
     btn.setAttribute('aria-label', `${dir === 'up' ? 'Raise' : 'Lower'} priority of “${t.text}”`);
+    btn.append(icon(dir === 'up' ? 'arrow-up' : 'arrow-down'));
     btn.dataset.focus = `${dir}-${index}`;
     btn.addEventListener('click', () => {
       t.p = LEVELS[level + delta]; save();
@@ -74,8 +75,8 @@ function render(focusSelector, fallbackFocus) {
     const isCollapsed = collapsed.has(p);
     const listId = `group-list-${p}`;
     const toggle = el('button', { type: 'button', className: 'group-toggle' },
-      el('span', { className: 'chevron', textContent: isCollapsed ? '▸' : '▾' }),
-      el('span', { className: `swatch ${p}` }),
+      icon(isCollapsed ? 'caret-right' : 'caret-down', 'chevron'),
+      icon('flag', `flag-${p}`),
       `${LABELS[p]} · ${items.length}`);
     toggle.dataset.group = p;
     toggle.setAttribute('aria-expanded', !isCollapsed);

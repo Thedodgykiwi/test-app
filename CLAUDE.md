@@ -105,6 +105,11 @@ If they say yes:
 ## Notes
 
 - `stage.js` is overwritten per stage at deploy time; locally it says `local`.
+- Icons: **Phosphor Icons, duotone style only**, stored in `icons.js` (no CDN).
+  Use `icon('name')` in JS or `<span data-icon="name"></span>` in HTML. To add
+  one, copy the inside of its `<svg>` from `@phosphor-icons/core`
+  (`assets/duotone/<name>-duotone.svg`) into `ICON_PATHS`. Don't mix in emoji or
+  other icon sets for UI controls. Licence: `LICENSES/phosphor-icons.txt`.
 - Browser storage is kept separate per stage (`todos-<stage>` keys).
 - Release notes: written once when promoting to Alpha, reused for later
   stages, and shown in the app's "📋 What's new" panel.
