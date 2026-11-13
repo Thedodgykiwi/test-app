@@ -54,6 +54,8 @@ The repo's GitHub Issues are the to-do list (playbook `issues.md`; labels
 feature, fix, tweak or idea, show the AskUserQuestion card with "Log it,
 build later" / "Log it + mock-up first" / "Build it now", recommended first,
 before doing anything (unless the user already said which).
+**Every issue uses the playbook's layout** (`issues.md`, "Writing a good issue":
+What's happening / wanted, Where, Expected, Reported by, Notes).
 **Every bug the user reports or change they ask for gets an issue,
 automatically** (they don't need to say "log it"): create it with the right
 label before starting work, and put `Issue #<n>` in the commit. Small
