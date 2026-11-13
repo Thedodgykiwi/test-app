@@ -42,6 +42,9 @@ is a small file that calls the **shared** deploy in the app-playbook repo
 - Urgent production fixes ("hotfixes") are the only exception, and only when
   the user asks for one: fix on a branch from `main`, release it, then merge
   the fix back into `dev` so it isn't lost.
+- **Rollbacks** (undo the last Production release) use the promote skill's
+  `rollback` command only, with the user's "yes" and their reason (playbook
+  `stages-and-releases.md`).
 
 ## Issues (bugs, requests, tweaks)
 
@@ -94,7 +97,7 @@ If they say yes:
 ## Quality checklist (before pushing)
 
 - The app loads with no errors in the browser console.
-- Existing features still work: adding/toggling to-dos (and that
+- Existing features still work: counter, adding/toggling to-dos (and that
   they persist after a reload), the "What's new" panel.
 - Layout works on a phone-sized screen (about 375px wide) as well as desktop.
 - Basic accessibility: buttons and inputs have clear labels, text has good
