@@ -102,6 +102,8 @@ If they say yes:
   failed.
 - End each piece of work with its status: what changed, whether it's
   committed and pushed, and where to see it.
+- **Every deploy ends with a link:** the full, clickable address of each stage
+  that changed (pushed to Dev or promoted), plus one line on what to look at.
 
 ## Quality checklist (before pushing)
 
