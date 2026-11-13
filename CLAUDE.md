@@ -48,8 +48,9 @@ is a small file that calls the **shared** deploy in the app-playbook repo
 The repo's GitHub Issues are the to-do list (playbook `issues.md`; labels
 `bug`, `feature`, `tweak`, `performance`, `priority: high/low`).
 **"Log it" means record only:** create the issue, don't change code. Fix
-later on `dev` with `Fixes #<n>` in the commit message; the issue closes
-when the fix reaches Production. This repo is public, so its issues are
+later on `dev` with `Issue #<n>` (not "Fixes": the default branch is `dev`,
+so GitHub would close it on Dev) in the commit message; the Production
+release closes the issue automatically. This repo is public, so its issues are
 public: no client names, emails or private details.
 
 ## Concept first (for bigger ideas)
