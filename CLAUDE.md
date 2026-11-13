@@ -85,6 +85,7 @@ If they say yes:
 - **Don't delete or reset user data** (e.g. saved to-dos in browser storage)
   without asking; if stored data needs a new format, migrate it.
 - Keep it plain HTML/CSS/JS with no build step unless the user agrees to change that.
+  (`package.json` is for dev-only tests; the app must never import from `node_modules`.)
 - Never edit `stage.js` by hand for deploys; the workflow sets it per stage.
 
 ## Known gotchas
@@ -122,8 +123,11 @@ If they say yes:
 - Use the official Firebase agent skills (github.com/firebase/agent-skills)
   and the Firebase plugin/MCP server for Firebase work; run the CLI as
   `npx -y firebase-tools@latest`.
-- Security rules: `firestore.rules` (owner-only, every field validated). After
-  changing them, re-run the rules tests and deploy with
+- Security rules: `firestore.rules` (owner-only, every field validated).
+  Tests: `tests/firestore.rules.test.mjs`; run `npm install` once, then
+  `npm run test:rules` (uses a throwaway emulator, needs Java). When the data
+  model changes, update the tests with the rules. After changing them, re-run
+  the rules tests and deploy with
   `npx -y firebase-tools@latest deploy --only firestore:rules`.
 - Local testing without touching the real project: start the emulators with
   `npx -y firebase-tools@latest emulators:start --only auth,firestore --project demo-test-app`

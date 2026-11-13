@@ -1,3 +1,6 @@
 # Firebase CLI / emulator logs
 *-debug.log
 .firebase/
+
+# Dev-only packages (npm install)
+node_modules/
