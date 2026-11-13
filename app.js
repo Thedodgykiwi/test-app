@@ -49,7 +49,12 @@ function todoRow(t, index) {
   const key = t.id || index; // cloud to-dos have a stable id
   const id = `todo-${key}`;
   const checkbox = el('input', { type: 'checkbox', id, checked: t.done });
-  checkbox.addEventListener('change', () => { update(t, { done: checkbox.checked }); render(`#${id}`); });
+  checkbox.addEventListener('change', () => {
+    // Remember when it was ticked (for the Done group's date ranges).
+    update(t, { done: checkbox.checked, doneAt: checkbox.checked ? Date.now() : null });
+    // Ticked: it moves into Done; if Done is closed, focus its heading instead.
+    render(`#${id}`, '[data-group="done"]', checkbox.checked);
+  });
 
   const level = LEVELS.indexOf(t.p);
   const move = (delta, dir) => {
@@ -69,33 +74,60 @@ function todoRow(t, index) {
     return btn;
   };
 
+  // Done items show which priority they came from (unticking sends them back).
+  const side = t.done
+    ? el('span', { className: 'from-p', title: `Priority: ${LABELS[t.p]}` }, icon('flag', `flag-${t.p}`), LABELS[t.p])
+    : el('span', { className: 'move' }, move(-1, 'up'), move(1, 'down'));
   return el('li', { className: t.done ? 'todo done' : 'todo' },
     checkbox,
     el('label', { htmlFor: id, className: 'text', textContent: t.text }),
-    el('span', { className: 'move' }, move(-1, 'up'), move(1, 'down')));
+    side);
 }
 
-function render(focusSelector, fallbackFocus) {
+// Done to-dos are grouped by when they were ticked. Ones ticked before this
+// was recorded (no doneAt) count as "Older".
+const DONE_RANGES = [
+  ['today', 'Today'], ['week', 'Last 7 days'], ['month', 'Last 30 days'], ['older', 'Older'],
+];
+function doneRange(t, now = new Date()) {
+  if (!Number.isFinite(t.doneAt)) return 'older';
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const day = 24 * 60 * 60 * 1000;
+  if (t.doneAt >= startOfToday) return 'today';
+  if (t.doneAt >= startOfToday - 6 * day) return 'week';
+  if (t.doneAt >= startOfToday - 29 * day) return 'month';
+  return 'older';
+}
+
+// A collapsible section heading (priority groups, Done, and Done's date ranges).
+function sectionToggle(key, isCollapsed, listId, className, ...content) {
+  const toggle = el('button', { type: 'button', className },
+    icon(isCollapsed ? 'caret-right' : 'caret-down', 'chevron'), ...content);
+  toggle.dataset.group = key;
+  toggle.setAttribute('aria-expanded', !isCollapsed);
+  toggle.setAttribute('aria-controls', listId);
+  toggle.title = isCollapsed ? 'Show this section' : 'Hide this section';
+  return toggle;
+}
+
+function render(focusSelector, fallbackFocus, justTicked = false) {
   groupsEl.replaceChildren();
+  const indexed = todos.map((t, i) => [t, i]); // keep each to-do's saved position so its controls stay stable
+  const active = indexed.filter(([t]) => !t.done);
+  const done = indexed.filter(([t]) => t.done);
   if (!todos.length) {
     const msg = loading ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.';
     groupsEl.append(el('p', { className: 'empty', textContent: msg }));
+  } else if (!active.length) {
+    groupsEl.append(el('p', { className: 'empty', textContent: 'All done. Nothing left to do!' }));
   }
   for (const p of LEVELS) {
-    // Keep each to-do's position in the saved list so its controls stay stable.
-    const items = todos.map((t, i) => [t, i]).filter(([t]) => t.p === p)
-      .sort(([a], [b]) => a.done - b.done);
+    const items = active.filter(([t]) => t.p === p);
     if (!items.length) continue; // hide empty sections
     const isCollapsed = collapsed.has(p);
     const listId = `group-list-${p}`;
-    const toggle = el('button', { type: 'button', className: 'group-toggle' },
-      icon(isCollapsed ? 'caret-right' : 'caret-down', 'chevron'),
-      icon('flag', `flag-${p}`),
-      `${LABELS[p]} · ${items.length}`);
-    toggle.dataset.group = p;
-    toggle.setAttribute('aria-expanded', !isCollapsed);
-    toggle.setAttribute('aria-controls', listId);
-    toggle.title = isCollapsed ? 'Show this section' : 'Hide this section';
+    const toggle = sectionToggle(p, isCollapsed, listId, 'group-toggle',
+      icon('flag', `flag-${p}`), `${LABELS[p]} · ${items.length}`);
     toggle.addEventListener('click', () => {
       collapsed.has(p) ? collapsed.delete(p) : collapsed.add(p);
       saveCollapsed(); render(`[data-group="${p}"]`);
@@ -103,6 +135,38 @@ function render(focusSelector, fallbackFocus) {
     const list = el('ul', { className: 'todos', id: listId, hidden: isCollapsed },
       ...items.map(([t, i]) => todoRow(t, i)));
     groupsEl.append(el('div', { className: `group group-${p}` }, el('h2', {}, toggle), list));
+  }
+
+  // Done: closed by default (open = 'done-open' remembered), split by date range.
+  if (done.length) {
+    const doneClosed = !collapsed.has('done-open');
+    const toggle = sectionToggle('done', doneClosed, 'group-list-done', 'group-toggle',
+      icon('check-circle', 'done-icon'), `Done · ${done.length}`);
+    toggle.addEventListener('click', () => {
+      collapsed.has('done-open') ? collapsed.delete('done-open') : collapsed.add('done-open');
+      saveCollapsed(); render('[data-group="done"]');
+    });
+    const now = new Date();
+    const ranges = el('div', { className: 'done-ranges', id: 'group-list-done', hidden: doneClosed });
+    for (const [key, label] of DONE_RANGES) {
+      const items = done.filter(([t]) => doneRange(t, now) === key)
+        .sort(([a], [b]) => (b.doneAt || 0) - (a.doneAt || 0)); // newest first
+      if (!items.length) continue;
+      const rangeKey = `done-${key}`;
+      const isCollapsed = collapsed.has(rangeKey);
+      const listId = `group-list-${rangeKey}`;
+      const rangeToggle = sectionToggle(rangeKey, isCollapsed, listId, 'range-toggle', `${label} · ${items.length}`);
+      rangeToggle.addEventListener('click', () => {
+        collapsed.has(rangeKey) ? collapsed.delete(rangeKey) : collapsed.add(rangeKey);
+        saveCollapsed(); render(`[data-group="${rangeKey}"]`);
+      });
+      ranges.append(el('div', { className: 'done-range' }, el('h3', {}, rangeToggle),
+        el('ul', { className: 'todos', id: listId, hidden: isCollapsed }, ...items.map(([t, i]) => todoRow(t, i)))));
+    }
+    groupsEl.append(el('div', { className: 'group group-done' }, el('h2', {}, toggle), ranges));
+    if (justTicked && doneClosed) {
+      groupsEl.append(el('p', { className: 'moved-hint', textContent: 'Moved to Done ↓' }));
+    }
   }
   // Focus the first match that's actually visible (not inside a collapsed section).
   const visible = (sel) => sel && [...groupsEl.querySelectorAll(sel)].find((n) => !n.closest('[hidden]'));

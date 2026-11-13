@@ -128,8 +128,8 @@ async function start() {
 
     unsubscribe = fs.onSnapshot(fs.query(todosRef, fs.orderBy('pos')), { includeMetadataChanges: true }, (snap) => {
       const list = snap.docs.map((d) => {
-        const { text, done, p } = d.data();
-        return { id: d.id, text, done, p };
+        const { text, done, p, doneAt = null } = d.data();
+        return { id: d.id, text, done, p, doneAt };
       });
       app.setTodos(list);
       pending = snap.metadata.hasPendingWrites;
@@ -141,7 +141,10 @@ async function start() {
   });
 
   function newDoc(t, pos) {
-    return { text: String(t.text).slice(0, 500), done: !!t.done, p: t.p, pos, createdAt: fs.serverTimestamp() };
+    const doc = { text: String(t.text).slice(0, 500), done: !!t.done, p: t.p, pos, createdAt: fs.serverTimestamp() };
+    // When it was ticked (for the Done group's date ranges); only if known.
+    if (t.done && Number.isFinite(t.doneAt)) doc.doneAt = t.doneAt;
+    return doc;
   }
 
   // The first time someone signs in on a device, add the to-dos saved on that
