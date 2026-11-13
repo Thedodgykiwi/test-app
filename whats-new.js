@@ -9,7 +9,26 @@
 
   const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const inline = (s) => escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // "(#12)" at the end of a note marks a fixed GitHub issue: show it as a
+  // small pill in that issue's label colour (reference only, not a link).
+  // Label names/colours come from releases.json ("issues"), built at deploy.
+  let issues = {};
+  function pill(n) {
+    const info = issues[n] || {};
+    const color = /^[0-9a-f]{6}$/i.test(info.color || '') ? info.color : 'e9ecef';
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(color.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    // Dark or white text, whichever contrasts more with the label colour.
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const text = (lum + 0.05) / 0.0637 >= 1.05 / (lum + 0.05) ? '#1d1f23' : '#fff';
+    const label = info.label ? `${escapeHtml(info.label)} ` : '';
+    return `<span class="issue-pill" style="background:#${color};color:${text}" `
+      + `title="Issue #${n}${info.label ? ` (${escapeHtml(info.label)})` : ''}">${label}#${n}</span>`;
+  }
+  const inline = (s) => escapeHtml(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Keep the pill together with the word before it so it never sits alone on a line.
+    .replace(/([^\s<>]*)\s*\(#(\d+)\)/g, (m, word, n) => `<span class="keep">${word}&nbsp;${pill(n)}</span>`);
 
   // Minimal Markdown: ## / ### headings, "- " bullets (with wrapped
   // continuation lines), paragraphs and **bold**. Everything is escaped first.
@@ -37,6 +56,7 @@
     { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   function render(data) {
+    issues = data.issues || {};
     const releases = data.releases || [];
     const recent = data.recent || [];
     if (releases.length) {

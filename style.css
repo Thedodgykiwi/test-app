@@ -112,6 +112,12 @@ footer { display: flex; justify-content: space-between; align-items: center; }
 .release p { margin: .3rem 0; }
 .release ul { margin: .2rem 0; padding-left: 1.2rem; }
 .release li { margin: .3rem 0; }
+/* Fixed-issue reference at the end of a note, coloured like its GitHub label */
+.keep { white-space: nowrap; }
+.issue-pill {
+  display: inline-block; margin-left: .15rem; padding: 0 .45rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 600; line-height: 1.5; white-space: nowrap; vertical-align: .08em;
+}
 .intro { color: #495057; }
 .recent { list-style: none; padding: 0; }
 .recent li { display: flex; justify-content: space-between; gap: 1rem; padding: .45rem 0; border-bottom: 1px solid #f1f3f5; }
