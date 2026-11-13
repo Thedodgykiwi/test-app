@@ -94,6 +94,9 @@ footer { margin-top: 1.5rem; font-size: .8rem; color: #777; }
   all: unset; cursor: pointer; flex: none; display: inline-grid; place-items: center;
   width: 1.75rem; height: 1.75rem; border-radius: 50%; color: #237032;
 }
+/* Override the global blue button:hover: keep the bar green, underline the headline instead */
+.news-open:hover { background: none; }
+.news-open:hover .news-text b { text-decoration: underline; }
 .news-x:hover { background: #d3f9d8; }
 .news-open:focus-visible, .news-x:focus-visible { outline: 2px solid #237032; outline-offset: 2px; }
 
