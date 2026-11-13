@@ -19,13 +19,25 @@
 <body>
   <div id="stage-banner" hidden></div>
   <main class="card">
+    <!-- Google sign-in (sync.js). Hidden until Firebase is set up and loaded. -->
+    <div id="account" class="account" hidden>
+      <button type="button" id="sign-in" class="sign-in" hidden><span data-icon="google-logo"></span>Sign in</button>
+      <button type="button" id="account-btn" class="avatar-btn" aria-expanded="false" aria-controls="account-menu" hidden>
+        <span id="avatar" class="avatar" aria-hidden="true"></span><span id="sync-dot" class="sync-dot" aria-hidden="true"></span>
+      </button>
+      <div id="account-menu" class="account-menu" hidden>
+        <p class="who"><strong id="account-name"></strong><span id="account-email"></span></p>
+        <p id="sync-status" class="sync-status"></p>
+        <button type="button" id="sign-out" class="plain-btn"><span data-icon="sign-out"></span>Sign out</button>
+      </div>
+    </div>
     <h1><span data-icon="hand-waving" class="wave"></span>Test App</h1>
     <p>If you can see this, the build &amp; preview pipeline works.</p>
     <p class="new"><span data-icon="sparkle"></span>New in this release: stage promotion test.</p>
     <button id="counter"><span data-icon="cursor-click"></span><span id="counter-text">Clicked 0 times</span></button>
     <section id="todo-groups" aria-label="To-dos by priority"></section>
     <form id="todo-form">
-      <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" />
+      <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" maxlength="500" />
       <div class="chips" role="group" aria-label="Priority for new to-do">
         <button type="button" class="chip high" data-p="high" aria-pressed="false"><span data-icon="flag" class="flag-high"></span>High</button>
         <button type="button" class="chip med" data-p="med" aria-pressed="false"><span data-icon="flag" class="flag-med"></span>Medium</button>
@@ -46,8 +58,11 @@
     </header>
     <div id="whats-new-body"></div>
   </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script src="icons.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
   <script src="whats-new.js"></script>
+  <script type="module" src="sync.js"></script>
 </body>
 </html>

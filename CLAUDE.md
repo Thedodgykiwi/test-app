@@ -3,6 +3,19 @@
 A small static web app (plain HTML/CSS/JS, no build step) used to test
 building, previewing and releasing through stages on GitHub Pages.
 
+## Playbook
+
+General processes, design patterns and gotchas live in
+https://github.com/Thedodgykiwi/app-playbook. Before setting up anything it
+covers (new app, stages, deploys, Firebase, icons, design), attach that repo
+to the session and read its README and the relevant guide.
+
+**Keep the playbook growing.** Whenever work on this app teaches something
+that would help *any* app (a gotcha, a missing or wrong step, a setup
+process, a design or wording pattern that worked), update the right guide
+in the playbook in the same session, commit it to the playbook's `main`, and
+tell the user what was added. App-specific facts stay in this file instead.
+
 ## Stages and branches
 
 | Branch    | Stage      | URL                                              |
@@ -85,6 +98,7 @@ If they say yes:
 - **Don't delete or reset user data** (e.g. saved to-dos in browser storage)
   without asking; if stored data needs a new format, migrate it.
 - Keep it plain HTML/CSS/JS with no build step unless the user agrees to change that.
+  (`package.json` is for dev-only tests; the app must never import from `node_modules`.)
 - Never edit `stage.js` by hand for deploys; the workflow sets it per stage.
 
 ## Known gotchas
@@ -101,6 +115,38 @@ If they say yes:
   `[hidden] { display: none !important; }` rule in `style.css` now guards this).
 - When promoting by pull request on GitHub, the default target is `dev`;
   change the base branch, or use `compare/<destination>...<source>` links.
+
+## Firebase (sign-in and cloud to-dos)
+
+- Project: `test-app-52149`. Google sign-in (Firebase Authentication) plus
+  Cloud Firestore. Signed out, to-dos stay on the device exactly as before;
+  signed in, they're saved to `users/{uid}/stages/{stage}/todos/{id}`
+  (separate list per stage, same as browser storage).
+- Code: `sync.js` (ES module: sign-in, account menu, live sync, copying a
+  device's to-dos into the account on first sign-in). `app.js` exposes
+  `window.TodoApp` hooks for it. The SDK loads from gstatic, pinned in `sync.js`.
+- `firebase-config.js` holds the web app settings (not secret). While it's
+  `null`, sign-in is hidden and nothing talks to Firebase.
+- Set up: web app "Test App (web)" (`1:245899552801:web:698ea4d0a5a8c9d852db60`);
+  Firestore `(default)` database in `eur3` (Europe; can't be moved), Standard
+  edition, free tier, delete protection on; Google sign-in on, with
+  `thedodgykiwi.github.io` and `localhost` as authorised domains.
+- Keep Auth provider settings (they include a support email) out of
+  `firebase.json`: the repo is public.
+- Use the official Firebase agent skills (github.com/firebase/agent-skills)
+  and the Firebase plugin/MCP server for Firebase work; run the CLI as
+  `npx -y firebase-tools@latest`.
+- Security rules: `firestore.rules` (owner-only, every field validated).
+  Tests: `tests/firestore.rules.test.mjs`; run `npm install` once, then
+  `npm run test:rules` (uses a throwaway emulator, needs Java). When the data
+  model changes, update the tests with the rules. After changing them, re-run
+  the rules tests and deploy with
+  `npx -y firebase-tools@latest deploy --only firestore:rules`.
+- Local testing without touching the real project: start the emulators with
+  `npx -y firebase-tools@latest emulators:start --only auth,firestore --project demo-test-app`
+  and open `http://localhost:8080/?emulators`.
+- Sign-in is shared by all stages (one web address), but each stage keeps its
+  own to-do list. Never delete users' cloud or device data without asking.
 
 ## Notes
 
