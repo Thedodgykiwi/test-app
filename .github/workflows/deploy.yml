@@ -1,11 +1,8 @@
 name: Deploy to GitHub Pages
 
-# Every stage branch deploys. Each run rebuilds the whole site from the
-# latest commit of all four branches:
-#   main    -> https://<owner>.github.io/<repo>/
-#   staging -> https://<owner>.github.io/<repo>/staging/
-#   dev     -> https://<owner>.github.io/<repo>/dev/
-#   alpha   -> https://<owner>.github.io/<repo>/alpha/
+# Every stage branch deploys. The deploy steps themselves live in ONE shared
+# place, the app-playbook repo (.github/workflows/deploy-stages.yml), so all
+# apps stay in step. Only the app's name (and optionally colours) go here.
 on:
   push:
     branches: [main, staging, dev, alpha]
@@ -22,64 +19,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Check out deploy scripts
-        uses: actions/checkout@v4
-        with:
-          path: _tools
-          sparse-checkout: .github/scripts
-      - name: Assemble site from all stage branches
-        env:
-          REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-        run: |
-          set -e
-          mkdir _site
-          for stage in main staging dev alpha; do
-            if [ "$stage" = main ]; then dest=_site; else dest=_site/$stage; fi
-            if git ls-remote --exit-code --heads "$REPO_URL" "$stage" >/dev/null; then
-              tmp=$(mktemp -d)
-              # Full history (small repo) so release notes can be read from it
-              git clone -q --branch "$stage" "$REPO_URL" "$tmp"
-              sha=$(git -C "$tmp" rev-parse --short HEAD)
-              python3 _tools/.github/scripts/release_notes.py "$tmp" "$stage" "$tmp/releases.json"
-              rm -rf "$tmp/.git" "$tmp/.github"
-              # Cache-busting: make browsers fetch fresh CSS/JS after each deploy
-              # (also icons and the manifest, so phones don't keep stale home-screen icons)
-              sed -i -E "s/(href|src)=\"([^\":]+\.(css|js|png|svg|webmanifest))\"/\1=\"\2?v=$sha\"/g" "$tmp/index.html"
-              [ -f "$tmp/manifest.webmanifest" ] && sed -i -E "s/(\"src\": \"[^\"]+\.png)\"/\1?v=$sha\"/g" "$tmp/manifest.webmanifest"
-              # Home-screen app: this stage's icons, name and colour
-              case $stage in
-                main)    name="Test App";         short="Test App";     color="#3b5bdb" ;;
-                staging) name="Test App Staging"; short="Test Staging"; color="#e67700" ;;
-                alpha)   name="Test App Alpha";   short="Test Alpha";   color="#c2255c" ;;
-                dev)     name="Test App Dev";     short="Test Dev";     color="#7048e8" ;;
-              esac
-              for f in "$tmp/index.html" "$tmp/manifest.webmanifest"; do
-                [ -f "$f" ] || continue
-                sed -i "s#icons/app/local/#icons/app/$stage/#g; s#Test App Local#$name#g; s#Test Local#$short#g; s/#495057/$color/g" "$f"
-              done
-              # iOS 27 won't download a linked home-screen icon (shows a letter instead),
-              # so embed this stage's icon directly in the page as a data URI.
-              touch_icon="$tmp/icons/app/$stage/apple-touch-icon.png"
-              if [ -f "$touch_icon" ]; then
-                data=$(base64 -w0 "$touch_icon")
-                sed -i "s#href=\"icons/app/$stage/apple-touch-icon\.png[^\"]*\"#href=\"data:image/png;base64,$data\"#" "$tmp/index.html"
-              fi
-              mkdir -p "$dest"
-              cp -r "$tmp"/. "$dest"/
-              echo "window.STAGE = '$stage';" > "$dest/stage.js"
-              echo "Deployed $stage -> $dest"
-            else
-              echo "Branch $stage does not exist yet, skipping"
-            fi
-          done
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+    uses: Thedodgykiwi/app-playbook/.github/workflows/deploy-stages.yml@main
+    with:
+      app_name: Test App    # repo files say "Test App Local"
+      short_name: Test      # repo files say "Test Local" (home-screen short name)
