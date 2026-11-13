@@ -78,7 +78,11 @@ document.getElementById('edit-cancel').addEventListener('click', closeEditor);
 editDialog.addEventListener('click', (e) => { if (e.target === editDialog) closeEditor(); }); // tap outside
 document.getElementById('edit-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  const { t, key, p } = editing;
+  const { key, p } = editing;
+  // Use the to-do as it is now: the list may have been re-read while the
+  // sheet was open (e.g. the sign-in check just after loading, or a live
+  // update from another device), which replaces the to-do objects.
+  const t = todos.find((x, i) => (x.id || i) === key) || editing.t;
   const text = editText.value.trim().slice(0, 500);
   const changes = {};
   if (text && text !== t.text) changes.text = text;
