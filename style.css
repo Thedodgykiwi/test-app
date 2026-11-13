@@ -167,9 +167,9 @@ dialog.sheet h2 { font-size: 1.15rem; margin: 0; flex: 1; }
 .setting-name { margin: 0 0 .5rem; font-weight: 600; }
 .muted { color: var(--muted); }
 #whats-new-body h3 { font-size: 1rem; margin: .8rem 0 .3rem; }
-#whats-new-body h4 { font-size: .92rem; margin: .7rem 0 .2rem; }
-#whats-new-body ul { margin: .2rem 0; padding-left: 1.2rem; }
-#whats-new-body li { margin: .2rem 0; }
+#whats-new-body h4 { font-size: .95rem; margin: 1.4rem 0 .4rem; }   /* section headings (✨ New…) */
+#whats-new-body ul { margin: .3rem 0; padding-left: 1.2rem; }
+#whats-new-body li { margin: .75rem 0; line-height: 1.5; }   /* space between release-note items */
 .release { padding-bottom: .6rem; border-bottom: 1px solid var(--line); margin-bottom: .6rem; }
 .release:last-child { border-bottom: 0; }
 .release.rolled-back { opacity: .6; }
