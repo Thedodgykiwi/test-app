@@ -75,6 +75,7 @@ editDialog.addEventListener('close', () => {
   if (row && !row.closest('[hidden]')) row.focus({ preventScroll: true });
 });
 document.getElementById('edit-cancel').addEventListener('click', closeEditor);
+document.getElementById('edit-close').addEventListener('click', closeEditor);
 editDialog.addEventListener('click', (e) => { if (e.target === editDialog) closeEditor(); }); // tap outside
 document.getElementById('edit-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -116,7 +117,11 @@ function todoRow(t, index) {
   open.addEventListener('click', () => openEditor(t, key));
   checkbox.setAttribute('aria-label', `Done: ${t.text}`);
   const li = el('li', { className: t.done ? 'todo done' : 'todo' }, checkbox, open);
-  if (t.done) li.append(el('span', { className: 'from-p', title: `Priority: ${LABELS[t.p]}` }, icon('flag', `flag-${t.p}`), LABELS[t.p]));
+  // Priority: a coloured flag (the word is there for screen readers and on hover).
+  if (t.p !== 'none') {
+    li.append(el('span', { className: 'row-flag', title: `Priority: ${LABELS[t.p]}` },
+      icon('flag', `flag-${t.p}`), el('span', { className: 'visually-hidden', textContent: `Priority: ${LABELS[t.p]}` })));
+  }
   if (justEdited === key) { li.classList.add('just-edited'); justEdited = null; }
   return li;
 }
@@ -158,20 +163,10 @@ function render(focusSelector, fallbackFocus, justTicked = false) {
   } else if (!active.length) {
     groupsEl.append(el('p', { className: 'empty', textContent: 'All done. Nothing left to do!' }));
   }
-  for (const p of LEVELS) {
-    const items = active.filter(([t]) => t.p === p);
-    if (!items.length) continue; // hide empty sections
-    const isCollapsed = collapsed.has(p);
-    const listId = `group-list-${p}`;
-    const toggle = sectionToggle(p, isCollapsed, listId, 'group-toggle',
-      icon('flag', `flag-${p}`), `${LABELS[p]} · ${items.length}`);
-    toggle.addEventListener('click', () => {
-      collapsed.has(p) ? collapsed.delete(p) : collapsed.add(p);
-      saveCollapsed(); render(`[data-group="${p}"]`);
-    });
-    const list = el('ul', { className: 'todos', id: listId, hidden: isCollapsed },
-      ...items.map(([t, i]) => todoRow(t, i)));
-    groupsEl.append(el('div', { className: `group group-${p}` }, el('h2', {}, toggle), list));
+  // One list, highest priority first (same order as saved within a priority).
+  if (active.length) {
+    const sorted = [...active].sort(([a, ia], [b, ib]) => LEVELS.indexOf(a.p) - LEVELS.indexOf(b.p) || ia - ib);
+    groupsEl.append(el('ul', { className: 'todos list', id: 'todo-list' }, ...sorted.map(([t, i]) => todoRow(t, i))));
   }
 
   // Done: closed by default (open = 'done-open' remembered), split by date range.
@@ -198,7 +193,7 @@ function render(focusSelector, fallbackFocus, justTicked = false) {
         saveCollapsed(); render(`[data-group="${rangeKey}"]`);
       });
       ranges.append(el('div', { className: 'done-range' }, el('h3', {}, rangeToggle),
-        el('ul', { className: 'todos', id: listId, hidden: isCollapsed }, ...items.map(([t, i]) => todoRow(t, i)))));
+        el('ul', { className: 'todos list', id: listId, hidden: isCollapsed }, ...items.map(([t, i]) => todoRow(t, i)))));
     }
     groupsEl.append(el('div', { className: 'group group-done' }, el('h2', {}, toggle), ranges));
     if (justTicked && doneClosed) {
@@ -263,17 +258,14 @@ window.TodoApp = {
   useLocal() { cloud = null; todos = loadLocal(); loading = false; render(); },
 };
 
+// Stage banner on every stage except Production, with a link to the pipeline
+// page (built by the shared deploy at the site root; not on local copies).
 const stage = window.STAGE || 'local';
-document.getElementById('build').textContent = stage;
-// The pipeline page lives once, at the site root (…/<repo>/pipeline/).
-const pipelineLink = document.getElementById('pipeline-link');
-if (stage !== 'local') {
-  pipelineLink.href = stage === 'main' ? 'pipeline/' : '../pipeline/';
-  pipelineLink.hidden = false;
-}
 if (stage !== 'main') {
   const banner = document.getElementById('stage-banner');
-  banner.textContent = `${stage.toUpperCase()} environment`;
+  document.getElementById('stage-name').textContent = `${stage.toUpperCase()} environment`;
   banner.className = `stage-${stage}`;
   banner.hidden = false;
+  document.body.classList.add('has-banner');
+  if (stage !== 'local') document.getElementById('pipeline-link').hidden = false;
 }
