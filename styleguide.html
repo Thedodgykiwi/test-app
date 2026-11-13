@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-accent="blue">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Style guide · Test App</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Libraries for the app's screens (vendor/, see vendor/README.md), imported by name -->
+  <script type="importmap">
+    {
+      "imports": {
+        "preact": "./vendor/preact.js",
+        "preact/hooks": "./vendor/preact-hooks.js",
+        "htm": "./vendor/htm.js",
+        "htm/preact": "./vendor/htm-preact.js",
+        "@preact/signals": "./vendor/signals.js",
+        "@preact/signals-core": "./vendor/signals-core.js"
+      }
+    }
+  </script>
+  <script>
+    // Same saved theme / accent / text size as the app (see menu.js).
+    try {
+      const p = JSON.parse(localStorage.getItem(`prefs:${location.pathname.split('/')[1] || 'app'}`) || '{}');
+      const d = document.documentElement.dataset;
+      d.theme = p.theme || 'auto'; d.textSize = p.textSize || 'standard'; d.accent = p.accent || d.accent;
+    } catch { /* defaults */ }
+  </script>
+  <style>
+    /* Page layout for the guide only (not part of the kit) */
+    body { display: block; padding: 1.5rem 1rem 4rem; }
+    .guide { max-width: 760px; margin: 0 auto; display: grid; gap: 1.6rem; }
+    .guide h1 { margin: 0; font-size: 1.5rem; }
+    .guide h2 { margin: 0 0 .6rem; font-size: 1.1rem; }
+    .guide > header p { margin: .3rem 0 0; color: var(--muted); }
+    .example { background: var(--surface); border: 1px solid var(--line); border-radius: 12px 12px 0 0; padding: 1rem; display: grid; gap: .8rem; }
+    details.code { border: 1px solid var(--line); border-top: 0; border-radius: 0 0 12px 12px; background: var(--bg); }
+    details.code summary { cursor: pointer; padding: .5rem 1rem; font-size: .82rem; color: var(--muted); }
+    details.code pre { margin: 0; padding: 0 1rem 1rem; overflow-x: auto; font-size: .78rem; line-height: 1.5; }
+    .controls { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+  </style>
+</head>
+<body>
+  <div class="guide">
+    <header>
+      <h1>Style guide</h1>
+      <p>The building blocks for this app's screens. Copy the HTML under each example. Colours follow the theme, accent and text size chosen in the app's Settings; try them here.</p>
+    </header>
+
+    <section class="controls" aria-label="Preview options">
+      <div class="seg" role="radiogroup" aria-label="Theme" data-pref="theme">
+        <button type="button" role="radio" data-value="light">Light</button>
+        <button type="button" role="radio" data-value="auto">Auto</button>
+        <button type="button" role="radio" data-value="dark">Dark</button>
+      </div>
+      <div class="swatches" role="radiogroup" aria-label="Accent colour" data-pref="accent">
+        <button type="button" role="radio" data-value="blue" style="--sw:#3b5bdb" aria-label="Blue"></button>
+        <button type="button" role="radio" data-value="purple" style="--sw:#7048e8" aria-label="Purple"></button>
+        <button type="button" role="radio" data-value="green" style="--sw:#237032" aria-label="Green"></button>
+        <button type="button" role="radio" data-value="teal" style="--sw:#0b7285" aria-label="Teal"></button>
+        <button type="button" role="radio" data-value="orange" style="--sw:#c2410c" aria-label="Orange"></button>
+        <button type="button" role="radio" data-value="pink" style="--sw:#c2255c" aria-label="Pink"></button>
+      </div>
+    </section>
+
+    <section><h2>Buttons</h2>
+      <div class="example"><div class="row">
+        <button type="button" class="btn primary"><span data-icon="plus"></span>Add item</button>
+        <button type="button" class="btn secondary">Secondary</button>
+        <button type="button" class="btn outline"><span data-icon="pencil-simple"></span>Edit</button>
+        <button type="button" class="btn ghost">Cancel</button>
+        <button type="button" class="btn danger"><span data-icon="trash"></span>Delete</button>
+        <button type="button" class="btn outline icon" aria-label="Settings"><span data-icon="gear-six"></span></button>
+        <button type="button" class="btn primary" disabled><span data-icon="spinner-gap" class="spin"></span>Saving…</button>
+        <button type="button" class="btn primary sm">Small</button>
+        <button type="button" class="btn primary lg">Large</button>
+      </div></div>
+    </section>
+
+    <section><h2>Form fields</h2>
+      <div class="example">
+        <div class="field">
+          <label for="sg-title">Title</label>
+          <input id="sg-title" class="input" placeholder="e.g. Buy milk" aria-describedby="sg-title-hint">
+          <span id="sg-title-hint" class="hint">Shown at the top of the card.</span>
+        </div>
+        <div class="field">
+          <label for="sg-search">Search</label>
+          <div class="with-icon"><span data-icon="magnifying-glass"></span><input id="sg-search" class="input" type="search" placeholder="Search…"></div>
+        </div>
+        <div class="field">
+          <label for="sg-priority">Priority</label>
+          <div class="select-wrap">
+            <select id="sg-priority" class="select"><option>High</option><option selected>Medium</option><option>Low</option></select>
+            <span data-icon="caret-down"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="sg-notes">Notes</label>
+          <textarea id="sg-notes" class="textarea" placeholder="Anything else…"></textarea>
+        </div>
+        <div class="field">
+          <label for="sg-email">Email</label>
+          <input id="sg-email" class="input" value="sam@" aria-invalid="true" aria-describedby="sg-email-error">
+          <span id="sg-email-error" class="error-text">Enter a full email address.</span>
+        </div>
+      </div>
+    </section>
+
+    <section><h2>Choices</h2>
+      <div class="example">
+        <label class="check"><input type="checkbox" checked> Remember me</label>
+        <div class="row" role="radiogroup" aria-label="How often">
+          <label class="check"><input type="radio" name="sg-often" checked> Daily</label>
+          <label class="check"><input type="radio" name="sg-often"> Weekly</label>
+        </div>
+        <label class="check"><input type="checkbox" role="switch" checked> Notifications</label>
+        <div class="seg" role="radiogroup" aria-label="View">
+          <button type="button" role="radio" aria-checked="true">List</button>
+          <button type="button" role="radio" aria-checked="false">Grid</button>
+        </div>
+      </div>
+    </section>
+
+    <section><h2>Card and badges</h2>
+      <div class="example">
+        <article class="card">
+          <div class="row"><h3 style="flex:1">Weekly shop</h3><span class="badge ok"><span data-icon="check"></span>Done</span></div>
+          <p>4 of 4 items ticked off · updated today</p>
+          <div class="row"><span class="badge accent">New</span><span class="badge warn">Due soon</span><span class="badge">#12</span></div>
+          <div class="row"><button type="button" class="btn primary sm"><span data-icon="arrow-right"></span>Open</button><button type="button" class="btn ghost sm">Share</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section><h2>List</h2>
+      <div class="example">
+        <ul class="list">
+          <li><span data-icon="star"></span><span class="grow">Starred item</span><button type="button" class="btn ghost icon sm" aria-label="More"><span data-icon="caret-down"></span></button></li>
+          <li><span data-icon="bell"></span><span class="grow">Reminders</span><label class="check"><input type="checkbox" role="switch" aria-label="Reminders"></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <section><h2>Components (Preact)</h2>
+      <p class="muted" style="margin:.2rem 0 .8rem">React-style building blocks for the app's screens (Preact + htm + signals, in <code>vendor/</code>). Each example works; its code is underneath. The starter's <code>app/example.js</code> uses the same patterns.</p>
+      <div style="display:grid;gap:1rem">
+        <div><h3 class="field-label">A component with its own state</h3><div class="example demo"><div data-demo="counter"></div></div></div>
+        <div><h3 class="field-label">Shared data between components (signals)</h3><div class="example demo"><div data-demo="shared"></div></div></div>
+        <div><h3 class="field-label">A reusable component with props</h3><div class="example demo"><div data-demo="field"></div></div></div>
+        <div><h3 class="field-label">Lists, conditions and loading</h3><div class="example demo"><div data-demo="loading"></div></div></div>
+        <div><h3 class="field-label">A dialog</h3><div class="example demo"><div data-demo="dialog"></div></div></div>
+      </div>
+    </section>
+
+    <section><h2>Messages and empty state</h2>
+      <div class="example">
+        <div class="notice"><span data-icon="info"></span><div><strong>Heads up.</strong> Changes save to your account automatically.</div></div>
+        <div class="notice warn"><span data-icon="warning-circle"></span><div>This can't be undone.</div></div>
+        <div class="empty-state">
+          <span data-icon="tray"></span>
+          <strong>Nothing here yet</strong>
+          <span>Add your first item to get started.</span>
+          <button type="button" class="btn primary sm"><span data-icon="plus"></span>Add item</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Show each example's HTML (before icons are drawn) under it, ready to copy.
+    document.querySelectorAll('.example:not(.demo)').forEach((ex) => {
+      const lines = ex.innerHTML.replace(/^\n+|\s+$/g, '').split('\n');
+      const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length));
+      const d = document.createElement('details'); d.className = 'code';
+      d.innerHTML = '<summary>HTML</summary><pre><code></code></pre>';
+      d.querySelector('code').textContent = lines.map((l) => l.slice(indent)).join('\n');
+      ex.after(d);
+    });
+  </script>
+  <script src="icons.js"></script>
+  <script type="module" src="styleguide-components.js"></script>
+  <script>
+    // Preview controls: same saved preferences as the app's Settings.
+    const KEY = `prefs:${location.pathname.split('/')[1] || 'app'}`;
+    const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
+    const show = () => document.querySelectorAll('[data-pref]').forEach((g) => g.querySelectorAll('[data-value]').forEach((b) => {
+      b.setAttribute('aria-checked', b.dataset.value === document.documentElement.dataset[g.dataset.pref]);
+    }));
+    document.querySelectorAll('[data-pref]').forEach((g) => g.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-value]'); if (!b) return;
+      const p = read(); p[g.dataset.pref] = b.dataset.value;
+      try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* storage blocked */ }
+      document.documentElement.dataset[g.dataset.pref] = b.dataset.value; show();
+    }));
+    show();
+    // Demo-only: the List/Grid choice and the example buttons don't do anything.
+    document.querySelectorAll('.example .seg').forEach((g) => g.addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', x === b));
+    }));
+  </script>
+</body>
+</html>

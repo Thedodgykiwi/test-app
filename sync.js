@@ -39,20 +39,19 @@ async function start() {
   const $ = (id) => document.getElementById(id);
   const ui = {
     box: $('account'), signIn: $('sign-in'), button: $('account-btn'), avatar: $('avatar'),
-    dot: $('sync-dot'), menu: $('account-menu'), name: $('account-name'), email: $('account-email'),
-    status: $('sync-status'), signOut: $('sign-out'),
+    avatarImg: $('avatar-img'), who: $('who'), whoImg: $('who-img'), whoLetter: $('who-letter'),
+    dot: $('sync-dot'), name: $('account-name'), email: $('account-email'),
+    status: $('sync-status'), signOut: $('sign-out'), label: $('avatar-label'),
   };
-
-  // ---- Account menu -------------------------------------------------------
-  const setMenu = (open) => {
-    ui.menu.hidden = !open;
-    ui.button.setAttribute('aria-expanded', open);
-  };
-  ui.button.addEventListener('click', () => setMenu(ui.menu.hidden));
-  document.addEventListener('click', (e) => { if (!ui.box.contains(e.target)) setMenu(false); });
-  ui.box.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !ui.menu.hidden) { setMenu(false); ui.button.focus(); }
-  });
+  // The menu itself (open/close, theme, Settings, version) is menu.js.
+  const setMenu = () => window.AppMenu?.close();
+  const signedOutAvatar = ui.avatar.innerHTML;   // the generic person icon
+  // Google photo, falling back to the first letter if there's none or it fails to load.
+  function showPhoto(img, letterEl, url, letter) {
+    letterEl.textContent = letter;
+    img.hidden = !url; letterEl.hidden = !!url;
+    if (url) { img.onerror = () => { img.hidden = true; letterEl.hidden = false; }; img.src = url; }
+  }
 
   ui.signIn.addEventListener('click', async () => {
     try {
@@ -82,10 +81,11 @@ async function start() {
   function showStatus() {
     const state = error ? 'error' : !navigator.onLine ? 'offline' : pending ? 'saving' : 'synced';
     const text = typeof STATUS[state] === 'function' ? STATUS[state]() : STATUS[state];
+    ui.status.hidden = ui.dot.hidden = false;
     ui.status.className = `sync-status ${state}`;
     ui.status.replaceChildren(icon({ synced: 'cloud-check', saving: 'cloud-arrow-up', offline: 'cloud-slash', error: 'warning-circle' }[state]), text);
     ui.dot.className = `sync-dot ${state}`;
-    ui.button.setAttribute('aria-label', `Account: ${ui.name.textContent}. ${text}`);
+    ui.button.setAttribute('aria-label', `Menu: ${ui.name.textContent}. ${text}`);
     ui.button.title = text;
   }
   addEventListener('online', showStatus);
@@ -97,11 +97,16 @@ async function start() {
   authLib.onAuthStateChanged(auth, (user) => {
     if (unsubscribe) { unsubscribe(); unsubscribe = null; }
     setMenu(false);
-    ui.box.hidden = false;
     ui.box.classList.toggle('signed-in', !!user);
     ui.signIn.hidden = !!user;
-    ui.button.hidden = !user;
+    ui.signOut.hidden = !user;
+    ui.who.hidden = !user;
     if (!user) {
+      ui.avatarImg.hidden = true; ui.avatar.hidden = false;
+      ui.avatar.innerHTML = signedOutAvatar; ui.avatar.classList.remove('letter');
+      ui.label.textContent = 'Menu';
+      ui.status.hidden = ui.dot.hidden = true;
+      ui.button.setAttribute('aria-label', 'Menu'); ui.button.title = 'Menu';
       if (localStorage.getItem('signed-in')) toast('Signed out. Showing the to-dos saved on this device.');
       localStorage.removeItem('signed-in');
       app.useLocal();
@@ -111,7 +116,11 @@ async function start() {
     const name = user.displayName || user.email || 'Signed in';
     ui.name.textContent = name;
     ui.email.textContent = user.email || '';
-    ui.avatar.textContent = name.trim().charAt(0).toUpperCase();
+    const letter = name.trim().charAt(0).toUpperCase();
+    showPhoto(ui.avatarImg, ui.avatar, user.photoURL, letter);
+    showPhoto(ui.whoImg, ui.whoLetter, user.photoURL, letter);
+    ui.avatar.classList.add('letter');
+    ui.label.textContent = 'My account';
     error = '';
 
     const todosRef = fs.collection(db, 'users', user.uid, 'stages', app.stage, 'todos');
