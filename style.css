@@ -175,6 +175,13 @@ dialog.sheet h2 { font-size: 1.15rem; margin: 0; flex: 1; }
 .release.rolled-back { opacity: .6; }
 .release-meta { color: var(--muted); font-size: .82rem; margin: 0; }
 .recent small { color: var(--muted); }
+/* What's new on Dev: changes grouped by day, in cards */
+.day-head { display: flex; justify-content: space-between; align-items: baseline; margin: .9rem 0 .35rem; font-size: .9rem; }
+.day-head .muted { font-size: .78rem; }
+#whats-new-body ul.changes { padding: 0; margin: 0; }
+#whats-new-body .changes > li { margin: 0; align-items: flex-start; line-height: 1.4; }
+.change-emoji { width: 1.4em; flex: none; text-align: center; }
+.change-time { color: var(--muted); font-size: .76rem; white-space: nowrap; padding-top: .1rem; }
 .issue-pill { font-size: .72rem; border: 1px solid var(--line); border-radius: 99px; padding: 0 .4rem; color: var(--muted); white-space: nowrap; }
 
 /* Works offline + install (pwa.js) */

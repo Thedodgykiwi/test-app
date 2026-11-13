@@ -125,12 +125,43 @@
         <p class="release-meta">${day(r.date)}${r.version ? ` · ${esc(r.version)}` : ''}${r.rolled_back ? ' · rolled back' : ''}</p>
         ${markdown(r.notes || '')}</article>`).join('');
     }
-    if (data.recent?.length) {
-      return `<p class="muted">${esc(STAGE_NAMES[STAGE] || STAGE)} holds work in progress, so this is a list of the latest changes; they get proper release notes when they move on to Alpha.</p>
-        <ul class="recent">${data.recent.map((c) => `<li>${esc(c.title)} <small>${day(c.date)}</small></li>`).join('')}</ul>`;
-    }
+    if (data.recent?.length) return recentByDay(data.recent);
     return `<p class="muted">No releases in ${esc(STAGE_NAMES[STAGE] || STAGE)} yet.</p>`;
   }
+  // Dev: the latest changes grouped by day, in cards (option C from the mock-up).
+  // Each change: an emoji for its type (from its issue's label, else its wording),
+  // the issue pill(s) and the time. Proper release notes start at Alpha.
+  const TYPE_EMOJI = { feature: '✨', tweak: '🎨', bug: '🐛', performance: '⚡' };
+  function changeType(c) {
+    const label = (c.issues || []).map((n) => data.issues?.[n]?.label).find((l) => TYPE_EMOJI[l]);
+    return label || (/^fix\b/i.test(c.title) ? 'bug' : 'scenes');
+  }
+  function recentByDay(list) {
+    const dayKey = (d) => new Date(d).toDateString();
+    const today = new Date(), yesterday = new Date(Date.now() - 864e5);
+    const dayName = (d) => (dayKey(d) === today.toDateString() ? 'Today'
+      : dayKey(d) === yesterday.toDateString() ? 'Yesterday'
+      : new Date(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }));
+    const time = (d) => new Date(d).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    const days = [];
+    for (const c of list) {
+      const k = dayKey(c.date);
+      if (!days.length || days[days.length - 1].k !== k) days.push({ k, name: dayName(c.date), items: [] });
+      days[days.length - 1].items.push(c);
+    }
+    const row = (c) => {
+      const type = changeType(c);
+      const title = esc(c.title.replace(/^fix:\s*(.)/i, (m, a) => a.toUpperCase()));
+      const pills = (c.issues || []).map((n) => `&nbsp;${pill(n)}`).join('');
+      return `<li><span class="change-emoji" aria-hidden="true">${TYPE_EMOJI[type] || '🧰'}</span>
+        <span class="grow">${title}${pills}</span><span class="change-time">${time(c.date)}</span></li>`;
+    };
+    return `<p class="muted">🧪 Work in progress on ${esc(STAGE_NAMES[STAGE] || STAGE)}. These get proper release notes when they move on to Alpha.</p>
+      ${days.map((d) => `
+        <div class="day-head"><strong>${esc(d.name)}</strong><span class="muted">${d.items.length} change${d.items.length === 1 ? '' : 's'}</span></div>
+        <ul class="list changes">${d.items.map(row).join('')}</ul>`).join('')}`;
+  }
+
   $('version-btn').addEventListener('click', async () => {
     setMenu(false);
     await loaded;
