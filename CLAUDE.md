@@ -50,6 +50,10 @@ is a small file that calls the **shared** deploy in the app-playbook repo
 
 The repo's GitHub Issues are the to-do list (playbook `issues.md`; labels
 `bug`, `feature`, `tweak`, `performance`, `priority: high/low`).
+**Every request starts with a choice card** (playbook `issues.md`): for any
+feature, fix, tweak or idea, show the AskUserQuestion card with "Log it,
+build later" / "Log it + mock-up first" / "Build it now", recommended first,
+before doing anything (unless the user already said which).
 **Every bug the user reports or change they ask for gets an issue,
 automatically** (they don't need to say "log it"): create it with the right
 label before starting work, and put `Issue #<n>` in the commit. Small
@@ -62,11 +66,10 @@ public: no client names, emails or private details.
 
 ## Concept first (for bigger ideas)
 
-Before building a **new feature or a noticeable change to how the app looks
-or works**, ask the user once whether they'd like a concept mock-up first.
-Offer it when there's more than one reasonable design, or the request is
-vague. Don't offer it for small tweaks ("make the button blue"), bug fixes or
-behind-the-scenes changes; just do those on `dev`.
+Offered through the choice card: "Log it + mock-up first" is the recommended
+option for a **new feature or a noticeable change** with more than one
+reasonable design, or a vague request; "Build it now" for small tweaks ("make
+the button blue"), bug fixes or behind-the-scenes changes.
 
 If they say yes:
 - Build a clickable mock-up as a Claude artifact, **not** in the repo. Show
