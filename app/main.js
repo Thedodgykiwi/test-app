@@ -78,35 +78,21 @@ async function animateDone(li, t, k) {
   busy.delete(k);
 }
 
-// "Moved to Done · Undo" note (one at a time; fades after a few seconds).
-let undoTimer;
+// "Moved to Done · Undo" toast (the playbook's shared toast.js).
 function showUndo(text, k) {
-  document.querySelector('.undo-toast')?.remove();
-  const el = document.createElement('div');
-  el.className = 'undo-toast';
-  el.setAttribute('role', 'status');
-  const msg = document.createElement('span');
-  msg.textContent = `“${text}” moved to Done`;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.append(icon('arrow-counter-clockwise'), 'Undo');
-  btn.addEventListener('click', () => {
-    // Use the to-do as it is now (the list may have been re-read since).
-    const cur = todos.value.find((x, i) => keyOf(x, i) === k);
-    if (cur) update(cur, { done: false, doneAt: null });
-    el.remove();
-    document.body.classList.remove('has-undo');
-    focusAfter = [`#todo-${k}`];
+  window.AppToast?.show(`“${text}” moved to Done`, {
+    icon: 'check-circle',
+    duration: 4500,
+    action: {
+      label: 'Undo', icon: 'arrow-counter-clockwise',
+      onClick() {
+        // Use the to-do as it is now (the list may have been re-read since).
+        const cur = todos.value.find((x, i) => keyOf(x, i) === k);
+        if (cur) update(cur, { done: false, doneAt: null });
+        focusAfter = [`#todo-${k}`];
+      },
+    },
   });
-  el.append(msg, btn);
-  document.body.append(el);
-  document.body.classList.add('has-undo');   // other bottom notes step aside meanwhile
-  if (!reduceMotion()) el.animate([{ transform: 'translate(-50%, 16px)', opacity: 0 }, { transform: 'translate(-50%, 0)', opacity: 1 }], { duration: 200, easing: 'ease-out' });
-  clearTimeout(undoTimer);
-  undoTimer = setTimeout(() => {
-    if (!el.isConnected) return;
-    el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250 }).finished.then(() => { el.remove(); document.body.classList.remove('has-undo'); });
-  }, 4500);
 }
 
 function Row({ t, k }) {

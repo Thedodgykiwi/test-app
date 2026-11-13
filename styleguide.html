@@ -154,6 +154,20 @@
       </div>
     </section>
 
+    <section><h2>Toasts</h2>
+      <p class="muted" style="margin:.2rem 0 .8rem">Short messages near the bottom (<code>toast.js</code>). One at a time; they fade after a few seconds.</p>
+      <div class="example demo"><div class="row">
+        <button type="button" class="btn outline" id="sg-toast-plain">Simple message</button>
+        <button type="button" class="btn outline" id="sg-toast-action">With Undo</button>
+      </div></div>
+      <details class="code"><summary>Code</summary><pre><code>AppToast.show('Saved.');
+
+AppToast.show('“Buy milk” moved to Done', {
+  icon: 'check-circle',
+  action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() { /* put it back */ } },
+});</code></pre></details>
+    </section>
+
     <section><h2>Messages and empty state</h2>
       <div class="example">
         <div class="notice"><span data-icon="info"></span><div><strong>Heads up.</strong> Changes save to your account automatically.</div></div>
@@ -180,6 +194,12 @@
     });
   </script>
   <script src="icons.js"></script>
+  <script src="toast.js"></script>
+  <script>
+    document.getElementById('sg-toast-plain').addEventListener('click', () => AppToast.show('Saved.'));
+    document.getElementById('sg-toast-action').addEventListener('click', () => AppToast.show('“Buy milk” moved to Done', {
+      icon: 'check-circle', action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick: () => AppToast.show('Put back.') } }));
+  </script>
   <script type="module" src="styleguide-components.js"></script>
   <script>
     // Preview controls: same saved preferences as the app's Settings.

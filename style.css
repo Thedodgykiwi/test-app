@@ -222,11 +222,23 @@ body.has-banner.is-offline .account { top: 5rem; }
 .update-bar { background: var(--accent); color: var(--accent-fg); justify-content: space-between; }
 .update-bar button { background: var(--surface); color: var(--text); font-weight: 700; padding: .35rem .8rem; }
 .update-bar button:hover { background: var(--secondary); }
-.toast {
-  position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 10;
-  width: max-content; max-width: min(420px, 92vw); padding: .65rem .9rem; border-radius: 10px;
-  background: #1d1f23; color: #fff; font-size: .9rem; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+/* Toasts (toast.js): dark rounded card near the bottom, optional action button.
+   Apps with a fixed bottom bar set --toast-bottom so toasts sit above it. */
+:root { --toast-bottom: 1rem; }
+.app-toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 10;
+  bottom: calc(var(--toast-bottom) + env(safe-area-inset-bottom));
+  width: max-content; max-width: min(440px, calc(100vw - 1.5rem)); display: flex; align-items: center; gap: .6rem;
+  padding: .65rem .9rem; border-radius: 12px; background: #1d1f23; color: #fff; font-size: .9rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
 }
+.app-toast:has(.app-toast-action) { width: min(440px, calc(100vw - 1.5rem)); padding-right: .6rem; }
+.app-toast-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-toast-icon { color: #8ce99a; }
+.app-toast-action { flex: none; gap: .3rem; padding: .35rem .6rem; color: #91a7ff; font-weight: 700; border-radius: 8px; }
+.app-toast-action:focus-visible { outline: 2px solid #91a7ff; outline-offset: 1px; }
+@media (hover: hover) { .app-toast-action:hover { background: rgba(255,255,255,.1); } }
+body.has-toast .install-tip, body.has-toast .update-bar { visibility: hidden; }   /* never overlap */
 
 /* ---- Style kit (B) ------------------------------------------------------------
    Building blocks for the app's own screens. Live examples + copy-ready HTML:
@@ -399,7 +411,6 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .flag-btn.p-high .word { color: var(--high); } .flag-btn.p-med .word { color: var(--med); } .flag-btn.p-low .word { color: var(--low); }
 .flag-btn .ic.pop { animation: bump .18s ease-out; }
 @keyframes bump { 50% { transform: scale(1.25); } }
-.toast { bottom: 5.5rem; }
 .install-tip, .update-bar { bottom: 5.2rem; }
 
 /* Edit sheet */
@@ -440,7 +451,6 @@ body.has-banner.is-offline { padding-top: 6rem; }
 #todo-input { height: 2.9rem; border-radius: 12px; }
 .add-bar .btn.primary { height: 2.9rem; border-radius: 12px; padding: 0 1.1rem; }
 body { padding-bottom: 8rem; }
-.toast { bottom: 7rem; }
 .install-tip, .update-bar { bottom: 6.8rem; }
 
 /* Ticking off (Issue #20): green "Done" chip + Undo note */
@@ -452,14 +462,7 @@ body { padding-bottom: 8rem; }
 :root[data-theme="dark"] .done-chip { color: #0b2610; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] .done-chip { color: #0b2610; } }
 .done-chip .ic { width: 1.1em; height: 1.1em; }
-.undo-toast {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(6.4rem + env(safe-area-inset-bottom)); z-index: 9;
-  width: min(440px, calc(100vw - 1.5rem)); display: flex; align-items: center; gap: .6rem;
-  padding: .65rem .7rem .65rem .9rem; border-radius: 12px; background: #1d1f23; color: #fff; font-size: .9rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,.25);
-}
-.undo-toast span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.undo-toast button { flex: none; gap: .3rem; padding: .35rem .6rem; color: #91a7ff; font-weight: 700; }
-.undo-toast button:focus-visible { outline: 2px solid #91a7ff; }
-@media (hover: hover) { .undo-toast button:hover { background: rgba(255,255,255,.1); } }
-body.has-undo .install-tip, body.has-undo .update-bar { visibility: hidden; }
+
+
+/* Toasts sit above the add bar */
+:root { --toast-bottom: 6.4rem; }
