@@ -394,3 +394,11 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .chips button { gap: .3rem; }
 .chips button[aria-pressed="true"] { background: var(--surface); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .edit-actions { justify-content: flex-end; }
+/* Inside Done: a centred divider per date range ("─ Today · 2 ⌃ ─"); tap it to show/hide its to-dos */
+.done-range h3 { margin: .2rem 0 .35rem; }
+.done-divider {
+  width: 100%; gap: .4rem; padding: .35rem 0; color: var(--muted); font-size: .8rem; font-weight: 600;
+}
+.done-divider::before, .done-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.done-divider:hover { color: var(--text); }
+.done-divider .chevron { width: 1em; height: 1em; }

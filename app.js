@@ -169,7 +169,9 @@ function render(focusSelector, fallbackFocus, justTicked = false) {
     groupsEl.append(el('ul', { className: 'todos list', id: 'todo-list' }, ...sorted.map(([t, i]) => todoRow(t, i))));
   }
 
-  // Done: closed by default (open = 'done-open' remembered), split by date range.
+  // Done: closed by default (open = 'done-open' remembered). Inside it, each
+  // date range is a centred divider ("─ Today · 2 ⌃ ─"): tap it to hide or
+  // show that range's to-dos (open by default, remembered).
   if (done.length) {
     const doneClosed = !collapsed.has('done-open');
     const toggle = sectionToggle('done', doneClosed, 'group-list-done', 'group-toggle',
@@ -187,12 +189,18 @@ function render(focusSelector, fallbackFocus, justTicked = false) {
       const rangeKey = `done-${key}`;
       const isCollapsed = collapsed.has(rangeKey);
       const listId = `group-list-${rangeKey}`;
-      const rangeToggle = sectionToggle(rangeKey, isCollapsed, listId, 'range-toggle', `${label} · ${items.length}`);
-      rangeToggle.addEventListener('click', () => {
+      const divider = el('button', { type: 'button', className: 'done-divider' },
+        el('span', { textContent: `${label} · ${items.length}` }),
+        icon(isCollapsed ? 'caret-down' : 'caret-up', 'chevron'));
+      divider.dataset.group = rangeKey;
+      divider.setAttribute('aria-expanded', !isCollapsed);
+      divider.setAttribute('aria-controls', listId);
+      divider.title = isCollapsed ? `Show: ${label}` : `Hide: ${label}`;
+      divider.addEventListener('click', () => {
         collapsed.has(rangeKey) ? collapsed.delete(rangeKey) : collapsed.add(rangeKey);
         saveCollapsed(); render(`[data-group="${rangeKey}"]`);
       });
-      ranges.append(el('div', { className: 'done-range' }, el('h3', {}, rangeToggle),
+      ranges.append(el('div', { className: 'done-range' }, el('h3', {}, divider),
         el('ul', { className: 'todos list', id: listId, hidden: isCollapsed }, ...items.map(([t, i]) => todoRow(t, i)))));
     }
     groupsEl.append(el('div', { className: 'group group-done' }, el('h2', {}, toggle), ranges));
