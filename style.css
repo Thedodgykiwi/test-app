@@ -49,6 +49,22 @@ h1 .ic.wave { color: #e8890c; }
 .todo input[type="checkbox"] { width: 18px; height: 18px; accent-color: #3b5bdb; flex: none; }
 .todo .text { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: pointer; }
 .todo.done .text { text-decoration: line-through; color: #888; }
+/* Done group: ticked to-dos, split into date ranges (each range is clickable to hide/show) */
+.done-icon { color: #2f9e44; }
+.done-ranges { display: grid; gap: .5rem; padding-left: .4rem; }
+.done-range h3 { margin: 0 0 .3rem; }
+.range-toggle {
+  display: flex; align-items: center; justify-content: flex-start; gap: .3rem; width: 100%; padding: .15rem .25rem;
+  background: none; color: #868e96; border-radius: 6px; text-align: left;
+  font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+}
+.range-toggle:hover { background: #f1f3f5; }   /* overrides the global blue button:hover */
+.range-toggle:focus-visible, .group-toggle:focus-visible { outline: 2px solid #3b5bdb; outline-offset: 1px; }
+.range-toggle .ic { width: 1.2em; height: 1.2em; }
+.from-p { display: flex; align-items: center; gap: .2rem; font-size: .72rem; color: #868e96; flex: none; }
+.from-p .ic { width: 1.1em; height: 1.1em; }
+.moved-hint { margin: 0; font-size: .78rem; color: #868e96; animation: hint-fade 2.5s forwards; }
+@keyframes hint-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 .move { display: flex; gap: 2px; }
 .icon-btn {
   width: 28px; height: 28px; padding: 0; border-radius: 6px; font-size: .85rem;
