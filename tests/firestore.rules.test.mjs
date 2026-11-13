@@ -42,7 +42,12 @@ await t('extra field rejected', () => assertFails(setDoc(p(alice, 'dev', 'x4'), 
 await t('missing field rejected', () => { const d = good(); delete d.done; return assertFails(setDoc(p(alice, 'dev', 'x5'), d)); });
 await t('client-chosen createdAt rejected', () => assertFails(setDoc(p(alice, 'dev', 'x6'), { ...good(), createdAt: Timestamp.fromMillis(0) })));
 await t('negative pos rejected', () => assertFails(setDoc(p(alice, 'dev', 'x7'), { ...good(), pos: -1 })));
-await t('text cannot change', () => assertFails(updateDoc(p(alice), { text: 'changed' })));
+await t('owner can edit text', () => assertSucceeds(updateDoc(p(alice), { text: 'Buy oat milk' })));
+await t('owner can edit text and priority together', () => assertSucceeds(updateDoc(p(alice), { text: 'Buy milk', p: 'low' })));
+await t('edited text cannot be empty', () => assertFails(updateDoc(p(alice), { text: '' })));
+await t('edited text cannot exceed 500', () => assertFails(updateDoc(p(alice), { text: 'a'.repeat(501) })));
+await t('edited text must be text', () => assertFails(updateDoc(p(alice), { text: 42 })));
+await t('other user cannot edit text', () => assertFails(updateDoc(p(bob), { text: 'hacked' })));
 await t('pos cannot change', () => assertFails(updateDoc(p(alice), { pos: 5 })));
 await t('done must stay bool', () => assertFails(updateDoc(p(alice), { done: 'yes' })));
 await t('create with doneAt time', () => assertSucceeds(setDoc(p(alice, 'dev', 'd1'), { ...good(), done: true, doneAt: Date.now() })));

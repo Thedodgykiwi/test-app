@@ -54,6 +54,27 @@
     </footer>
   </main>
   <script src="stage.js"></script>
+  <!-- Edit to-do: a sheet sliding up on phones, a centred card on wider screens -->
+  <dialog id="edit-todo" aria-labelledby="edit-todo-title">
+    <form id="edit-form" class="edit-form" method="dialog">
+      <div class="grab" aria-hidden="true"></div>
+      <h2 id="edit-todo-title">Edit to-do</h2>
+      <label for="edit-text" class="field-label">To-do</label>
+      <textarea id="edit-text" rows="2" maxlength="500" required></textarea>
+      <span class="field-label" id="edit-priority-label">Priority</span>
+      <div class="chips" role="group" aria-labelledby="edit-priority-label">
+        <button type="button" class="chip high" data-p="high" aria-pressed="false"><span data-icon="flag" class="flag-high"></span>High</button>
+        <button type="button" class="chip med" data-p="med" aria-pressed="false"><span data-icon="flag" class="flag-med"></span>Medium</button>
+        <button type="button" class="chip low" data-p="low" aria-pressed="false"><span data-icon="flag" class="flag-low"></span>Low</button>
+        <button type="button" class="chip none" data-p="none" aria-pressed="false"><span data-icon="flag" class="flag-none"></span>None</button>
+      </div>
+      <div class="edit-actions">
+        <button type="button" id="edit-cancel" class="secondary-btn">Cancel</button>
+        <button type="submit" id="edit-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="whats-new" aria-labelledby="whats-new-title">
     <header>
       <h2 id="whats-new-title"><span data-icon="sparkle"></span><span id="whats-new-title-text">What's new</span></h2>
