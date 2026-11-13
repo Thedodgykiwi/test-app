@@ -62,10 +62,13 @@
     if (releases.length) {
       return releases.map((r) => {
         const from = STAGE_NAMES[r.from] || r.from;
-        const how = r.pr ? `via pull request #${r.pr}` : `from ${from}`;
+        const how = r.from === 'rollback' ? 'rollback'
+          : r.pr ? `via pull request #${r.pr}` : `from ${from}`;
         const notes = /^##\s/.test(r.notes) ? r.notes : `## 📦 Update ${how}\n\n${r.notes}`;
-        return `<article class="release">
-          <div class="release-meta">🗓️ ${formatDate(r.date)} · ${escapeHtml(how)} · <code>${escapeHtml(r.sha)}</code></div>
+        // A release that was later rolled back stays listed, faded and tagged.
+        const undone = r.rolled_back ? ' · <span class="rolled-back-tag">↩️ rolled back</span>' : '';
+        return `<article class="release${r.rolled_back ? ' rolled-back' : ''}${r.from === 'rollback' ? ' rollback' : ''}">
+          <div class="release-meta">🗓️ ${formatDate(r.date)} · ${escapeHtml(how)} · <code>${escapeHtml(r.sha)}</code>${undone}</div>
           ${markdown(notes)}
         </article>`;
       }).join('');

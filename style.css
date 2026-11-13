@@ -112,6 +112,10 @@ footer { display: flex; justify-content: space-between; align-items: center; }
 .release p { margin: .3rem 0; }
 .release ul { margin: .2rem 0; padding-left: 1.2rem; }
 .release li { margin: .3rem 0; }
+/* Rollbacks: the undone release stays listed but faded; the rollback itself is highlighted */
+.release.rolled-back > :not(.release-meta) { opacity: .55; }
+.rolled-back-tag { color: #862e9c; font-weight: 600; }
+.release.rollback h3 { color: #5f3dc4; }
 /* Fixed-issue reference at the end of a note, coloured like its GitHub label */
 .keep { white-space: nowrap; }
 .issue-pill {
