@@ -208,4 +208,5 @@ If they say yes:
   delete and re-add the home-screen shortcut to see it.
 - Browser storage is kept separate per stage (`todos-<stage>` keys).
 - Release notes: written once when promoting to Alpha, reused for later
-  stages, and shown in the app's "📋 What's new" panel.
+  stages, and shown in What's new (menu → version). Dev shows its changes by
+  day instead (up to 200, built by the playbook's shared release-notes script).
