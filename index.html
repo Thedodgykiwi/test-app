@@ -49,7 +49,11 @@
     </form>
     <footer>
       <span>Build: <span id="build">local</span></span>
-      <button type="button" id="whats-new-btn" class="link-btn"><span data-icon="sparkle"></span>What's new</button>
+      <span class="footer-links">
+        <!-- Pipeline page (built by the shared deploy): hidden on local copies, where it doesn't exist -->
+        <a id="pipeline-link" class="link-btn" href="pipeline/" hidden><span data-icon="kanban"></span>Pipeline</a>
+        <button type="button" id="whats-new-btn" class="link-btn"><span data-icon="sparkle"></span>What's new</button>
+      </span>
     </footer>
   </main>
   <script src="stage.js"></script>

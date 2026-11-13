@@ -265,6 +265,12 @@ window.TodoApp = {
 
 const stage = window.STAGE || 'local';
 document.getElementById('build').textContent = stage;
+// The pipeline page lives once, at the site root (…/<repo>/pipeline/).
+const pipelineLink = document.getElementById('pipeline-link');
+if (stage !== 'local') {
+  pipelineLink.href = stage === 'main' ? 'pipeline/' : '../pipeline/';
+  pipelineLink.hidden = false;
+}
 if (stage !== 'main') {
   const banner = document.getElementById('stage-banner');
   banner.textContent = `${stage.toUpperCase()} environment`;
