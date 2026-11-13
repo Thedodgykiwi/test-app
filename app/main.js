@@ -190,11 +190,24 @@ function EditSheet() {
     </dialog>`;
 }
 
+// One-line summary under the title, e.g. "3 to do · 2 done today".
+function Summary() {
+  if (loading.value && !todos.value.length) return 'Loading your to-dos…';
+  const all = todos.value;
+  if (!all.length) return 'Nothing on your list yet';
+  const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+  const left = all.filter((t) => !t.done).length;
+  const doneToday = all.filter((t) => t.done && Number.isFinite(t.doneAt) && t.doneAt >= startOfToday).length;
+  const today = doneToday ? ` · ${doneToday} done today` : '';
+  return left ? `${left} to do${today}` : `All done!${today}`;
+}
+
 function App() {
   return html`<${TodoList} />`;
 }
 
 render(html`<${App} />`, document.getElementById('todo-groups'));
+render(html`<${Summary} />`, document.getElementById('summary'));
 // The add bar and edit sheet sit outside the list (fixed bar, modal sheet).
 const extras = document.createElement('div');
 document.body.append(extras);
