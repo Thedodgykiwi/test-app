@@ -442,3 +442,24 @@ body.has-banner.is-offline { padding-top: 6rem; }
 body { padding-bottom: 8rem; }
 .toast { bottom: 7rem; }
 .install-tip, .update-bar { bottom: 6.8rem; }
+
+/* Ticking off (Issue #20): green "Done" chip + Undo note */
+.done-chip {
+  position: fixed; z-index: 9; display: flex; align-items: center; gap: .35rem; height: 34px; padding: 0 .9rem;
+  border-radius: 999px; background: var(--ok); color: #fff; font-weight: 700; font-size: .9rem;
+  box-shadow: 0 6px 16px rgba(0,0,0,.18); pointer-events: none;
+}
+:root[data-theme="dark"] .done-chip { color: #0b2610; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .done-chip { color: #0b2610; } }
+.done-chip .ic { width: 1.1em; height: 1.1em; }
+.undo-toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(6.4rem + env(safe-area-inset-bottom)); z-index: 9;
+  width: min(440px, calc(100vw - 1.5rem)); display: flex; align-items: center; gap: .6rem;
+  padding: .65rem .7rem .65rem .9rem; border-radius: 12px; background: #1d1f23; color: #fff; font-size: .9rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+.undo-toast span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.undo-toast button { flex: none; gap: .3rem; padding: .35rem .6rem; color: #91a7ff; font-weight: 700; }
+.undo-toast button:focus-visible { outline: 2px solid #91a7ff; }
+@media (hover: hover) { .undo-toast button:hover { background: rgba(255,255,255,.1); } }
+body.has-undo .install-tip, body.has-undo .update-bar { visibility: hidden; }

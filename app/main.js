@@ -30,14 +30,100 @@ function doneRange(t, now = new Date()) {
   return 'older';
 }
 
+// ---- Ticking off (Issue #20, option 5 from the mock-up) --------------------
+// The row turns into a green "✓ Done" chip that drops down to the Done section
+// (whose count bumps), and an Undo note appears for a few seconds in case of a
+// mis-tap. With Reduce Motion switched on: no movement, just the Undo note.
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const busy = new Set();   // rows mid-animation (ignore extra taps)
+
+function markDone(t, k) {
+  // Use the to-do as it is now: the list may have been re-read during the
+  // animation (e.g. sign-in finishing just after the page opens).
+  const cur = todos.value.find((x, i) => keyOf(x, i) === k) || t;
+  update(cur, { done: true, doneAt: Date.now() });   // when it was ticked, for Done's date groups
+  if (!reduceMotion()) {
+    // Bump Done's count once it has re-drawn.
+    requestAnimationFrame(() => document.querySelector('#todo-groups [data-group="done"]')
+      ?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' }));
+  }
+  showUndo(t.text, k);
+}
+
+async function animateDone(li, t, k) {
+  busy.add(k);
+  const r = li.getBoundingClientRect();
+  const chip = document.createElement('div');
+  chip.className = 'done-chip';
+  chip.setAttribute('aria-hidden', 'true');
+  chip.append(icon('check'), 'Done');
+  Object.assign(chip.style, { left: `${r.left + 12}px`, top: `${r.top + (r.height - 34) / 2}px` });
+  document.body.append(chip);
+  // 1. The row fades and closes up while the chip pops in where it was.
+  li.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.97)' }], { duration: 180, fill: 'forwards' });
+  li.animate([{ height: `${r.height}px` }, { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginTop: '-0.4rem' }],
+    { duration: 280, delay: 60, easing: 'ease-in', fill: 'forwards' });
+  await chip.animate([{ transform: 'scale(.6)', opacity: 0 }, { transform: 'scale(1.08)', opacity: 1, offset: .7 }, { transform: 'scale(1)', opacity: 1 }],
+    { duration: 300, easing: 'ease-out', fill: 'forwards' }).finished;
+  await new Promise((res) => setTimeout(res, 120));
+  // 2. Move it to Done; the chip drops down to the Done heading (or the bottom of the screen) and fades.
+  markDone(t, k);
+  await new Promise((res) => requestAnimationFrame(res));
+  const target = document.querySelector('#todo-groups [data-group="done"]')?.getBoundingClientRect();
+  const floor = (document.getElementById('todo-form')?.getBoundingClientRect().top || innerHeight) - 40;
+  const dy = Math.min(target ? target.top : floor, floor) - parseFloat(chip.style.top);
+  await chip.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${Math.max(dy, 24)}px)`, opacity: 0 }],
+    { duration: 420, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).finished;
+  chip.remove();
+  busy.delete(k);
+}
+
+// "Moved to Done · Undo" note (one at a time; fades after a few seconds).
+let undoTimer;
+function showUndo(text, k) {
+  document.querySelector('.undo-toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'undo-toast';
+  el.setAttribute('role', 'status');
+  const msg = document.createElement('span');
+  msg.textContent = `“${text}” moved to Done`;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.append(icon('arrow-counter-clockwise'), 'Undo');
+  btn.addEventListener('click', () => {
+    // Use the to-do as it is now (the list may have been re-read since).
+    const cur = todos.value.find((x, i) => keyOf(x, i) === k);
+    if (cur) update(cur, { done: false, doneAt: null });
+    el.remove();
+    document.body.classList.remove('has-undo');
+    focusAfter = [`#todo-${k}`];
+  });
+  el.append(msg, btn);
+  document.body.append(el);
+  document.body.classList.add('has-undo');   // other bottom notes step aside meanwhile
+  if (!reduceMotion()) el.animate([{ transform: 'translate(-50%, 16px)', opacity: 0 }, { transform: 'translate(-50%, 0)', opacity: 1 }], { duration: 200, easing: 'ease-out' });
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => {
+    if (!el.isConnected) return;
+    el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250 }).finished.then(() => { el.remove(); document.body.classList.remove('has-undo'); });
+  }, 4500);
+}
+
 function Row({ t, k }) {
   const id = `todo-${k}`;
   const tick = (e) => {
     const done = e.target.checked;
-    update(t, { done, doneAt: done ? Date.now() : null });   // when it was ticked, for Done's date groups
-    const doneClosed = !collapsed.value.has('done-open');
-    if (done && doneClosed) { movedHint.value = true; setTimeout(() => { movedHint.value = false; }, 2500); }
+    if (busy.has(k)) return;
+    if (!done) {   // unticking: straight back, no fuss
+      update(t, { done: false, doneAt: null });
+      focusAfter = [`#${id}`];
+      return;
+    }
     focusAfter = [`#${id}`, '[data-group="done"]'];   // keep the keyboard where it was
+    const doneClosed = !collapsed.value.has('done-open');
+    if (doneClosed && reduceMotion()) { movedHint.value = true; setTimeout(() => { movedHint.value = false; }, 2500); }
+    if (reduceMotion()) markDone(t, k);
+    else animateDone(e.target.closest('li'), t, k);
   };
   const hl = justEdited.value === k;
   return html`
