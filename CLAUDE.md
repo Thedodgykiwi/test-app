@@ -50,6 +50,14 @@ is a small file that calls the **shared** deploy in the app-playbook repo
 
 The repo's GitHub Issues are the to-do list (playbook `issues.md`; labels
 `bug`, `feature`, `tweak`, `performance`, `priority: high/low`).
+**Every request starts with a choice card** (playbook `issues.md`): for any
+feature, fix, tweak or idea, show the AskUserQuestion card with "Log it,
+build later" / "Log it + mock-up first" / "Build it now", recommended first,
+before doing anything (unless the user already said which).
+**Every bug the user reports or change they ask for gets an issue,
+automatically** (they don't need to say "log it"): create it with the right
+label before starting work, and put `Issue #<n>` in the commit. Small
+follow-ups to the same piece of work go on that issue, not a new one.
 **"Log it" means record only:** create the issue, don't change code. Fix
 later on `dev` with `Issue #<n>` (not "Fixes": the default branch is `dev`,
 so GitHub would close it on Dev) in the commit message; the Production
@@ -58,11 +66,10 @@ public: no client names, emails or private details.
 
 ## Concept first (for bigger ideas)
 
-Before building a **new feature or a noticeable change to how the app looks
-or works**, ask the user once whether they'd like a concept mock-up first.
-Offer it when there's more than one reasonable design, or the request is
-vague. Don't offer it for small tweaks ("make the button blue"), bug fixes or
-behind-the-scenes changes; just do those on `dev`.
+Offered through the choice card: "Log it + mock-up first" is the recommended
+option for a **new feature or a noticeable change** with more than one
+reasonable design, or a vague request; "Build it now" for small tweaks ("make
+the button blue"), bug fixes or behind-the-scenes changes.
 
 If they say yes:
 - Build a clickable mock-up as a Claude artifact, **not** in the repo. Show
@@ -97,8 +104,10 @@ If they say yes:
 ## Quality checklist (before pushing)
 
 - The app loads with no errors in the browser console.
-- Existing features still work: adding/toggling to-dos (and that
-  they persist after a reload), the "What's new" panel.
+- Existing features still work: adding/toggling/editing to-dos (and that
+  they persist after a reload, signed out and signed in), Done and its date
+  ranges, the "New:" bar and What's new (menu → version), theme, accent
+  colour, offline.
 - Layout works on a phone-sized screen (about 375px wide) as well as desktop.
 - Basic accessibility: buttons and inputs have clear labels, text has good
   contrast, everything works with the keyboard.
@@ -138,8 +147,9 @@ If they say yes:
   Cloud Firestore. Signed out, to-dos stay on the device exactly as before;
   signed in, they're saved to `users/{uid}/stages/{stage}/todos/{id}`
   (separate list per stage, same as browser storage).
-- Code: `sync.js` (ES module: sign-in, account menu, live sync, copying a
-  device's to-dos into the account on first sign-in). `app.js` exposes
+- Code: `app/store.js` (to-dos and saving; `window.TodoApp` hooks), `app/main.js`
+  (the to-do screen as Preact components), `sync.js` (ES module: sign-in, account menu, live sync, copying a
+  device's to-dos into the account on first sign-in). `app/store.js` exposes
   `window.TodoApp` hooks for it. The SDK loads from gstatic, pinned in `sync.js`.
 - `firebase-config.js` holds the web app settings (not secret). While it's
   `null`, sign-in is hidden and nothing talks to Firebase.
@@ -167,13 +177,26 @@ If they say yes:
 ## Notes
 
 - `stage.js` is overwritten per stage at deploy time; locally it says `local`.
-- Icons: **Phosphor Icons, duotone style only**, stored in `icons.js` (no CDN).
-  Use `icon('name')` in JS or `<span data-icon="name"></span>` in HTML. To add
-  one, copy the inside of its `<svg>` from `@phosphor-icons/core`
-  (`assets/duotone/<name>-duotone.svg`) into `ICON_PATHS`. Don't mix in emoji or
-  other icon sets for UI controls. Licence: `LICENSES/phosphor-icons.txt`.
+- **Look and layout (Nov 2026, from the playbook starter):** the starter's style
+  kit in `style.css` (top part; test-app's own rules are in the section at the
+  end), `menu.js` (menu: photo, theme, Settings with accent colour and text
+  size, version → What's new), `pwa.js` + `sw.js` (offline, install, "new
+  version" bar), `styleguide.html`; the to-do screen is Preact components (`app/`, libraries in `vendor/`).
+  Layout "B": one list sorted by priority with a coloured flag per row, Done
+  at the end, add bar fixed at the bottom. `whats-new.js` is only the "New:"
+  bar now; the panel is menu.js's. `sync.js` fills in the menu's account part.
+  When the starter's shared pieces improve, copy them over (they're app-owned copies).
+- Icons: **Phosphor Icons, Regular style only** (since the new look; home-screen
+  icons stay duotone), stored in `icons.js` (no CDN). Use `icon('name')` in JS or
+  `<span data-icon="name"></span>` in HTML. To add one, copy the inside of its
+  `<svg>` from `@phosphor-icons/core` (`assets/regular/<name>.svg`) into
+  `ICON_PATHS`. Don't mix in emoji or other icon sets for UI controls. Licence:
+  `LICENSES/phosphor-icons.txt`.
 - Home-screen (PWA) icons live in `icons/app/<stage>/`, one colour per stage,
-  generated by `tools/make-app-icons.js` (Phosphor "check-circle"). Files in
+  generated by the playbook's **shared** `tools/make-app-icons.js` (Phosphor
+  "check-circle", duotone): `node <playbook>/tools/make-app-icons.js --phosphor
+  <@phosphor-icons/core package> --glyph check-circle --weight duotone --out
+  icons/app` (playbook `pwa-icons.md`). Files in
   the repo point at `icons/app/local/` and say "Test App Local"; the deploy
   swaps in each stage's icons, name and theme colour. Don't hand-edit them.
 - **iOS 27 quirk:** Add to Home Screen ignores linked icon files and manifest
