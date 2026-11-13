@@ -324,13 +324,13 @@ body { display: block; padding: 1rem 1rem 6.5rem; }        /* room for the add b
 body.has-banner { padding-top: 3rem; }
 body.is-offline { padding-top: 4.5rem; }
 body.has-banner.is-offline { padding-top: 6rem; }
-.todo-page { width: min(560px, 100%); margin: 0 auto; display: grid; gap: .7rem; }
+.todo-page { width: min(560px, 100%); margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: .7rem; }   /* minmax(0,…): long one-line text (the "New:" bar) can't widen the page */
 .todo-page h1 { margin: .4rem 0 0; display: flex; align-items: center; gap: .5rem; font-size: 1.6rem; padding-right: 5.5rem; }
 .todo-page > .muted { margin: 0; padding-right: 3.6rem; }
 .wave { color: #e8890c; }
 
 /* "New: …" bar */
-.news { display: flex; align-items: center; gap: .3rem; padding: .25rem .25rem .25rem .7rem; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); font-size: .85rem; }
+.news { min-width: 0; display: flex; align-items: center; gap: .3rem; padding: .25rem .25rem .25rem .7rem; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); font-size: .85rem; }
 .news-open { flex: 1; min-width: 0; justify-content: flex-start; padding: .2rem 0; color: var(--text); }
 .news-open .ic { color: var(--accent); }
 .news-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
