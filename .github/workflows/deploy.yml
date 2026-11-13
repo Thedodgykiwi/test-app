@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write   # lets the shared deploy create a GitHub release for each Production release
+  issues: write     # lets the shared deploy keep the shared issue labels in place
   pages: write
   id-token: write
 
