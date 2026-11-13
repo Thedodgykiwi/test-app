@@ -383,7 +383,7 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .flag-btn:hover { background: var(--secondary); }
 .flag-btn .ic { width: 1.25em; height: 1.25em; }
 .flag-btn.p-high .word { color: var(--high); } .flag-btn.p-med .word { color: var(--med); } .flag-btn.p-low .word { color: var(--low); }
-.flag-btn.bump .ic { animation: bump .18s ease-out; }
+.flag-btn .ic.pop { animation: bump .18s ease-out; }
 @keyframes bump { 50% { transform: scale(1.25); } }
 .toast { bottom: 5.5rem; }
 .install-tip, .update-bar { bottom: 5.2rem; }
@@ -402,3 +402,6 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .done-divider::before, .done-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .done-divider:hover { color: var(--text); }
 .done-divider .chevron { width: 1em; height: 1em; }
+
+/* Icons inside Preact components (app/main.js) sit in a wrapper that adds no box */
+.icon-wrap { display: contents; }

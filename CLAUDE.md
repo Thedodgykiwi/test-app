@@ -144,8 +144,9 @@ If they say yes:
   Cloud Firestore. Signed out, to-dos stay on the device exactly as before;
   signed in, they're saved to `users/{uid}/stages/{stage}/todos/{id}`
   (separate list per stage, same as browser storage).
-- Code: `sync.js` (ES module: sign-in, account menu, live sync, copying a
-  device's to-dos into the account on first sign-in). `app.js` exposes
+- Code: `app/store.js` (to-dos and saving; `window.TodoApp` hooks), `app/main.js`
+  (the to-do screen as Preact components), `sync.js` (ES module: sign-in, account menu, live sync, copying a
+  device's to-dos into the account on first sign-in). `app/store.js` exposes
   `window.TodoApp` hooks for it. The SDK loads from gstatic, pinned in `sync.js`.
 - `firebase-config.js` holds the web app settings (not secret). While it's
   `null`, sign-in is hidden and nothing talks to Firebase.
@@ -177,7 +178,7 @@ If they say yes:
   kit in `style.css` (top part; test-app's own rules are in the section at the
   end), `menu.js` (menu: photo, theme, Settings with accent colour and text
   size, version → What's new), `pwa.js` + `sw.js` (offline, install, "new
-  version" bar), `styleguide.html` (+ `vendor/` Preact for future screens).
+  version" bar), `styleguide.html`; the to-do screen is Preact components (`app/`, libraries in `vendor/`).
   Layout "B": one list sorted by priority with a coloured flag per row, Done
   at the end, add bar fixed at the bottom. `whats-new.js` is only the "New:"
   bar now; the panel is menu.js's. `sync.js` fills in the menu's account part.
