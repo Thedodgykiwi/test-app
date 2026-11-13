@@ -107,6 +107,7 @@ footer { display: flex; justify-content: space-between; align-items: center; }
 .release:last-child { border-bottom: 0; }
 .release-meta { font-size: .78rem; color: #868e96; }
 .release-meta code { font-size: .75rem; }
+.release-version { font-weight: 600; color: #6c757d; }
 .release h3 { margin: .4rem 0 .3rem; font-size: 1.1rem; }
 .release h4 { margin: .9rem 0 .2rem; font-size: .95rem; }
 .release p { margin: .3rem 0; }
