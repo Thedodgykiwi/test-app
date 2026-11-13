@@ -50,6 +50,10 @@ is a small file that calls the **shared** deploy in the app-playbook repo
 
 The repo's GitHub Issues are the to-do list (playbook `issues.md`; labels
 `bug`, `feature`, `tweak`, `performance`, `priority: high/low`).
+**Every bug the user reports or change they ask for gets an issue,
+automatically** (they don't need to say "log it"): create it with the right
+label before starting work, and put `Issue #<n>` in the commit. Small
+follow-ups to the same piece of work go on that issue, not a new one.
 **"Log it" means record only:** create the issue, don't change code. Fix
 later on `dev` with `Issue #<n>` (not "Fixes": the default branch is `dev`,
 so GitHub would close it on Dev) in the commit message; the Production
