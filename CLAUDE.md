@@ -42,6 +42,9 @@ is a small file that calls the **shared** deploy in the app-playbook repo
 - Urgent production fixes ("hotfixes") are the only exception, and only when
   the user asks for one: fix on a branch from `main`, release it, then merge
   the fix back into `dev` so it isn't lost.
+- **Rollbacks** (undo the last Production release) use the promote skill's
+  `rollback` command only, with the user's "yes" and their reason (playbook
+  `stages-and-releases.md`).
 
 ## Issues (bugs, requests, tweaks)
 
