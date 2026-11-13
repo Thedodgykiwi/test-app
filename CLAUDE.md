@@ -43,6 +43,16 @@ is a small file that calls the **shared** deploy in the app-playbook repo
   the user asks for one: fix on a branch from `main`, release it, then merge
   the fix back into `dev` so it isn't lost.
 
+## Issues (bugs, requests, tweaks)
+
+The repo's GitHub Issues are the to-do list (playbook `issues.md`; labels
+`bug`, `feature`, `tweak`, `performance`, `priority: high/low`).
+**"Log it" means record only:** create the issue, don't change code. Fix
+later on `dev` with `Issue #<n>` (not "Fixes": the default branch is `dev`,
+so GitHub would close it on Dev) in the commit message; the Production
+release closes the issue automatically. This repo is public, so its issues are
+public: no client names, emails or private details.
+
 ## Concept first (for bigger ideas)
 
 Before building a **new feature or a noticeable change to how the app looks
