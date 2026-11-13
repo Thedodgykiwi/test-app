@@ -113,6 +113,12 @@ If they say yes:
   `window.TodoApp` hooks for it. The SDK loads from gstatic, pinned in `sync.js`.
 - `firebase-config.js` holds the web app settings (not secret). While it's
   `null`, sign-in is hidden and nothing talks to Firebase.
+- Set up: web app "Test App (web)" (`1:245899552801:web:698ea4d0a5a8c9d852db60`);
+  Firestore `(default)` database in `eur3` (Europe; can't be moved), Standard
+  edition, free tier, delete protection on; Google sign-in on, with
+  `thedodgykiwi.github.io` and `localhost` as authorised domains.
+- Keep Auth provider settings (they include a support email) out of
+  `firebase.json`: the repo is public.
 - Use the official Firebase agent skills (github.com/firebase/agent-skills)
   and the Firebase plugin/MCP server for Firebase work; run the CLI as
   `npx -y firebase-tools@latest`.
