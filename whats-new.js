@@ -66,9 +66,11 @@
           : r.pr ? `via pull request #${r.pr}` : `from ${from}`;
         const notes = /^##\s/.test(r.notes) ? r.notes : `## 📦 Update ${how}\n\n${r.notes}`;
         // A release that was later rolled back stays listed, faded and tagged.
+        // Production releases carry their version (same name as the GitHub release).
+        const version = r.version ? ` · <span class="release-version">${escapeHtml(r.version)}</span>` : '';
         const undone = r.rolled_back ? ' · <span class="rolled-back-tag">↩️ rolled back</span>' : '';
         return `<article class="release${r.rolled_back ? ' rolled-back' : ''}${r.from === 'rollback' ? ' rollback' : ''}">
-          <div class="release-meta">🗓️ ${formatDate(r.date)} · ${escapeHtml(how)} · <code>${escapeHtml(r.sha)}</code>${undone}</div>
+          <div class="release-meta">🗓️ ${formatDate(r.date)}${version} · ${escapeHtml(how)} · <code>${escapeHtml(r.sha)}</code>${undone}</div>
           ${markdown(notes)}
         </article>`;
       }).join('');
