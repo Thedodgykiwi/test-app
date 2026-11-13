@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # lets the shared deploy create a GitHub release for each Production release
   pages: write
   id-token: write
 
