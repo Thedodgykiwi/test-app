@@ -102,6 +102,29 @@ If they say yes:
 - When promoting by pull request on GitHub, the default target is `dev`;
   change the base branch, or use `compare/<destination>...<source>` links.
 
+## Firebase (sign-in and cloud to-dos)
+
+- Project: `test-app-52149`. Google sign-in (Firebase Authentication) plus
+  Cloud Firestore. Signed out, to-dos stay on the device exactly as before;
+  signed in, they're saved to `users/{uid}/stages/{stage}/todos/{id}`
+  (separate list per stage, same as browser storage).
+- Code: `sync.js` (ES module: sign-in, account menu, live sync, copying a
+  device's to-dos into the account on first sign-in). `app.js` exposes
+  `window.TodoApp` hooks for it. The SDK loads from gstatic, pinned in `sync.js`.
+- `firebase-config.js` holds the web app settings (not secret). While it's
+  `null`, sign-in is hidden and nothing talks to Firebase.
+- Use the official Firebase agent skills (github.com/firebase/agent-skills)
+  and the Firebase plugin/MCP server for Firebase work; run the CLI as
+  `npx -y firebase-tools@latest`.
+- Security rules: `firestore.rules` (owner-only, every field validated). After
+  changing them, re-run the rules tests and deploy with
+  `npx -y firebase-tools@latest deploy --only firestore:rules`.
+- Local testing without touching the real project: start the emulators with
+  `npx -y firebase-tools@latest emulators:start --only auth,firestore --project demo-test-app`
+  and open `http://localhost:8080/?emulators`.
+- Sign-in is shared by all stages (one web address), but each stage keeps its
+  own to-do list. Never delete users' cloud or device data without asking.
+
 ## Notes
 
 - `stage.js` is overwritten per stage at deploy time; locally it says `local`.
