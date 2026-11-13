@@ -186,8 +186,8 @@ If they say yes:
   end), `menu.js` (menu: photo, theme, Settings with accent colour and text
   size, version → What's new), `pwa.js` + `sw.js` (offline, install, "new
   version" bar), `styleguide.html`; the to-do screen is Preact components (`app/`, libraries in `vendor/`).
-  Layout "B": one list sorted by priority with a coloured flag per row, Done
-  at the end, add bar fixed at the bottom. `whats-new.js` is only the "New:"
+  Layout: a soft panel per priority (option D, Issue #19) with roomy rows, Done
+  at the end, add bar in a panel at the bottom (clear of the home bar). `whats-new.js` is only the "New:"
   bar now; the panel is menu.js's. `sync.js` fills in the menu's account part.
   When the starter's shared pieces improve, copy them over (they're app-owned copies).
 - Icons: **Phosphor Icons, Regular style only** (since the new look; home-screen

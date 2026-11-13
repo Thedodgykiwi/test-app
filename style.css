@@ -84,7 +84,8 @@ body.has-banner { padding-top: 3rem; }
 }
 
 /* App menu (menu.js) + Google sign-in (account.js): top-right corner */
-.account { position: fixed; top: .8rem; right: .8rem; z-index: 5; display: flex; align-items: flex-start; gap: .5rem; }
+.account { position: absolute; top: .8rem; right: .8rem; z-index: 5;   /* scrolls away with the page header, never covers the list */
+  display: flex; align-items: flex-start; gap: .5rem; }
 body.has-banner .account { top: 2.8rem; }
 .sign-in {
   padding: .35rem .7rem; font-size: .85rem; font-weight: 600;
@@ -417,3 +418,26 @@ body.has-banner.is-offline { padding-top: 6rem; }
 
 /* Icons inside Preact components (app/main.js) sit in a wrapper that adds no box */
 .icon-wrap { display: contents; }
+
+/* Issue #19: more room. Option D: a soft panel per priority with roomy rows;
+   option C's add panel at the bottom, clear of the phone's home bar. */
+.prio-groups { display: grid; gap: .9rem; }
+.prio-group { background: var(--secondary); border-radius: 16px; padding: .35rem .4rem .45rem; }
+.prio-head { display: flex; align-items: center; gap: .35rem; margin: 0; padding: .45rem .6rem .4rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.prio-head .ic { width: 1.05em; height: 1.05em; }
+.prio-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.prio-list > .todo { background: var(--surface); border-radius: 12px; padding: .85rem .9rem; gap: .85rem; }
+.prio-list .row-flag { display: none; }   /* the section already says the priority */
+.todo input[type="checkbox"] { width: 1.35rem; height: 1.35rem; border-radius: 6px; }
+.group-done .list > .todo { padding: .8rem .9rem; }
+.add-bar {
+  background: var(--surface); backdrop-filter: none; border-top: 1px solid var(--line);
+  border-radius: 20px 20px 0 0; box-shadow: 0 -6px 20px rgba(16,24,40,.08);
+  padding: .8rem 1rem calc(1.1rem + env(safe-area-inset-bottom));
+}
+:root[data-theme="dark"] .add-bar { box-shadow: 0 -6px 20px rgba(0,0,0,.35); }
+#todo-input { height: 2.9rem; border-radius: 12px; }
+.add-bar .btn.primary { height: 2.9rem; border-radius: 12px; padding: 0 1.1rem; }
+body { padding-bottom: 8rem; }
+.toast { bottom: 7rem; }
+.install-tip, .update-bar { bottom: 6.8rem; }

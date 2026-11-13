@@ -91,11 +91,18 @@ function TodoList() {
     const visible = (s) => s && [...document.querySelectorAll(`#todo-groups ${s}`)].find((n) => !n.closest('[hidden]'));
     (visible(sel) || visible(fallback))?.focus();
   });
-  const sorted = [...active].sort(([a, ia], [b, ib]) => LEVELS.indexOf(a.p) - LEVELS.indexOf(b.p) || ia - ib);
+  // Option D (Issue #19): a soft panel per priority, roomy rows inside.
+  const groups = LEVELS.map((p) => [p, active.filter(([t]) => t.p === p)]).filter(([, l]) => l.length);
   return html`
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
     ${all.length > 0 && !active.length && html`<p class="empty">All done. Nothing left to do!</p>`}
-    ${active.length > 0 && html`<ul class="todos list" id="todo-list">${sorted.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>`}
+    ${active.length > 0 && html`<div id="todo-list" class="prio-groups">
+      ${groups.map(([p, items]) => html`
+        <section class=${`prio-group prio-${p}`} key=${p} aria-label=${`${LABELS[p]}: ${items.length}`}>
+          <h2 class="prio-head"><${Icon} name="flag" cls=${`flag-${p}`} />${LABELS[p]} · ${items.length}</h2>
+          <ul class="todos prio-list">${items.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
+        </section>`)}
+    </div>`}
     ${done.length > 0 && html`<${DoneSection} done=${done} />`}
     ${movedHint.value && html`<p class="moved-hint">Moved to Done ↓</p>`}`;
 }
