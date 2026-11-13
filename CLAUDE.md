@@ -3,6 +3,19 @@
 A small static web app (plain HTML/CSS/JS, no build step) used to test
 building, previewing and releasing through stages on GitHub Pages.
 
+## Playbook
+
+General processes, design patterns and gotchas live in
+https://github.com/Thedodgykiwi/app-playbook. Before setting up anything it
+covers (new app, stages, deploys, Firebase, icons, design), attach that repo
+to the session and read its README and the relevant guide.
+
+**Keep the playbook growing.** Whenever work on this app teaches something
+that would help *any* app (a gotcha, a missing or wrong step, a setup
+process, a design or wording pattern that worked), update the right guide
+in the playbook in the same session, commit it to the playbook's `main`, and
+tell the user what was added. App-specific facts stay in this file instead.
+
 ## Stages and branches
 
 | Branch    | Stage      | URL                                              |
