@@ -33,7 +33,11 @@
     </div>
     <h1><span data-icon="hand-waving" class="wave"></span>Test App</h1>
     <p>If you can see this, the build &amp; preview pipeline works.</p>
-    <p class="new"><span data-icon="sparkle"></span>New in this release: stage promotion test.</p>
+    <!-- Latest release headline (filled in by whats-new.js); hidden until there is one, and after × until the next release -->
+    <div id="news" class="news" hidden>
+      <button type="button" id="news-open" class="news-open"><span data-icon="sparkle"></span><span class="news-text">New: <b id="news-headline"></b></span></button>
+      <button type="button" id="news-dismiss" class="news-x" aria-label="Dismiss what's new"><span data-icon="x"></span></button>
+    </div>
     <section id="todo-groups" aria-label="To-dos by priority"></section>
     <form id="todo-form">
       <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" maxlength="500" />
