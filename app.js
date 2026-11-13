@@ -210,12 +210,23 @@ function render(focusSelector, fallbackFocus, justTicked = false) {
   (visible(focusSelector) || visible(fallbackFocus))?.focus();
 }
 
-// Priority chips for new to-dos: tap to select, tap again to clear.
-const chips = document.querySelectorAll('#todo-form .chip');
-chips.forEach((chip) => chip.addEventListener('click', () => {
-  newPriority = newPriority === chip.dataset.p ? 'none' : chip.dataset.p;
-  chips.forEach((c) => c.setAttribute('aria-pressed', c.dataset.p === newPriority));
-}));
+// Priority for a new to-do: the flag in the entry box. Each tap moves to the
+// next one (none → Low → Medium → High → none); the flag takes the colour and
+// a short word shows beside it, so it doesn't rely on colour alone.
+const PRIORITY_CYCLE = ['none', 'low', 'med', 'high'];
+const flagBtn = document.getElementById('new-priority');
+function setNewPriority(p, bump = false) {
+  newPriority = p;
+  flagBtn.className = `flag-btn p-${p}`;
+  flagBtn.querySelector('.word').textContent = p === 'none' ? '' : LABELS[p];
+  flagBtn.querySelector('.ic').setAttribute('class', `ic flag-${p}`);
+  flagBtn.setAttribute('aria-label', `Priority for new to-do: ${LABELS[p]}. Tap to change`);
+  flagBtn.title = `Priority: ${LABELS[p]} (tap to change)`;
+  if (bump) { void flagBtn.offsetWidth; flagBtn.classList.add('bump'); } // replay the little pop
+}
+flagBtn.addEventListener('click', () => {
+  setNewPriority(PRIORITY_CYCLE[(PRIORITY_CYCLE.indexOf(newPriority) + 1) % PRIORITY_CYCLE.length], true);
+});
 
 document.getElementById('todo-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -227,6 +238,7 @@ document.getElementById('todo-form').addEventListener('submit', (e) => {
   // Open the section it went into, so the new to-do is visible.
   if (collapsed.delete(newPriority)) saveCollapsed();
   input.value = '';
+  setNewPriority('none'); // each new to-do starts with no priority
   render();
   input.focus();
 });

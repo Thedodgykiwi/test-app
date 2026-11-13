@@ -23,8 +23,22 @@ h1 .ic.wave { color: #e8890c; }
 .flag-high { color: var(--high); } .flag-med { color: var(--med); }
 .flag-low { color: var(--low); } .flag-none { color: var(--none); }
 .chip[aria-pressed="true"] .ic { color: #fff; }
-#todo-form { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
-#todo-input { flex: 1 1 160px; padding: .5rem; border: 1px solid #ccd; border-radius: 8px; font: inherit; }
+#todo-form { display: flex; gap: .5rem; margin-top: 1rem; }
+/* Entry box with the priority flag inside it (right end) */
+.entry { position: relative; flex: 1; min-width: 0; }
+#todo-input { width: 100%; padding: .55rem 6rem .55rem .6rem; border: 1px solid #ccd; border-radius: 8px; font: inherit; }
+.flag-btn {
+  all: unset; box-sizing: border-box; position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  height: 2rem; min-width: 2rem; padding: 0 .4rem; display: flex; align-items: center; justify-content: flex-end; gap: .25rem;
+  border-radius: 6px; cursor: pointer; font-size: .78rem; font-weight: 700; user-select: none;
+}
+.flag-btn:hover { background: #f1f3f5; }              /* overrides the global blue button:hover */
+.flag-btn:focus-visible { outline: 2px solid #3b5bdb; outline-offset: 1px; }
+.flag-btn .ic { width: 1.25em; height: 1.25em; }
+.flag-btn .word { min-width: 3.6em; text-align: right; }
+.flag-btn.p-high .word { color: #c92a2a; } .flag-btn.p-med .word { color: #c2410c; } .flag-btn.p-low .word { color: #237032; }
+.flag-btn.bump .ic { animation: bump .18s ease-out; }
+@keyframes bump { 50% { transform: scale(1.25); } }
 
 /* Priority colours */
 :root { --high: #e03131; --med: #d9480f; --low: #2f9e44; --none: #adb5bd; }

@@ -40,11 +40,10 @@
     </div>
     <section id="todo-groups" aria-label="To-dos by priority"></section>
     <form id="todo-form">
-      <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" maxlength="500" />
-      <div class="chips" role="group" aria-label="Priority for new to-do">
-        <button type="button" class="chip high" data-p="high" aria-pressed="false"><span data-icon="flag" class="flag-high"></span>High</button>
-        <button type="button" class="chip med" data-p="med" aria-pressed="false"><span data-icon="flag" class="flag-med"></span>Medium</button>
-        <button type="button" class="chip low" data-p="low" aria-pressed="false"><span data-icon="flag" class="flag-low"></span>Low</button>
+      <div class="entry">
+        <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" maxlength="500" />
+        <!-- Priority for the new to-do: each tap moves none → Low → Medium → High → none -->
+        <button type="button" id="new-priority" class="flag-btn p-none" aria-label="Priority for new to-do: No priority. Tap to change" title="Priority: No priority (tap to change)"><span class="word"></span><span data-icon="flag" class="flag-none"></span></button>
       </div>
       <button type="submit"><span data-icon="plus"></span>Add</button>
     </form>
