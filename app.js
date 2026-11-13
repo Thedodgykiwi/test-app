@@ -13,9 +13,28 @@ const LEVELS = ['high', 'med', 'low', 'none'];
 const LABELS = { high: 'High', med: 'Medium', low: 'Low', none: 'No priority' };
 
 // Older saved to-dos have no priority: keep them and treat them as 'none'.
-const todos = JSON.parse(localStorage.getItem(storageKey) || '[]')
+const loadLocal = () => JSON.parse(localStorage.getItem(storageKey) || '[]')
   .map((t) => ({ ...t, p: LEVELS.includes(t.p) ? t.p : 'none' }));
-const save = () => localStorage.setItem(storageKey, JSON.stringify(todos));
+let todos = loadLocal();
+
+// Signed in last time? Wait for the account's list instead of flashing this
+// device's list first. If sign-in can't load (e.g. offline), fall back.
+let loading = !!window.FIREBASE_CONFIG && localStorage.getItem('signed-in') === '1';
+if (loading) {
+  todos = [];
+  setTimeout(() => { if (loading && !cloud) window.TodoApp.useLocal(); }, 5000);
+}
+
+// Where to-dos are saved: this device (localStorage) unless sync.js has
+// signed the user in, in which case `cloud` saves to their Firebase account.
+let cloud = null;
+const save = () => { if (!cloud && !loading) localStorage.setItem(storageKey, JSON.stringify(todos)); };
+
+// Change a to-do (done / priority) and save it wherever it lives.
+function update(t, changes) {
+  Object.assign(t, changes);
+  if (cloud) cloud.update(t, changes); else save();
+}
 
 const groupsEl = document.getElementById('todo-groups');
 let newPriority = 'none';
@@ -34,9 +53,10 @@ function el(tag, props = {}, ...children) {
 }
 
 function todoRow(t, index) {
-  const id = `todo-${index}`;
+  const key = t.id || index; // cloud to-dos have a stable id
+  const id = `todo-${key}`;
   const checkbox = el('input', { type: 'checkbox', id, checked: t.done });
-  checkbox.addEventListener('change', () => { t.done = checkbox.checked; save(); render(`#${id}`); });
+  checkbox.addEventListener('change', () => { update(t, { done: checkbox.checked }); render(`#${id}`); });
 
   const level = LEVELS.indexOf(t.p);
   const move = (delta, dir) => {
@@ -47,11 +67,11 @@ function todoRow(t, index) {
     });
     btn.setAttribute('aria-label', `${dir === 'up' ? 'Raise' : 'Lower'} priority of “${t.text}”`);
     btn.append(icon(dir === 'up' ? 'arrow-up' : 'arrow-down'));
-    btn.dataset.focus = `${dir}-${index}`;
+    btn.dataset.focus = `${dir}-${key}`;
     btn.addEventListener('click', () => {
-      t.p = LEVELS[level + delta]; save();
+      update(t, { p: LEVELS[level + delta] });
       // If it moved into a collapsed section, focus that section's heading instead.
-      render(`[data-focus="${dir}-${index}"]:not(:disabled)`, `[data-group="${t.p}"]`);
+      render(`[data-focus="${dir}-${key}"]:not(:disabled)`, `[data-group="${t.p}"]`);
     });
     return btn;
   };
@@ -65,7 +85,8 @@ function todoRow(t, index) {
 function render(focusSelector, fallbackFocus) {
   groupsEl.replaceChildren();
   if (!todos.length) {
-    groupsEl.append(el('p', { className: 'empty', textContent: 'No to-dos yet. Add one below.' }));
+    const msg = loading ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.';
+    groupsEl.append(el('p', { className: 'empty', textContent: msg }));
   }
   for (const p of LEVELS) {
     // Keep each to-do's position in the saved list so its controls stay stable.
@@ -106,15 +127,35 @@ document.getElementById('todo-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = document.getElementById('todo-input');
   const text = input.value.trim();
-  if (!text) return;
-  todos.push({ text, done: false, p: newPriority });
+  if (!text || (loading && !cloud)) return; // wait until we know which list to add to
+  const item = { text, done: false, p: newPriority };
+  if (cloud) cloud.add(item); else { todos.push(item); save(); }
   // Open the section it went into, so the new to-do is visible.
   if (collapsed.delete(newPriority)) saveCollapsed();
   input.value = '';
-  save(); render();
+  render();
   input.focus();
 });
 render();
+
+// Hooks for sync.js (Firebase sign-in and cloud saving).
+window.TodoApp = {
+  stage: window.STAGE || 'local',
+  localTodos: loadLocal,
+  // Signed in: show the account's to-dos and save changes through `api`.
+  useCloud(api) { cloud = api; todos = []; loading = true; render(); },
+  // New to-dos from the account (live updates): redraw, keeping keyboard focus.
+  setTodos(list) {
+    const a = document.activeElement;
+    const sel = !groupsEl.contains(a) ? null
+      : a.id ? `#${a.id}`
+      : a.dataset.focus ? `[data-focus="${a.dataset.focus}"]:not(:disabled)`
+      : a.dataset.group ? `[data-group="${a.dataset.group}"]` : null;
+    todos = list; loading = false; render(sel);
+  },
+  // Signed out: back to the to-dos saved on this device.
+  useLocal() { cloud = null; todos = loadLocal(); loading = false; render(); },
+};
 
 const stage = window.STAGE || 'local';
 document.getElementById('build').textContent = stage;
