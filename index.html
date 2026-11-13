@@ -35,25 +35,49 @@
     <p>If you can see this, the build &amp; preview pipeline works.</p>
     <!-- Latest release headline (filled in by whats-new.js); hidden until there is one, and after × until the next release -->
     <div id="news" class="news" hidden>
-      <button type="button" id="news-open" class="news-open"><span data-icon="sparkle"></span><span class="news-text">New: <b id="news-headline"></b></span></button>
+      <button type="button" id="news-open" class="news-open"><span data-icon="sparkle"></span><span class="news-text"><span id="news-label">New:</span> <b id="news-headline"></b></span></button>
       <button type="button" id="news-dismiss" class="news-x" aria-label="Dismiss what's new"><span data-icon="x"></span></button>
     </div>
     <section id="todo-groups" aria-label="To-dos by priority"></section>
     <form id="todo-form">
-      <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" maxlength="500" />
-      <div class="chips" role="group" aria-label="Priority for new to-do">
-        <button type="button" class="chip high" data-p="high" aria-pressed="false"><span data-icon="flag" class="flag-high"></span>High</button>
-        <button type="button" class="chip med" data-p="med" aria-pressed="false"><span data-icon="flag" class="flag-med"></span>Medium</button>
-        <button type="button" class="chip low" data-p="low" aria-pressed="false"><span data-icon="flag" class="flag-low"></span>Low</button>
+      <div class="entry">
+        <input id="todo-input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" maxlength="500" />
+        <!-- Priority for the new to-do: each tap moves none → Low → Medium → High → none -->
+        <button type="button" id="new-priority" class="flag-btn p-none" aria-label="Priority for new to-do: No priority. Tap to change" title="Priority: No priority (tap to change)"><span class="word"></span><span data-icon="flag" class="flag-none"></span></button>
       </div>
       <button type="submit"><span data-icon="plus"></span>Add</button>
     </form>
     <footer>
       <span>Build: <span id="build">local</span></span>
-      <button type="button" id="whats-new-btn" class="link-btn"><span data-icon="sparkle"></span>What's new</button>
+      <span class="footer-links">
+        <!-- Pipeline page (built by the shared deploy): hidden on local copies, where it doesn't exist -->
+        <a id="pipeline-link" class="link-btn" href="pipeline/" hidden><span data-icon="kanban"></span>Pipeline</a>
+        <button type="button" id="whats-new-btn" class="link-btn"><span data-icon="sparkle"></span>What's new</button>
+      </span>
     </footer>
   </main>
   <script src="stage.js"></script>
+  <!-- Edit to-do: a sheet sliding up on phones, a centred card on wider screens -->
+  <dialog id="edit-todo" aria-labelledby="edit-todo-title">
+    <form id="edit-form" class="edit-form" method="dialog">
+      <div class="grab" aria-hidden="true"></div>
+      <h2 id="edit-todo-title">Edit to-do</h2>
+      <label for="edit-text" class="field-label">To-do</label>
+      <textarea id="edit-text" rows="2" maxlength="500" required></textarea>
+      <span class="field-label" id="edit-priority-label">Priority</span>
+      <div class="chips" role="group" aria-labelledby="edit-priority-label">
+        <button type="button" class="chip high" data-p="high" aria-pressed="false"><span data-icon="flag" class="flag-high"></span>High</button>
+        <button type="button" class="chip med" data-p="med" aria-pressed="false"><span data-icon="flag" class="flag-med"></span>Medium</button>
+        <button type="button" class="chip low" data-p="low" aria-pressed="false"><span data-icon="flag" class="flag-low"></span>Low</button>
+        <button type="button" class="chip none" data-p="none" aria-pressed="false"><span data-icon="flag" class="flag-none"></span>None</button>
+      </div>
+      <div class="edit-actions">
+        <button type="button" id="edit-cancel" class="secondary-btn">Cancel</button>
+        <button type="submit" id="edit-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="whats-new" aria-labelledby="whats-new-title">
     <header>
       <h2 id="whats-new-title"><span data-icon="sparkle"></span><span id="whats-new-title-text">What's new</span></h2>

@@ -119,8 +119,10 @@
       const data = await res.json();
       // Released stages: the latest release. Dev has no release notes, so it
       // shows its most recent change instead (as its "What's new" does).
-      const latest = (data.releases || []).find((r) => r.from !== 'rollback')
-        || (data.recent || []).map((c) => ({ sha: c.sha, notes: c.title }))[0];
+      const release = (data.releases || []).find((r) => r.from !== 'rollback');
+      const latest = release || (data.recent || []).map((c) => ({ sha: c.sha, notes: c.title }))[0];
+      // Dev shows work in progress, not a release: label it honestly.
+      if (!release) document.getElementById('news-label').textContent = 'Latest change:';
       if (!latest || localStorage.getItem(dismissKey) === latest.sha) return;
       const headline = headlineOf(latest.notes || '');
       if (!headline) return;
