@@ -20,7 +20,6 @@ button { display: inline-flex; align-items: center; justify-content: center; gap
 .ic { width: 1.2em; height: 1.2em; flex: none; }
 h1 { display: flex; align-items: center; gap: .5rem; }
 h1 .ic.wave { color: #e8890c; }
-.new { display: flex; align-items: center; gap: .4rem; }
 .flag-high { color: var(--high); } .flag-med { color: var(--med); }
 .flag-low { color: var(--low); } .flag-none { color: var(--none); }
 .chip[aria-pressed="true"] .ic { color: #fff; }
@@ -80,7 +79,23 @@ footer { margin-top: 1.5rem; font-size: .8rem; color: #777; }
 .stage-dev     { background: #7048e8; }
 .stage-staging { background: #e67700; }
 .stage-local   { background: #495057; }
-.new { background: #ebfbee; color: #2b8a3e; padding: .5rem .75rem; border-radius: 8px; }
+/* Slim "New: <latest release headline>" bar with a dismiss button */
+.news {
+  display: flex; align-items: center; gap: .35rem; margin: 0 0 .75rem;
+  background: #ebfbee; color: #237032; border: 1px solid rgba(35, 112, 50, .4); /* faint outline in the text's green; text 5.5:1 */
+  border-radius: 8px; padding: .15rem .25rem .15rem .6rem; font-size: .85rem;
+}
+.news-open {
+  all: unset; cursor: pointer; flex: 1; min-width: 0; display: flex; align-items: center; gap: .35rem;
+  padding: .25rem 0; border-radius: 6px;
+}
+.news-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.news-x {
+  all: unset; cursor: pointer; flex: none; display: inline-grid; place-items: center;
+  width: 1.75rem; height: 1.75rem; border-radius: 50%; color: #237032;
+}
+.news-x:hover { background: #d3f9d8; }
+.news-open:focus-visible, .news-x:focus-visible { outline: 2px solid #237032; outline-offset: 2px; }
 
 footer { display: flex; justify-content: space-between; align-items: center; }
 .link-btn {
