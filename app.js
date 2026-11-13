@@ -1,3 +1,10 @@
+let count = 0;
+const counterText = document.getElementById('counter-text');
+document.getElementById('counter').addEventListener('click', () => {
+  count++;
+  counterText.textContent = `Clicked ${count} time${count === 1 ? '' : 's'}`;
+});
+
 // Stages share one origin on GitHub Pages, so keep each stage's data separate.
 const storageKey = `todos-${window.STAGE || 'local'}`;
 
