@@ -100,6 +100,39 @@
   }
 
   document.getElementById('whats-new-btn').addEventListener('click', open);
+
+  // Slim "New: …" bar under the welcome text: the latest release's headline
+  // (first bold bullet in its notes). Clicking opens the panel; × hides it
+  // until the next release (remembered per stage, like everything stored).
+  const news = document.getElementById('news');
+  const dismissKey = `news-dismissed-${stage}`;
+  const headlineOf = (notes) => {
+    const bold = notes.match(/^\s*[-*]\s+\*\*(.+?)\*\*/m);
+    if (bold) return bold[1];
+    const line = notes.split('\n').find((l) => l.trim() && !/^#/.test(l.trim()));
+    return line ? line.replace(/\s*\(#\d+\)/g, '').trim() : '';
+  };
+  (async () => {
+    try {
+      const res = await fetch('releases.json', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      // Released stages: the latest release. Dev has no release notes, so it
+      // shows its most recent change instead (as its "What's new" does).
+      const latest = (data.releases || []).find((r) => r.from !== 'rollback')
+        || (data.recent || []).map((c) => ({ sha: c.sha, notes: c.title }))[0];
+      if (!latest || localStorage.getItem(dismissKey) === latest.sha) return;
+      const headline = headlineOf(latest.notes || '');
+      if (!headline) return;
+      document.getElementById('news-headline').textContent = headline;
+      news.hidden = false;
+      document.getElementById('news-dismiss').addEventListener('click', () => {
+        localStorage.setItem(dismissKey, latest.sha);
+        news.hidden = true;
+      });
+    } catch { /* no notes (e.g. local copy): just leave it hidden */ }
+  })();
+  document.getElementById('news-open').addEventListener('click', open);
   document.getElementById('whats-new-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
 })();
