@@ -45,6 +45,58 @@ function el(tag, props = {}, ...children) {
   return node;
 }
 
+// Edit to-do sheet. Opening it only adds the panel: the list behind is
+// left alone (no redraw, no scroll jump). The list redraws on Save only.
+const editDialog = document.getElementById('edit-todo');
+const editText = document.getElementById('edit-text');
+const editChips = editDialog.querySelectorAll('.chip');
+let editing = null;      // { t, key, p } while the sheet is open
+let justEdited = null;   // row to highlight briefly after saving
+editChips.forEach((chip) => chip.addEventListener('click', () => {
+  editing.p = chip.dataset.p;
+  editChips.forEach((c) => c.setAttribute('aria-pressed', c === chip));
+}));
+function openEditor(t, key) {
+  editing = { t, key, p: t.p };
+  editText.value = t.text;
+  editChips.forEach((c) => c.setAttribute('aria-pressed', c.dataset.p === t.p));
+  editDialog.showModal();
+  editText.focus({ preventScroll: true });
+  editText.setSelectionRange(editText.value.length, editText.value.length);
+}
+function closeEditor() {
+  if (editDialog.open) editDialog.close();
+}
+editDialog.addEventListener('close', () => {
+  const key = editing?.key;
+  editing = null;
+  // Back to the row that was being edited (it may have moved group).
+  const row = groupsEl.querySelector(`[data-edit="${key}"]`);
+  if (row && !row.closest('[hidden]')) row.focus({ preventScroll: true });
+});
+document.getElementById('edit-cancel').addEventListener('click', closeEditor);
+editDialog.addEventListener('click', (e) => { if (e.target === editDialog) closeEditor(); }); // tap outside
+document.getElementById('edit-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const { key, p } = editing;
+  // Use the to-do as it is now: the list may have been re-read while the
+  // sheet was open (e.g. the sign-in check just after loading, or a live
+  // update from another device), which replaces the to-do objects.
+  const t = todos.find((x, i) => (x.id || i) === key) || editing.t;
+  const text = editText.value.trim().slice(0, 500);
+  const changes = {};
+  if (text && text !== t.text) changes.text = text;
+  if (p !== t.p) changes.p = p;
+  if (Object.keys(changes).length) {
+    update(t, changes);
+    // Moved into a closed section? Open it so the edited to-do is visible.
+    if (changes.p && collapsed.delete(changes.p)) saveCollapsed();
+    justEdited = key;
+    render();
+  }
+  closeEditor();
+});
+
 function todoRow(t, index) {
   const key = t.id || index; // cloud to-dos have a stable id
   const id = `todo-${key}`;
@@ -56,32 +108,17 @@ function todoRow(t, index) {
     render(`#${id}`, '[data-group="done"]', checkbox.checked);
   });
 
-  const level = LEVELS.indexOf(t.p);
-  const move = (delta, dir) => {
-    const btn = el('button', {
-      type: 'button', className: 'icon-btn',
-      disabled: level + delta < 0 || level + delta >= LEVELS.length,
-      title: dir === 'up' ? 'Raise priority' : 'Lower priority',
-    });
-    btn.setAttribute('aria-label', `${dir === 'up' ? 'Raise' : 'Lower'} priority of “${t.text}”`);
-    btn.append(icon(dir === 'up' ? 'arrow-up' : 'arrow-down'));
-    btn.dataset.focus = `${dir}-${key}`;
-    btn.addEventListener('click', () => {
-      update(t, { p: LEVELS[level + delta] });
-      // If it moved into a collapsed section, focus that section's heading instead.
-      render(`[data-focus="${dir}-${key}"]:not(:disabled)`, `[data-group="${t.p}"]`);
-    });
-    return btn;
-  };
-
   // Done items show which priority they came from (unticking sends them back).
-  const side = t.done
-    ? el('span', { className: 'from-p', title: `Priority: ${LABELS[t.p]}` }, icon('flag', `flag-${t.p}`), LABELS[t.p])
-    : el('span', { className: 'move' }, move(-1, 'up'), move(1, 'down'));
-  return el('li', { className: t.done ? 'todo done' : 'todo' },
-    checkbox,
-    el('label', { htmlFor: id, className: 'text', textContent: t.text }),
-    side);
+  // The text opens the editor (change wording or priority).
+  const open = el('button', { type: 'button', className: 'text', textContent: t.text });
+  open.dataset.edit = key;
+  open.setAttribute('aria-label', `Edit “${t.text}”`);
+  open.addEventListener('click', () => openEditor(t, key));
+  checkbox.setAttribute('aria-label', `Done: ${t.text}`);
+  const li = el('li', { className: t.done ? 'todo done' : 'todo' }, checkbox, open);
+  if (t.done) li.append(el('span', { className: 'from-p', title: `Priority: ${LABELS[t.p]}` }, icon('flag', `flag-${t.p}`), LABELS[t.p]));
+  if (justEdited === key) { li.classList.add('just-edited'); justEdited = null; }
+  return li;
 }
 
 // Done to-dos are grouped by when they were ticked. Ones ticked before this
@@ -173,12 +210,23 @@ function render(focusSelector, fallbackFocus, justTicked = false) {
   (visible(focusSelector) || visible(fallbackFocus))?.focus();
 }
 
-// Priority chips for new to-dos: tap to select, tap again to clear.
-const chips = document.querySelectorAll('#todo-form .chip');
-chips.forEach((chip) => chip.addEventListener('click', () => {
-  newPriority = newPriority === chip.dataset.p ? 'none' : chip.dataset.p;
-  chips.forEach((c) => c.setAttribute('aria-pressed', c.dataset.p === newPriority));
-}));
+// Priority for a new to-do: the flag in the entry box. Each tap moves to the
+// next one (none → Low → Medium → High → none); the flag takes the colour and
+// a short word shows beside it, so it doesn't rely on colour alone.
+const PRIORITY_CYCLE = ['none', 'low', 'med', 'high'];
+const flagBtn = document.getElementById('new-priority');
+function setNewPriority(p, bump = false) {
+  newPriority = p;
+  flagBtn.className = `flag-btn p-${p}`;
+  flagBtn.querySelector('.word').textContent = p === 'none' ? '' : LABELS[p];
+  flagBtn.querySelector('.ic').setAttribute('class', `ic flag-${p}`);
+  flagBtn.setAttribute('aria-label', `Priority for new to-do: ${LABELS[p]}. Tap to change`);
+  flagBtn.title = `Priority: ${LABELS[p]} (tap to change)`;
+  if (bump) { void flagBtn.offsetWidth; flagBtn.classList.add('bump'); } // replay the little pop
+}
+flagBtn.addEventListener('click', () => {
+  setNewPriority(PRIORITY_CYCLE[(PRIORITY_CYCLE.indexOf(newPriority) + 1) % PRIORITY_CYCLE.length], true);
+});
 
 document.getElementById('todo-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -190,6 +238,7 @@ document.getElementById('todo-form').addEventListener('submit', (e) => {
   // Open the section it went into, so the new to-do is visible.
   if (collapsed.delete(newPriority)) saveCollapsed();
   input.value = '';
+  setNewPriority('none'); // each new to-do starts with no priority
   render();
   input.focus();
 });
@@ -206,7 +255,7 @@ window.TodoApp = {
     const a = document.activeElement;
     const sel = !groupsEl.contains(a) ? null
       : a.id ? `#${a.id}`
-      : a.dataset.focus ? `[data-focus="${a.dataset.focus}"]:not(:disabled)`
+      : a.dataset.edit ? `[data-edit="${a.dataset.edit}"]`
       : a.dataset.group ? `[data-group="${a.dataset.group}"]` : null;
     todos = list; loading = false; render(sel);
   },
@@ -216,6 +265,12 @@ window.TodoApp = {
 
 const stage = window.STAGE || 'local';
 document.getElementById('build').textContent = stage;
+// The pipeline page lives once, at the site root (…/<repo>/pipeline/).
+const pipelineLink = document.getElementById('pipeline-link');
+if (stage !== 'local') {
+  pipelineLink.href = stage === 'main' ? 'pipeline/' : '../pipeline/';
+  pipelineLink.hidden = false;
+}
 if (stage !== 'main') {
   const banner = document.getElementById('stage-banner');
   banner.textContent = `${stage.toUpperCase()} environment`;
