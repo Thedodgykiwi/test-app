@@ -25,7 +25,9 @@ tell the user what was added. App-specific facts stay in this file instead.
 | `staging` | Staging    | https://thedodgykiwi.github.io/test-app/staging/ |
 | `main`    | Production | https://thedodgykiwi.github.io/test-app/         |
 
-Any push to one of these branches redeploys the site (`.github/workflows/deploy.yml`).
+Any push to one of these branches redeploys the site. `.github/workflows/deploy.yml`
+is a small file that calls the **shared** deploy in the app-playbook repo
+(`.github/workflows/deploy-stages.yml`); change the deploy steps there, not here.
 
 ## Rules
 
@@ -33,7 +35,8 @@ Any push to one of these branches redeploys the site (`.github/workflows/deploy.
   on `dev` and up to date (`git checkout dev && git pull`). If you find
   yourself on another branch, switch to `dev` before changing anything.
 - **Never commit or push directly to `alpha`, `staging` or `main`.** Changes
-  reach them only through the `promote` skill (`.claude/skills/promote/`),
+  reach them only through the `promote` skill (shared, in the app-playbook repo:
+  attach the playbook to use it; there's no copy in this repo),
   one stage at a time: dev → alpha → staging → main.
 - **Production (`main`) needs the user's explicit "yes"** for each release.
 - Urgent production fixes ("hotfixes") are the only exception, and only when
