@@ -20,12 +20,13 @@ Each stage is a branch and gets its own URL on GitHub Pages:
 
 Changes are promoted one stage at a time: `dev` → `alpha` → `staging` → `main`,
 either with a pull request on GitHub or by asking Claude to run the `promote` skill
-(`.claude/skills/promote/`), e.g. "promote to alpha" or "what's waiting to be promoted?".
+(shared from the app-playbook repo), e.g. "promote to alpha" or "what's waiting to be promoted?".
 Non-production stages show a coloured banner so they can't be mistaken for production.
 
 ## Deploy
 
-Pushing to any stage branch runs `.github/workflows/deploy.yml`, which rebuilds the
+Pushing to any stage branch runs `.github/workflows/deploy.yml`, which calls the shared
+deploy in the app-playbook repo. It rebuilds the
 site from the latest commit of every stage branch and publishes it to GitHub Pages.
 
 One-time setup:
