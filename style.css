@@ -381,6 +381,9 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .row-flag .ic { width: 1.15em; height: 1.15em; }
 .todo.just-edited > .todo-row { animation: edited 1.2s ease-out; }
 @keyframes edited { from { background: color-mix(in srgb, var(--accent) 18%, transparent); } to { background: transparent; } }
+/* Rows in the priority panels sit on the gold swipe layer: fade to the card colour, never see-through (Issue #23). */
+.prio-list > .todo.just-edited > .todo-row { animation-name: edited-card; }
+@keyframes edited-card { from { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); } to { background: var(--surface); } }
 
 /* Done (closed by default) and its date ranges */
 .group h2, .done-range h3 { margin: 0 0 .35rem; }
