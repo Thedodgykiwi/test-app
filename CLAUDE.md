@@ -54,6 +54,8 @@ The repo's GitHub Issues are the to-do list (playbook `issues.md`; labels
 feature, fix, tweak or idea, show the AskUserQuestion card with "Log it,
 build later" / "Log it + mock-up first" / "Build it now", recommended first,
 before doing anything (unless the user already said which).
+**Every issue uses the playbook's layout** (`issues.md`, "Writing a good issue":
+What's happening / wanted, Where, Expected, Reported by, Notes).
 **Every bug the user reports or change they ask for gets an issue,
 automatically** (they don't need to say "log it"): create it with the right
 label before starting work, and put `Issue #<n>` in the commit. Small
@@ -100,6 +102,8 @@ If they say yes:
   failed.
 - End each piece of work with its status: what changed, whether it's
   committed and pushed, and where to see it.
+- **Every deploy ends with a link:** the full, clickable address of each stage
+  that changed (pushed to Dev or promoted), plus one line on what to look at.
 
 ## Quality checklist (before pushing)
 
@@ -182,8 +186,8 @@ If they say yes:
   end), `menu.js` (menu: photo, theme, Settings with accent colour and text
   size, version → What's new), `pwa.js` + `sw.js` (offline, install, "new
   version" bar), `styleguide.html`; the to-do screen is Preact components (`app/`, libraries in `vendor/`).
-  Layout "B": one list sorted by priority with a coloured flag per row, Done
-  at the end, add bar fixed at the bottom. `whats-new.js` is only the "New:"
+  Layout: a soft panel per priority (option D, Issue #19) with roomy rows, Done
+  at the end, add bar in a panel at the bottom (clear of the home bar). `whats-new.js` is only the "New:"
   bar now; the panel is menu.js's. `sync.js` fills in the menu's account part.
   When the starter's shared pieces improve, copy them over (they're app-owned copies).
 - Icons: **Phosphor Icons, Regular style only** (since the new look; home-screen
@@ -206,4 +210,5 @@ If they say yes:
   delete and re-add the home-screen shortcut to see it.
 - Browser storage is kept separate per stage (`todos-<stage>` keys).
 - Release notes: written once when promoting to Alpha, reused for later
-  stages, and shown in the app's "📋 What's new" panel.
+  stages, and shown in What's new (menu → version). Dev shows its changes by
+  day instead (up to 200, built by the playbook's shared release-notes script).

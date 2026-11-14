@@ -118,7 +118,8 @@
        Done at the end, and the add bar fixed at the bottom, in thumb reach. -->
   <main id="app" class="todo-page" aria-label="Test App">
     <h1><span data-icon="hand-waving" class="wave"></span>Test App</h1>
-    <p class="muted">If you can see this, the build &amp; preview pipeline works.</p>
+    <!-- Live summary of the list ("3 to do · 2 done today"), drawn by app/main.js -->
+    <p id="summary" class="muted" aria-live="polite"></p>
     <!-- Latest release headline (whats-new.js); hidden until there is one, and after × until the next release -->
     <div id="news" class="news" hidden>
       <button type="button" id="news-open" class="news-open"><span data-icon="sparkle"></span><span class="news-text"><span id="news-label">New:</span> <b id="news-headline"></b></span></button>
@@ -151,9 +152,9 @@
     <span>A new version is ready.</span><button type="button" id="update-reload">Reload</button>
   </div>
 
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script src="stage.js"></script>
   <script src="icons.js"></script>
+  <script src="toast.js"></script>
   <script src="firebase-config.js"></script>
   <script src="menu.js"></script>
   <script src="pwa.js"></script>
