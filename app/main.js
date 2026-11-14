@@ -30,6 +30,37 @@ function doneRange(t, now = new Date()) {
   return 'older';
 }
 
+
+// ---- Due dates (Issue #23) -------------------------------------------------
+// A to-do can have a due date ('YYYY-MM-DD', local day). On the day it moves
+// into a purple "Due today" panel at the top; after it, if still not done,
+// into a red "Overdue" panel above that. Its priority flag shows instead.
+const pad = (n) => String(n).padStart(2, '0');
+const isoDay = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseDay = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d); };
+const today = signal(isoDay(new Date()));   // re-checked when the app comes back into view
+const recheckDay = () => { const t = isoDay(new Date()); if (t !== today.value) today.value = t; };
+document.addEventListener('visibilitychange', recheckDay);
+setInterval(recheckDay, 60 * 1000);
+const validDue = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const daysUntil = (v) => Math.round((parseDay(v) - parseDay(today.value)) / 864e5);
+function dueState(t) {
+  if (t.done || !validDue(t.due)) return null;
+  const n = daysUntil(t.due);
+  return n < 0 ? 'overdue' : n === 0 ? 'today' : 'upcoming';
+}
+function dueLabel(v) {
+  const n = daysUntil(v);
+  if (n < 0) return `Overdue · ${-n} day${n === -1 ? '' : 's'}`;
+  if (n === 0) return 'Due today';
+  if (n === 1) return 'Due tomorrow';
+  const d = parseDay(v), wd = d.toLocaleDateString(undefined, { weekday: 'short' });
+  if (n < 7) return `Due ${wd} ${d.getDate()}`;   // "Due Tue 17"
+  const mon = d.toLocaleDateString(undefined, { month: 'short' });
+  return `Due ${wd} ${d.getDate()} ${mon}${d.getFullYear() !== parseDay(today.value).getFullYear() ? ` ${d.getFullYear()}` : ''}`;
+}
+const DUE_ICON = { overdue: 'warning', today: 'clock', upcoming: 'calendar-blank' };
+
 // ---- Ticking off (Issue #20, option 5 from the mock-up) --------------------
 // The row turns into a green "✓ Done" chip that drops down to the Done section
 // (whose count bumps), and an Undo note appears for a few seconds in case of a
@@ -163,13 +194,16 @@ function Row({ t, k }) {
   };
   const hl = justEdited.value === k;
   const { row, handlers } = useSwipe(t, k);
+  const ds = dueState(t);
   return html`
     <li class=${`todo${t.done ? ' done' : ''}${hl ? ' just-edited' : ''}`}>
       ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>`}
       <div class="todo-row" ref=${row} ...${handlers}>
         <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
-        <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}`}
-          onClick=${() => { if (swallowClick) return; editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred }; }}>${t.text}</button>
+        <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}${ds ? `, ${dueLabel(t.due)}` : ''}`}
+          onClick=${() => { if (swallowClick) return; editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '' }; }}>
+          <span class="t-main">${t.text}</span>
+          ${ds && html`<span class=${`due-label due-${ds}`}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}</span>`}</button>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name="flag" cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
@@ -218,16 +252,25 @@ function TodoList() {
     (visible(sel) || visible(fallback))?.focus();
   });
   // Option D (Issue #19): a soft panel per priority, roomy rows inside.
-  const starred = active.filter(([t]) => t.starred);
-  const groups = [['starred', starred], ...LEVELS.map((p) => [p, active.filter(([t]) => t.p === p && !t.starred)])].filter(([, l]) => l.length);
+  // Due today / Overdue (Issue #23) come first, then Starred, then each priority.
+  const ds = new Map(active.map(([t]) => [t, dueState(t)]));
+  const urgent = ([t]) => ds.get(t) === 'overdue' || ds.get(t) === 'today';
+  const byDue = (a, b) => a[0].due.localeCompare(b[0].due);
+  const overdue = active.filter(([t]) => ds.get(t) === 'overdue').sort(byDue);
+  const dueToday = active.filter(([t]) => ds.get(t) === 'today');
+  const rest = active.filter((x) => !urgent(x));
+  const starred = rest.filter(([t]) => t.starred);
+  const groups = [['overdue', overdue], ['today', dueToday], ['starred', starred],
+    ...LEVELS.map((p) => [p, rest.filter(([t]) => t.p === p && !t.starred)])].filter(([, l]) => l.length);
+  const HEAD = { overdue: ['warning', 'Overdue'], today: ['clock', 'Due today'], starred: ['star-fill', 'Starred'] };
   return html`
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
     ${all.length > 0 && !active.length && html`<p class="empty">All done. Nothing left to do!</p>`}
     ${active.length > 0 && html`<div id="todo-list" class="prio-groups">
       ${groups.map(([p, items]) => html`
-        <section class=${`prio-group prio-${p}`} key=${p} aria-label=${`${p === 'starred' ? 'Starred' : LABELS[p]}: ${items.length}`}>
-          <h2 class="prio-head">${p === 'starred'
-            ? html`<${Icon} name="star-fill" />Starred · ${items.length}`
+        <section class=${`prio-group prio-${p}`} key=${p} aria-label=${`${HEAD[p] ? HEAD[p][1] : LABELS[p]}: ${items.length}`}>
+          <h2 class="prio-head">${HEAD[p]
+            ? html`<${Icon} name=${HEAD[p][0]} />${HEAD[p][1]} · ${items.length}`
             : html`<${Icon} name="flag" cls=${`flag-${p}`} />${LABELS[p]} · ${items.length}`}</h2>
           <ul class="todos prio-list">${items.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
         </section>`)}
@@ -270,6 +313,50 @@ function AddBar() {
     </form>`;
 }
 
+// Due date picker in the edit sheet (Issue #23): None / Today / Tomorrow chips
+// and a small month calendar. Value is 'YYYY-MM-DD' or '' for none.
+const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+function DueField({ value, onChange, open }) {
+  const t0 = parseDay(today.value);
+  const tomorrow = isoDay(new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + 1));
+  const start = value ? parseDay(value) : t0;
+  const [month, setMonth] = useState([start.getFullYear(), start.getMonth()]);
+  // Each time the sheet opens, show the month of the current due date (or this month).
+  useEffect(() => { if (open) setMonth([start.getFullYear(), start.getMonth()]); }, [open]);
+  const [y, m] = month;
+  const first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate();
+  const lead = (first.getDay() + 6) % 7;   // weeks start on Monday
+  const thisMonth = y === t0.getFullYear() && m === t0.getMonth();
+  const go = (n) => setMonth(([yy, mm]) => { const d = new Date(yy, mm + n, 1); return [d.getFullYear(), d.getMonth()]; });
+  const choice = !value ? 'none' : value === today.value ? 'today' : value === tomorrow ? 'tomorrow' : '';
+  const pick = (v) => { onChange(v); if (v) { const d = parseDay(v); setMonth([d.getFullYear(), d.getMonth()]); } };
+  const monthName = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return html`
+    <p class="field-label" id="edit-due-label">Due${value ? html` · <span class="due-chosen">${dueLabel(value).replace(/^Due /, '')}</span>` : ''}</p>
+    <div class="seg chips" role="group" aria-labelledby="edit-due-label">
+      ${[['none', 'None', ''], ['today', 'Today', today.value], ['tomorrow', 'Tomorrow', tomorrow]].map(([k, l, v]) => html`
+        <button type="button" class="chip" data-due=${k} aria-pressed=${choice === k} onClick=${() => pick(v)}>${l}</button>`)}
+    </div>
+    <div class="mini-cal" role="group" aria-label=${`Pick a due date, ${monthName}`}>
+      <div class="cal-head">
+        <button type="button" class="cal-nav" aria-label="Previous month" disabled=${thisMonth} onClick=${() => go(-1)}><${Icon} name="caret-left" /></button>
+        <span>${monthName}</span>
+        <button type="button" class="cal-nav" aria-label="Next month" onClick=${() => go(1)}><${Icon} name="caret-right" /></button>
+      </div>
+      <div class="cal-grid">
+        ${WEEKDAYS.map((d) => html`<span class="cal-wd" aria-hidden="true">${d}</span>`)}
+        ${Array.from({ length: lead }, () => html`<span />`)}
+        ${Array.from({ length: days }, (_, i) => {
+          const v = `${y}-${pad(m + 1)}-${pad(i + 1)}`;
+          const past = v < today.value && v !== value;
+          return html`<button type="button" class=${`cal-day${v === today.value ? ' is-today' : ''}`} disabled=${past}
+            aria-pressed=${v === value} aria-label=${new Date(y, m, i + 1).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+            onClick=${() => pick(v)}>${i + 1}</button>`;
+        })}
+      </div>
+    </div>`;
+}
+
 // Edit sheet: change the wording or priority. Opening it doesn't redraw or
 // move the list behind; the list changes only on Save.
 function EditSheet() {
@@ -277,9 +364,10 @@ function EditSheet() {
   const e = editing.value;
   const [p, setP] = useState('none');
   const [star, setStarOn] = useState(false);
+  const [due, setDue] = useState('');
   useEffect(() => {
     if (!e) { if (dlg.current.open) dlg.current.close(); return; }
-    setP(e.p); setStarOn(!!e.starred); text.current.value = e.text;
+    setP(e.p); setStarOn(!!e.starred); setDue(e.due || ''); text.current.value = e.text;
     dlg.current.showModal();
     text.current.focus({ preventScroll: true });
     text.current.setSelectionRange(e.text.length, e.text.length);
@@ -299,6 +387,7 @@ function EditSheet() {
       if (v && v !== t.text) changes.text = v;
       if (p !== t.p) changes.p = p;
       if (star !== !!t.starred) changes.starred = star;   // Issue #22
+      if (due !== (validDue(t.due) ? t.due : '')) changes.due = due || null;   // Issue #23
       if (Object.keys(changes).length) {
         update(t, changes);
         justEdited.value = e.key; setTimeout(() => { justEdited.value = null; }, 1300);
@@ -320,6 +409,7 @@ function EditSheet() {
             <button type="button" class=${`chip ${v}`} data-p=${v} aria-pressed=${p === v} onClick=${() => setP(v)}>
               <${Icon} name="flag" cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
         </div>
+        <${DueField} value=${due} onChange=${setDue} open=${!!e} />
         <button type="button" class="star-toggle" role="switch" aria-checked=${star} onClick=${() => setStarOn(!star)}>
           <${Icon} name=${star ? 'star-fill' : 'star'} />Star this to-do<span class="switch" aria-hidden="true"></span>
         </button>
