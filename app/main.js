@@ -95,6 +95,56 @@ function showUndo(text, k) {
   });
 }
 
+// ---- Starring (Issue #22) -------------------------------------------------
+// Starred to-dos sit in a gold "Starred" section at the very top, whatever
+// their priority (they keep it, so un-starring puts them back). Star by
+// swiping a to-do to the right, or with the switch in the edit sheet.
+function setStar(t, k, starred) {
+  const cur = todos.value.find((x, i) => keyOf(x, i) === k) || t;
+  update(cur, { starred });
+  window.AppToast?.show(`“${cur.text}” ${starred ? 'starred' : 'unstarred'}`, {
+    icon: starred ? 'star-fill' : 'star',
+    action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() {
+      const now = todos.value.find((x, i) => keyOf(x, i) === k);
+      if (now) update(now, { starred: !starred });
+    } },
+  });
+}
+
+// Swipe right on a row to star / un-star it. Vertical moves still scroll the
+// page; a tap still opens the editor. Done to-dos don't swipe.
+const SWIPE_AT = 72;   // px to drag before letting go stars it
+function useSwipe(t, k) {
+  const row = useRef(), s = useRef(null);
+  const down = (e) => {
+    if (t.done || e.button > 0 || e.target.closest('input')) return;
+    s.current = { x: e.clientX, y: e.clientY, dx: 0, id: e.pointerId, dragging: false };
+  };
+  const move = (e) => {
+    const st = s.current; if (!st) return;
+    const dx = e.clientX - st.x, dy = e.clientY - st.y;
+    if (!st.dragging) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { s.current = null; return; }   // scrolling
+      if (dx < 10 || Math.abs(dx) < Math.abs(dy)) return;
+      st.dragging = true; row.current.setPointerCapture(st.id); row.current.classList.add('swiping');
+    }
+    st.dx = Math.max(0, Math.min(dx, 140));
+    row.current.style.transform = `translateX(${st.dx}px)`;
+    row.current.parentElement.classList.toggle('swipe-ready', st.dx >= SWIPE_AT);
+  };
+  const up = () => {
+    const st = s.current; s.current = null; if (!st?.dragging) return;
+    const el = row.current;
+    el.classList.remove('swiping'); el.classList.add('settle'); el.style.transform = '';
+    setTimeout(() => el.classList.remove('settle'), 250);
+    el.parentElement.classList.remove('swipe-ready');
+    swallowClick = true; setTimeout(() => { swallowClick = false; }, 60);   // not also a tap
+    if (st.dx >= SWIPE_AT) setTimeout(() => setStar(t, k, !t.starred), 180);
+  };
+  return { row, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up } };
+}
+let swallowClick = false;
+
 function Row({ t, k }) {
   const id = `todo-${k}`;
   const tick = (e) => {
@@ -112,15 +162,19 @@ function Row({ t, k }) {
     else animateDone(e.target.closest('li'), t, k);
   };
   const hl = justEdited.value === k;
+  const { row, handlers } = useSwipe(t, k);
   return html`
     <li class=${`todo${t.done ? ' done' : ''}${hl ? ' just-edited' : ''}`}>
-      <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
-      <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”`}
-        onClick=${() => { editing.value = { key: k, text: t.text, p: t.p }; }}>${t.text}</button>
-      ${t.p !== 'none' && html`
-        <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
-          <${Icon} name="flag" cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
-        </span>`}
+      ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>`}
+      <div class="todo-row" ref=${row} ...${handlers}>
+        <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
+        <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}`}
+          onClick=${() => { if (swallowClick) return; editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred }; }}>${t.text}</button>
+        ${t.p !== 'none' && html`
+          <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
+            <${Icon} name="flag" cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
+          </span>`}
+      </div>
     </li>`;
 }
 
@@ -164,14 +218,17 @@ function TodoList() {
     (visible(sel) || visible(fallback))?.focus();
   });
   // Option D (Issue #19): a soft panel per priority, roomy rows inside.
-  const groups = LEVELS.map((p) => [p, active.filter(([t]) => t.p === p)]).filter(([, l]) => l.length);
+  const starred = active.filter(([t]) => t.starred);
+  const groups = [['starred', starred], ...LEVELS.map((p) => [p, active.filter(([t]) => t.p === p && !t.starred)])].filter(([, l]) => l.length);
   return html`
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
     ${all.length > 0 && !active.length && html`<p class="empty">All done. Nothing left to do!</p>`}
     ${active.length > 0 && html`<div id="todo-list" class="prio-groups">
       ${groups.map(([p, items]) => html`
-        <section class=${`prio-group prio-${p}`} key=${p} aria-label=${`${LABELS[p]}: ${items.length}`}>
-          <h2 class="prio-head"><${Icon} name="flag" cls=${`flag-${p}`} />${LABELS[p]} · ${items.length}</h2>
+        <section class=${`prio-group prio-${p}`} key=${p} aria-label=${`${p === 'starred' ? 'Starred' : LABELS[p]}: ${items.length}`}>
+          <h2 class="prio-head">${p === 'starred'
+            ? html`<${Icon} name="star-fill" />Starred · ${items.length}`
+            : html`<${Icon} name="flag" cls=${`flag-${p}`} />${LABELS[p]} · ${items.length}`}</h2>
           <ul class="todos prio-list">${items.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
         </section>`)}
     </div>`}
@@ -219,9 +276,10 @@ function EditSheet() {
   const dlg = useRef(), text = useRef();
   const e = editing.value;
   const [p, setP] = useState('none');
+  const [star, setStarOn] = useState(false);
   useEffect(() => {
     if (!e) { if (dlg.current.open) dlg.current.close(); return; }
-    setP(e.p); text.current.value = e.text;
+    setP(e.p); setStarOn(!!e.starred); text.current.value = e.text;
     dlg.current.showModal();
     text.current.focus({ preventScroll: true });
     text.current.setSelectionRange(e.text.length, e.text.length);
@@ -240,6 +298,7 @@ function EditSheet() {
       const changes = {}, v = text.current.value.trim().slice(0, 500);
       if (v && v !== t.text) changes.text = v;
       if (p !== t.p) changes.p = p;
+      if (star !== !!t.starred) changes.starred = star;   // Issue #22
       if (Object.keys(changes).length) {
         update(t, changes);
         justEdited.value = e.key; setTimeout(() => { justEdited.value = null; }, 1300);
@@ -261,6 +320,9 @@ function EditSheet() {
             <button type="button" class=${`chip ${v}`} data-p=${v} aria-pressed=${p === v} onClick=${() => setP(v)}>
               <${Icon} name="flag" cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
         </div>
+        <button type="button" class="star-toggle" role="switch" aria-checked=${star} onClick=${() => setStarOn(!star)}>
+          <${Icon} name=${star ? 'star-fill' : 'star'} />Star this to-do<span class="switch" aria-hidden="true"></span>
+        </button>
         <div class="row edit-actions">
           <button type="button" id="edit-cancel" class="btn ghost" onClick=${close}>Cancel</button>
           <button type="submit" id="edit-save" class="btn primary">Save</button>
@@ -286,6 +348,15 @@ function App() {
 }
 
 render(html`<${App} />`, document.getElementById('todo-groups'));
+// One-time tip (per stage): how to star.
+setTimeout(() => {
+  const key = `swipe-tip:${window.STAGE || 'local'}`;
+  try {
+    if (localStorage.getItem(key) || !todos.value.some((t) => !t.done)) return;
+    localStorage.setItem(key, '1');
+  } catch { return; }
+  window.AppToast?.show('Tip: swipe a to-do to the right to star it', { icon: 'star', duration: 6000 });
+}, 2500);
 render(html`<${Summary} />`, document.getElementById('summary'));
 // The add bar and edit sheet sit outside the list (fixed bar, modal sheet).
 const extras = document.createElement('div');

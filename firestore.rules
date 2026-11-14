@@ -19,6 +19,7 @@ rules_version = '2';
 //   - createdAt: timestamp (required, = server time on create, immutable)
 //   - doneAt:    number|null (optional) - when it was ticked (ms since 1970),
 //                null/absent when not done or done before this existed
+//   - starred:   bool (optional)             - starred: shown at the very top (Issue #22)
 //
 // The parent documents users/{userId} and .../stages/{stage} are never
 // written; nothing else in the database is readable or writable.
@@ -77,14 +78,15 @@ service cloud.firestore {
     function isValidTodo() {
       let data = request.resource.data;
       return hasRequiredFields(['text', 'done', 'p', 'pos', 'createdAt']) &&
-        hasOnlyAllowedFields(['text', 'done', 'p', 'pos', 'createdAt', 'doneAt']) &&
+        hasOnlyAllowedFields(['text', 'done', 'p', 'pos', 'createdAt', 'doneAt', 'starred']) &&
         validStringLength('text', 1, 500) &&
         data.done is bool &&
         data.p in ['high', 'med', 'low', 'none'] &&
         data.pos is number && data.pos >= 0 && data.pos <= 10000000000000 &&
         data.createdAt is timestamp &&
         (!('doneAt' in data) || data.doneAt == null ||
-          (data.doneAt is number && data.doneAt >= 0 && data.doneAt <= 10000000000000));
+          (data.doneAt is number && data.doneAt >= 0 && data.doneAt <= 10000000000000)) &&
+        (!('starred' in data) || data.starred is bool);   // starred to-dos sit at the top (Issue #22)
     }
 
     // ===============================================================
@@ -101,11 +103,11 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time;
 
       // Owner only: tick/untick (with the time it was ticked), change
-      // priority and edit the text (still 1-500 chars). Order and creation
+      // priority, star/unstar and edit the text (still 1-500 chars). Order and creation
       // time can't change, and the result must still be valid.
       allow update: if isOwner(userId) && isValidStage(stage) &&
         isValidTodo() &&
-        onlyChanges(['done', 'p', 'doneAt', 'text']);
+        onlyChanges(['done', 'p', 'doneAt', 'text', 'starred']);
 
       // No deletes (the app has no delete feature yet).
     }

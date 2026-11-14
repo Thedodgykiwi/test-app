@@ -366,7 +366,9 @@ body.has-banner.is-offline { padding-top: 6rem; }
 /* The list */
 #todo-groups { display: grid; gap: .6rem; }
 #todo-groups .empty { color: var(--muted); margin: .5rem 0; text-align: center; }
-.todo { display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; }
+.todo { position: relative; }
+.list > li.todo { display: block; padding: 0; }
+.todo-row { display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; position: relative; border-radius: inherit; }
 .todo input[type="checkbox"] {
   appearance: none; margin: 0; flex: none; width: 1.2rem; height: 1.2rem; border: 1.5px solid var(--input);
   border-radius: 5px; background: var(--surface); display: grid; place-items: center; cursor: pointer;
@@ -377,7 +379,7 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .todo.done .text { text-decoration: line-through; color: var(--muted); }
 .row-flag { display: grid; flex: none; }
 .row-flag .ic { width: 1.15em; height: 1.15em; }
-.todo.just-edited { animation: edited 1.2s ease-out; }
+.todo.just-edited > .todo-row { animation: edited 1.2s ease-out; }
 @keyframes edited { from { background: color-mix(in srgb, var(--accent) 18%, transparent); } to { background: transparent; } }
 
 /* Done (closed by default) and its date ranges */
@@ -438,10 +440,11 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .prio-head { display: flex; align-items: center; gap: .35rem; margin: 0; padding: .45rem .6rem .4rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .prio-head .ic { width: 1.05em; height: 1.05em; }
 .prio-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
-.prio-list > .todo { background: var(--surface); border-radius: 12px; padding: .85rem .9rem; gap: .85rem; }
+.prio-list > .todo { background: var(--surface); border-radius: 12px; overflow: hidden; }
+.prio-list > .todo > .todo-row { padding: .85rem .9rem; gap: .85rem; background: var(--surface); touch-action: pan-y; }
 .prio-list .row-flag { display: none; }   /* the section already says the priority */
 .todo input[type="checkbox"] { width: 1.35rem; height: 1.35rem; border-radius: 6px; }
-.group-done .list > .todo { padding: .8rem .9rem; }
+.group-done .list > .todo > .todo-row { padding: .8rem .9rem; }
 .add-bar {
   background: var(--surface); backdrop-filter: none; border-top: 1px solid var(--line);
   border-radius: 20px 20px 0 0; box-shadow: 0 -6px 20px rgba(16,24,40,.08);
@@ -470,3 +473,26 @@ body { padding-bottom: 8rem; }
 .prio-list > .todo { box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 2px 6px rgba(16, 24, 40, .06); }
 :root[data-theme="dark"] .prio-list > .todo { box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 2px 6px rgba(0, 0, 0, .25); }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] .prio-list > .todo { box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 2px 6px rgba(0, 0, 0, .25); } }
+
+/* Starred (Issue #22): a gold section at the very top; swipe a to-do right to star it */
+:root { --gold: #b77b00; --gold-bg: #fff6dc; --gold-swipe: #f2b400; }
+:root[data-theme="dark"] { --gold: #ffc94d; --gold-bg: #33290f; --gold-swipe: #c99400; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --gold: #ffc94d; --gold-bg: #33290f; --gold-swipe: #c99400; } }
+.prio-starred { background: var(--gold-bg); }
+.prio-starred .prio-head { color: var(--gold); }
+.prio-starred .row-flag { display: grid; }   /* show which priority a starred to-do has */
+.swipe-under {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: .45rem; padding-left: 1.1rem;
+  background: var(--gold-swipe); color: #2b1f00; font-weight: 700; font-size: .9rem; border-radius: inherit;
+}
+.swipe-under .ic { width: 1.2em; height: 1.2em; }
+.todo-row.swiping { transition: none; }
+.todo-row.settle { transition: transform .22s cubic-bezier(.2,.8,.3,1); }
+/* Star switch in the edit sheet */
+.star-toggle { display: flex; align-items: center; gap: .6rem; width: 100%; padding: .7rem .8rem; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--surface); color: var(--text); font-weight: 600; justify-content: flex-start; }
+.star-toggle[aria-checked="true"] { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
+.star-toggle .switch { margin-left: auto; width: 2.4rem; height: 1.4rem; border-radius: 99px; background: var(--input); position: relative; transition: background .2s; flex: none; }
+.star-toggle .switch::after { content: ""; position: absolute; top: .2rem; left: .2rem; width: 1rem; height: 1rem; border-radius: 50%; background: #fff; transition: left .2s; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+.star-toggle[aria-checked="true"] .switch { background: var(--gold-swipe); }
+.star-toggle[aria-checked="true"] .switch::after { left: 1.2rem; }

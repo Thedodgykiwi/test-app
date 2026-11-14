@@ -137,8 +137,8 @@ async function start() {
 
     unsubscribe = fs.onSnapshot(fs.query(todosRef, fs.orderBy('pos')), { includeMetadataChanges: true }, (snap) => {
       const list = snap.docs.map((d) => {
-        const { text, done, p, doneAt = null } = d.data();
-        return { id: d.id, text, done, p, doneAt };
+        const { text, done, p, doneAt = null, starred = false } = d.data();
+        return { id: d.id, text, done, p, doneAt, starred };
       });
       app.setTodos(list);
       pending = snap.metadata.hasPendingWrites;
@@ -153,6 +153,7 @@ async function start() {
     const doc = { text: String(t.text).slice(0, 500), done: !!t.done, p: t.p, pos, createdAt: fs.serverTimestamp() };
     // When it was ticked (for the Done group's date ranges); only if known.
     if (t.done && Number.isFinite(t.doneAt)) doc.doneAt = t.doneAt;
+    if (t.starred === true) doc.starred = true;   // starred on this device (Issue #22)
     return doc;
   }
 
