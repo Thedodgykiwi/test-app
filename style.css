@@ -424,6 +424,10 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .chips button { gap: .3rem; }
 .chips button[aria-pressed="true"] { background: var(--surface); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .edit-actions { justify-content: flex-end; }
+/* Save always in view: the actions stay pinned to the bottom of the sheet while the rest scrolls (Issue #23). */
+#edit-todo { max-height: 85dvh; padding-bottom: 0; }
+#edit-todo .edit-actions { position: sticky; bottom: 0; z-index: 1; background: var(--surface);
+  margin: 0 -1.1rem; padding: .7rem 1.1rem calc(.9rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
 /* Inside Done: a centred divider per date range ("─ Today · 2 ⌃ ─"); tap it to show/hide its to-dos */
 .done-range h3 { margin: .2rem 0 .35rem; }
 .done-divider {
