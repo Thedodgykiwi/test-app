@@ -537,3 +537,18 @@ body { padding-bottom: 8rem; }
 .cal-day:disabled { color: var(--input); cursor: default; }
 .cal-day.is-today { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .cal-day[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+
+/* ---- Fold a panel by tapping its heading (Issue #25, option B) ---- */
+.prio-head { padding: 0; }
+.prio-toggle { display: flex; align-items: center; gap: .35rem; width: 100%; padding: .45rem .3rem .4rem .6rem; border: 0; border-radius: 12px;
+  background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer; }
+.prio-toggle .chev { margin-left: auto; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; transition: transform .25s ease; }
+.prio-toggle .chev .ic { width: 1.15em; height: 1.15em; }
+.prio-toggle:hover .chev { background: color-mix(in srgb, currentColor 12%, transparent); }
+.prio-group.closed .chev { transform: rotate(-90deg); }
+.fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .28s ease, opacity .2s ease; }
+.fold > .prio-list { min-height: 0; overflow: hidden; padding: 0 3px 6px; margin: 0 -3px -6px; }   /* room for the cards' shadows */
+.prio-group.closed .fold { grid-template-rows: 0fr; opacity: 0; }
+.prio-group { transition: padding-bottom .28s ease; }
+.prio-group.closed { padding-bottom: .1rem; }
+@media (prefers-reduced-motion: reduce) { .fold, .prio-toggle .chev, .prio-group { transition: none; } }

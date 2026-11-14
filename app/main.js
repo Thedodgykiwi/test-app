@@ -243,6 +243,26 @@ function DoneSection({ done }) {
     </div>`;
 }
 
+// One soft panel (Starred, Overdue, Due today/tomorrow or a priority). Tap the
+// heading to fold it down to just its coloured bar (Issue #25, option B: smooth
+// fold, chevron turns). Which panels are folded is remembered per stage.
+function Panel({ p, items, head }) {
+  const key = `panel-${p}`, closed = collapsed.value.has(key), listId = `panel-list-${p}`;
+  const title = head ? head[1] : LABELS[p];
+  return html`
+    <section class=${`prio-group prio-${p}${closed ? ' closed' : ''}`} aria-label=${`${title}: ${items.length}`}>
+      <h2 class="prio-head"><button type="button" class="prio-toggle" data-group=${key} aria-expanded=${!closed} aria-controls=${listId}
+        title=${closed ? 'Show this section' : 'Hide this section'}
+        onClick=${() => { toggleCollapsed(key); focusAfter = [`[data-group="${key}"]`]; }}>
+        ${head ? html`<${Icon} name=${head[0]} />` : html`<${Icon} name="flag" cls=${`flag-${p}`} />`}${title} · ${items.length}
+        <span class="chev"><${Icon} name="caret-down" /></span>
+      </button></h2>
+      <div class="fold" id=${listId} inert=${closed}>
+        <ul class="todos prio-list">${items.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
+      </div>
+    </section>`;
+}
+
 function TodoList() {
   const all = todos.value.map((t, i) => [t, i]);   // keep each to-do's saved position for stable keys
   const active = all.filter(([t]) => !t.done), done = all.filter(([t]) => t.done);
@@ -273,12 +293,7 @@ function TodoList() {
     ${all.length > 0 && !active.length && html`<p class="empty">All done. Nothing left to do!</p>`}
     ${active.length > 0 && html`<div id="todo-list" class="prio-groups">
       ${groups.map(([p, items]) => html`
-        <section class=${`prio-group prio-${p}`} key=${p} aria-label=${`${HEAD[p] ? HEAD[p][1] : LABELS[p]}: ${items.length}`}>
-          <h2 class="prio-head">${HEAD[p]
-            ? html`<${Icon} name=${HEAD[p][0]} />${HEAD[p][1]} · ${items.length}`
-            : html`<${Icon} name="flag" cls=${`flag-${p}`} />${LABELS[p]} · ${items.length}`}</h2>
-          <ul class="todos prio-list">${items.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
-        </section>`)}
+        <${Panel} key=${p} p=${p} items=${items} head=${HEAD[p]} />`)}
     </div>`}
     ${done.length > 0 && html`<${DoneSection} done=${done} />`}
     ${movedHint.value && html`<p class="moved-hint">Moved to Done ↓</p>`}`;
