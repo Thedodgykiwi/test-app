@@ -84,7 +84,8 @@ body.has-banner { padding-top: 3rem; }
 }
 
 /* App menu (menu.js) + Google sign-in (account.js): top-right corner */
-.account { position: fixed; top: .8rem; right: .8rem; z-index: 5; display: flex; align-items: flex-start; gap: .5rem; }
+.account { position: absolute; top: .8rem; right: .8rem; z-index: 5;   /* scrolls away with the page header, never covers the list */
+  display: flex; align-items: flex-start; gap: .5rem; }
 body.has-banner .account { top: 2.8rem; }
 .sign-in {
   padding: .35rem .7rem; font-size: .85rem; font-weight: 600;
@@ -167,9 +168,9 @@ dialog.sheet h2 { font-size: 1.15rem; margin: 0; flex: 1; }
 .setting-name { margin: 0 0 .5rem; font-weight: 600; }
 .muted { color: var(--muted); }
 #whats-new-body h3 { font-size: 1rem; margin: .8rem 0 .3rem; }
-#whats-new-body h4 { font-size: .92rem; margin: .7rem 0 .2rem; }
-#whats-new-body ul { margin: .2rem 0; padding-left: 1.2rem; }
-#whats-new-body li { margin: .2rem 0; }
+#whats-new-body h4 { font-size: .95rem; margin: 1.4rem 0 .4rem; }   /* section headings (✨ New…) */
+#whats-new-body ul { margin: .3rem 0; padding-left: 1.2rem; }
+#whats-new-body li { margin: .75rem 0; line-height: 1.5; }   /* space between release-note items */
 .release { padding-bottom: .6rem; border-bottom: 1px solid var(--line); margin-bottom: .6rem; }
 .release:last-child { border-bottom: 0; }
 .release.rolled-back { opacity: .6; }
@@ -221,11 +222,23 @@ body.has-banner.is-offline .account { top: 5rem; }
 .update-bar { background: var(--accent); color: var(--accent-fg); justify-content: space-between; }
 .update-bar button { background: var(--surface); color: var(--text); font-weight: 700; padding: .35rem .8rem; }
 .update-bar button:hover { background: var(--secondary); }
-.toast {
-  position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 10;
-  width: max-content; max-width: min(420px, 92vw); padding: .65rem .9rem; border-radius: 10px;
-  background: #1d1f23; color: #fff; font-size: .9rem; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+/* Toasts (toast.js): dark rounded card near the bottom, optional action button.
+   Apps with a fixed bottom bar set --toast-bottom so toasts sit above it. */
+:root { --toast-bottom: 1rem; }
+.app-toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 10;
+  bottom: calc(var(--toast-bottom) + env(safe-area-inset-bottom));
+  width: max-content; max-width: min(440px, calc(100vw - 1.5rem)); display: flex; align-items: center; gap: .6rem;
+  padding: .65rem .9rem; border-radius: 12px; background: #1d1f23; color: #fff; font-size: .9rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
 }
+.app-toast:has(.app-toast-action) { width: min(440px, calc(100vw - 1.5rem)); padding-right: .6rem; }
+.app-toast-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-toast-icon { color: #8ce99a; }
+.app-toast-action { flex: none; gap: .3rem; padding: .35rem .6rem; color: #91a7ff; font-weight: 700; border-radius: 8px; }
+.app-toast-action:focus-visible { outline: 2px solid #91a7ff; outline-offset: 1px; }
+@media (hover: hover) { .app-toast-action:hover { background: rgba(255,255,255,.1); } }
+body.has-toast .install-tip, body.has-toast .update-bar { visibility: hidden; }   /* never overlap */
 
 /* ---- Style kit (B) ------------------------------------------------------------
    Building blocks for the app's own screens. Live examples + copy-ready HTML:
@@ -392,12 +405,12 @@ body.has-banner.is-offline { padding-top: 6rem; }
   position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); height: 2rem; padding: 0 .5rem;
   gap: .3rem; font-size: .78rem; font-weight: 600; color: var(--muted);
 }
-.flag-btn:hover { background: var(--secondary); }
+/* Hover look only with a real mouse: on phones Safari keeps :hover after a tap (grey box behind "Medium") */
+@media (hover: hover) { .flag-btn:hover { background: var(--secondary); } }
 .flag-btn .ic { width: 1.25em; height: 1.25em; }
 .flag-btn.p-high .word { color: var(--high); } .flag-btn.p-med .word { color: var(--med); } .flag-btn.p-low .word { color: var(--low); }
 .flag-btn .ic.pop { animation: bump .18s ease-out; }
 @keyframes bump { 50% { transform: scale(1.25); } }
-.toast { bottom: 5.5rem; }
 .install-tip, .update-bar { bottom: 5.2rem; }
 
 /* Edit sheet */
@@ -417,3 +430,43 @@ body.has-banner.is-offline { padding-top: 6rem; }
 
 /* Icons inside Preact components (app/main.js) sit in a wrapper that adds no box */
 .icon-wrap { display: contents; }
+
+/* Issue #19: more room. Option D: a soft panel per priority with roomy rows;
+   option C's add panel at the bottom, clear of the phone's home bar. */
+.prio-groups { display: grid; gap: .9rem; }
+.prio-group { background: var(--secondary); border-radius: 16px; padding: .35rem .4rem .45rem; }
+.prio-head { display: flex; align-items: center; gap: .35rem; margin: 0; padding: .45rem .6rem .4rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.prio-head .ic { width: 1.05em; height: 1.05em; }
+.prio-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.prio-list > .todo { background: var(--surface); border-radius: 12px; padding: .85rem .9rem; gap: .85rem; }
+.prio-list .row-flag { display: none; }   /* the section already says the priority */
+.todo input[type="checkbox"] { width: 1.35rem; height: 1.35rem; border-radius: 6px; }
+.group-done .list > .todo { padding: .8rem .9rem; }
+.add-bar {
+  background: var(--surface); backdrop-filter: none; border-top: 1px solid var(--line);
+  border-radius: 20px 20px 0 0; box-shadow: 0 -6px 20px rgba(16,24,40,.08);
+  padding: .8rem 1rem calc(1.1rem + env(safe-area-inset-bottom));
+}
+:root[data-theme="dark"] .add-bar { box-shadow: 0 -6px 20px rgba(0,0,0,.35); }
+#todo-input { height: 2.9rem; border-radius: 12px; }
+.add-bar .btn.primary { height: 2.9rem; border-radius: 12px; padding: 0 1.1rem; }
+body { padding-bottom: 8rem; }
+.install-tip, .update-bar { bottom: 6.8rem; }
+
+/* Ticking off (Issue #20): green "Done" chip + Undo note */
+.done-chip {
+  position: fixed; z-index: 9; display: flex; align-items: center; gap: .35rem; height: 34px; padding: 0 .9rem;
+  border-radius: 999px; background: var(--ok); color: #fff; font-weight: 700; font-size: .9rem;
+  box-shadow: 0 6px 16px rgba(0,0,0,.18); pointer-events: none;
+}
+:root[data-theme="dark"] .done-chip { color: #0b2610; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .done-chip { color: #0b2610; } }
+.done-chip .ic { width: 1.1em; height: 1.1em; }
+
+
+/* Toasts sit above the add bar */
+:root { --toast-bottom: 6.4rem; }
+/* Issue #19 follow-up: a soft shadow under each to-do so it lifts off its panel */
+.prio-list > .todo { box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 2px 6px rgba(16, 24, 40, .06); }
+:root[data-theme="dark"] .prio-list > .todo { box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 2px 6px rgba(0, 0, 0, .25); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .prio-list > .todo { box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 2px 6px rgba(0, 0, 0, .25); } }

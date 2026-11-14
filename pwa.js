@@ -123,9 +123,5 @@
   setTimeout(refresh, 2500);
   btn.hidden = !canInstall();
 
-  function toast(message, ms = 4000) {
-    const el = $('toast');
-    el.textContent = message; el.hidden = false;
-    clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, ms);
-  }
+  const toast = (message, ms) => window.AppToast?.show(message, { duration: ms });
 })();
