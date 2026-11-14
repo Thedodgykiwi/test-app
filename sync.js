@@ -179,11 +179,5 @@ async function start() {
 }
 
 // Short message at the bottom of the screen.
-let toastTimer;
-function toast(message, ms = 4000) {
-  const el = document.getElementById('toast');
-  el.textContent = message;
-  el.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, ms);
-}
+// Short message at the bottom of the screen (toast.js).
+function toast(message, ms) { window.AppToast?.show(message, { duration: ms }); }
