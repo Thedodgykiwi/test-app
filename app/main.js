@@ -432,8 +432,14 @@ function Summary() {
   const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
   const left = all.filter((t) => !t.done).length;
   const doneToday = all.filter((t) => t.done && Number.isFinite(t.doneAt) && t.doneAt >= startOfToday).length;
-  const today = doneToday ? ` · ${doneToday} done today` : '';
-  return left ? `${left} to do${today}` : `All done!${today}`;
+  const doneTxt = doneToday ? ` · ${doneToday} done today` : '';
+  // Due today / overdue totals, starred ones included (Issue #23); only when there are any.
+  const dueToday = all.filter((t) => dueState(t) === 'today').length;
+  const overdue = all.filter((t) => dueState(t) === 'overdue').length;
+  const dueTxt = (dueToday ? ` · ${dueToday} due today` : '') + (overdue ? ` · ${overdue} overdue` : '');
+  // Non-breaking spaces inside each part, so a narrow screen wraps between parts, not mid-part.
+  const keep = (x) => x.replace(/(\d) /g, '$1\u00a0').replace(/ (today|do)\b/g, '\u00a0$1');
+  return keep(left ? `${left} to do${dueTxt}${doneTxt}` : `All done!${doneTxt}`);
 }
 
 function App() {
