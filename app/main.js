@@ -35,7 +35,8 @@ function doneRange(t, now = new Date()) {
 // A to-do can have a due date ('YYYY-MM-DD', local day). On the day it moves
 // into a purple "Due today" panel near the top; after it, if still not done,
 // into a red "Overdue" panel above that (its priority flag shows instead).
-// Starred to-dos stay in Starred, always first, with the date label.
+// Then a blue "Due tomorrow" panel (Issue #24). Starred to-dos stay in Starred, always
+// first, with the date label.
 const pad = (n) => String(n).padStart(2, '0');
 const isoDay = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseDay = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d); };
@@ -48,7 +49,7 @@ const daysUntil = (v) => Math.round((parseDay(v) - parseDay(today.value)) / 864e
 function dueState(t) {
   if (t.done || !validDue(t.due)) return null;
   const n = daysUntil(t.due);
-  return n < 0 ? 'overdue' : n === 0 ? 'today' : 'upcoming';
+  return n < 0 ? 'overdue' : n === 0 ? 'today' : n === 1 ? 'tomorrow' : 'upcoming';
 }
 function dueLabel(v) {
   const n = daysUntil(v);
@@ -60,7 +61,7 @@ function dueLabel(v) {
   const mon = d.toLocaleDateString(undefined, { month: 'short' });
   return `Due ${wd} ${d.getDate()} ${mon}${d.getFullYear() !== parseDay(today.value).getFullYear() ? ` ${d.getFullYear()}` : ''}`;
 }
-const DUE_ICON = { overdue: 'warning', today: 'clock', upcoming: 'calendar-blank' };
+const DUE_ICON = { overdue: 'warning', today: 'clock', tomorrow: 'calendar-blank', upcoming: 'calendar-blank' };
 
 // ---- Ticking off (Issue #20, option 5 from the mock-up) --------------------
 // The row turns into a green "✓ Done" chip that drops down to the Done section
@@ -257,15 +258,16 @@ function TodoList() {
   // then Overdue and Due today (Issue #23), then each priority.
   const ds = new Map(active.map(([t]) => [t, dueState(t)]));
   const byDue = (a, b) => a[0].due.localeCompare(b[0].due);
-  const RANK = { overdue: 0, today: 1 };   // inside Starred: overdue, then due today, then the rest
-  const starred = active.filter(([t]) => t.starred).sort(([a], [b]) => (RANK[ds.get(a)] ?? 2) - (RANK[ds.get(b)] ?? 2));
+  const RANK = { overdue: 0, today: 1, tomorrow: 2 };   // inside Starred: overdue, today, tomorrow, then the rest
+  const starred = active.filter(([t]) => t.starred).sort(([a], [b]) => (RANK[ds.get(a)] ?? 3) - (RANK[ds.get(b)] ?? 3));
   const unstarred = active.filter(([t]) => !t.starred);
   const overdue = unstarred.filter(([t]) => ds.get(t) === 'overdue').sort(byDue);
   const dueToday = unstarred.filter(([t]) => ds.get(t) === 'today');
-  const rest = unstarred.filter(([t]) => ds.get(t) !== 'overdue' && ds.get(t) !== 'today');
-  const groups = [['starred', starred], ['overdue', overdue], ['today', dueToday],
+  const dueTomorrow = unstarred.filter(([t]) => ds.get(t) === 'tomorrow');
+  const rest = unstarred.filter(([t]) => !['overdue', 'today', 'tomorrow'].includes(ds.get(t)));
+  const groups = [['starred', starred], ['overdue', overdue], ['today', dueToday], ['tomorrow', dueTomorrow],
     ...LEVELS.map((p) => [p, rest.filter(([t]) => t.p === p)])].filter(([, l]) => l.length);
-  const HEAD = { overdue: ['warning', 'Overdue'], today: ['clock', 'Due today'], starred: ['star-fill', 'Starred'] };
+  const HEAD = { overdue: ['warning', 'Overdue'], today: ['clock', 'Due today'], tomorrow: ['calendar-blank', 'Due tomorrow'], starred: ['star-fill', 'Starred'] };
   return html`
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
     ${all.length > 0 && !active.length && html`<p class="empty">All done. Nothing left to do!</p>`}

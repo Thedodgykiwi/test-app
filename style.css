@@ -505,9 +505,10 @@ body { padding-bottom: 8rem; }
 .star-toggle[aria-checked="true"] .switch::after { left: 1.2rem; }
 
 /* ---- Due dates (Issue #23) ---- */
-:root { --due-bg: #efe9ff; --due: #6741d9; --due-chip: #e5dbff; --over-bg: #ffe3e3; --over: #c92a2a; }
-:root[data-theme="dark"] { --due-bg: #2a2145; --due: #c4b5fd; --due-chip: #3b2f63; --over-bg: #3d1c1c; --over: #ff8787; }
-@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --due-bg: #2a2145; --due: #c4b5fd; --due-chip: #3b2f63; --over-bg: #3d1c1c; --over: #ff8787; } }
+/* Due tomorrow panel: cool blue (Issue #24) */
+:root { --tmr-bg: #e3f2fd; --tmr: #1864ab; --tmr-chip: #d0ebff; --due-bg: #efe9ff; --due: #6741d9; --due-chip: #e5dbff; --over-bg: #ffe3e3; --over: #c92a2a; }
+:root[data-theme="dark"] { --tmr-bg: #13293d; --tmr: #8ec5ff; --tmr-chip: #1c3b5a; --due-bg: #2a2145; --due: #c4b5fd; --due-chip: #3b2f63; --over-bg: #3d1c1c; --over: #ff8787; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-bg: #13293d; --tmr: #8ec5ff; --tmr-chip: #1c3b5a; --due-bg: #2a2145; --due: #c4b5fd; --due-chip: #3b2f63; --over-bg: #3d1c1c; --over: #ff8787; } }
 .todo-row .text:has(.due-label) { display: flex; flex-direction: column; align-items: flex-start; gap: .2rem; }
 .due-label { display: inline-flex; align-items: center; gap: .25rem; width: fit-content; font-size: .75rem; font-weight: 600;
   line-height: 1.5; padding: 0 .5rem; border-radius: 99px; background: var(--hover); color: var(--muted); }
@@ -519,7 +520,10 @@ body { padding-bottom: 8rem; }
 .prio-today .prio-head { color: var(--due); }
 .prio-overdue { background: var(--over-bg); }
 .prio-overdue .prio-head { color: var(--over); }
-.prio-today .row-flag, .prio-overdue .row-flag { display: grid; }   /* show the priority they came from */
+.due-tomorrow { background: var(--tmr-chip); color: var(--tmr); }
+.prio-tomorrow { background: var(--tmr-bg); }
+.prio-tomorrow .prio-head { color: var(--tmr); }
+.prio-today .row-flag, .prio-overdue .row-flag, .prio-tomorrow .row-flag { display: grid; }   /* show the priority they came from */
 .due-chosen { color: var(--accent); }
 .mini-cal { border: 1px solid var(--line); border-radius: 12px; padding: .4rem .5rem .5rem; }
 .cal-head { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: .9rem; }
