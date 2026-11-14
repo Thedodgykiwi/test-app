@@ -332,7 +332,7 @@ function DueField({ value, onChange, open }) {
   const pick = (v) => { onChange(v); if (v) { const d = parseDay(v); setMonth([d.getFullYear(), d.getMonth()]); } };
   const monthName = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   return html`
-    <p class="field-label" id="edit-due-label">Due${value ? html` · <span class="due-chosen">${dueLabel(value).replace(/^Due /, '')}</span>` : ''}</p>
+    <p class="field-label" id="edit-due-label">Due${value ? html` · <span class="due-chosen">${(l => l[0].toUpperCase() + l.slice(1))(dueLabel(value).replace(/^Due /, ''))}</span>` : ''}</p>
     <div class="seg chips" role="group" aria-labelledby="edit-due-label">
       ${[['none', 'None', ''], ['today', 'Today', today.value], ['tomorrow', 'Tomorrow', tomorrow]].map(([k, l, v]) => html`
         <button type="button" class="chip" data-due=${k} aria-pressed=${choice === k} onClick=${() => pick(v)}>${l}</button>`)}
@@ -409,10 +409,10 @@ function EditSheet() {
             <button type="button" class=${`chip ${v}`} data-p=${v} aria-pressed=${p === v} onClick=${() => setP(v)}>
               <${Icon} name="flag" cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
         </div>
-        <${DueField} value=${due} onChange=${setDue} open=${!!e} />
         <button type="button" class="star-toggle" role="switch" aria-checked=${star} onClick=${() => setStarOn(!star)}>
           <${Icon} name=${star ? 'star-fill' : 'star'} />Star this to-do<span class="switch" aria-hidden="true"></span>
         </button>
+        <${DueField} value=${due} onChange=${setDue} open=${!!e} />
         <div class="row edit-actions">
           <button type="button" id="edit-cancel" class="btn ghost" onClick=${close}>Cancel</button>
           <button type="submit" id="edit-save" class="btn primary">Save</button>
