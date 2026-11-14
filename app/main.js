@@ -33,8 +33,9 @@ function doneRange(t, now = new Date()) {
 
 // ---- Due dates (Issue #23) -------------------------------------------------
 // A to-do can have a due date ('YYYY-MM-DD', local day). On the day it moves
-// into a purple "Due today" panel at the top; after it, if still not done,
-// into a red "Overdue" panel above that. Its priority flag shows instead.
+// into a purple "Due today" panel near the top; after it, if still not done,
+// into a red "Overdue" panel above that (its priority flag shows instead).
+// Starred to-dos stay in Starred, always first, with the date label.
 const pad = (n) => String(n).padStart(2, '0');
 const isoDay = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseDay = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d); };
@@ -204,7 +205,6 @@ function Row({ t, k }) {
           onClick=${() => { if (swallowClick) return; editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '' }; }}>
           <span class="t-main">${t.text}</span>
           ${ds && html`<span class=${`due-label due-${ds}`}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}</span>`}</button>
-        ${t.starred && !t.done && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name="flag" cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
@@ -253,16 +253,18 @@ function TodoList() {
     (visible(sel) || visible(fallback))?.focus();
   });
   // Option D (Issue #19): a soft panel per priority, roomy rows inside.
-  // Due today / Overdue (Issue #23) come first, then Starred, then each priority.
+  // Starred first (whatever their date; they show a Due today / Overdue label),
+  // then Overdue and Due today (Issue #23), then each priority.
   const ds = new Map(active.map(([t]) => [t, dueState(t)]));
-  const urgent = ([t]) => ds.get(t) === 'overdue' || ds.get(t) === 'today';
   const byDue = (a, b) => a[0].due.localeCompare(b[0].due);
-  const overdue = active.filter(([t]) => ds.get(t) === 'overdue').sort(byDue);
-  const dueToday = active.filter(([t]) => ds.get(t) === 'today');
-  const rest = active.filter((x) => !urgent(x));
-  const starred = rest.filter(([t]) => t.starred);
-  const groups = [['overdue', overdue], ['today', dueToday], ['starred', starred],
-    ...LEVELS.map((p) => [p, rest.filter(([t]) => t.p === p && !t.starred)])].filter(([, l]) => l.length);
+  const RANK = { overdue: 0, today: 1 };   // inside Starred: overdue, then due today, then the rest
+  const starred = active.filter(([t]) => t.starred).sort(([a], [b]) => (RANK[ds.get(a)] ?? 2) - (RANK[ds.get(b)] ?? 2));
+  const unstarred = active.filter(([t]) => !t.starred);
+  const overdue = unstarred.filter(([t]) => ds.get(t) === 'overdue').sort(byDue);
+  const dueToday = unstarred.filter(([t]) => ds.get(t) === 'today');
+  const rest = unstarred.filter(([t]) => ds.get(t) !== 'overdue' && ds.get(t) !== 'today');
+  const groups = [['starred', starred], ['overdue', overdue], ['today', dueToday],
+    ...LEVELS.map((p) => [p, rest.filter(([t]) => t.p === p)])].filter(([, l]) => l.length);
   const HEAD = { overdue: ['warning', 'Overdue'], today: ['clock', 'Due today'], starred: ['star-fill', 'Starred'] };
   return html`
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
