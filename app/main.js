@@ -204,6 +204,7 @@ function Row({ t, k }) {
           onClick=${() => { if (swallowClick) return; editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '' }; }}>
           <span class="t-main">${t.text}</span>
           ${ds && html`<span class=${`due-label due-${ds}`}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}</span>`}</button>
+        ${t.starred && !t.done && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name="flag" cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>

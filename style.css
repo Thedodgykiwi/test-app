@@ -533,3 +533,7 @@ body { padding-bottom: 8rem; }
 .cal-day:disabled { color: var(--input); cursor: default; }
 .cal-day.is-today { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .cal-day[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+/* Starred to-dos in Due today / Overdue keep a gold star by the flag (Issue #23). */
+.row-star { display: none; flex: none; color: var(--gold); }
+.row-star .ic { width: 1.15em; height: 1.15em; }
+.prio-today .row-star, .prio-overdue .row-star { display: grid; }
