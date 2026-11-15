@@ -36,6 +36,25 @@ async function start() {
     fs.connectFirestoreEmulator(db, '127.0.0.1', 8081);
   }
 
+  // For the banner's "Report issue" drop-down (report.js, Issue #28). Reports go
+  // to issueReports/{id}; firestore.rules only lets people on the testers list
+  // add one, and nobody can read them back (a GitHub Action collects them).
+  window.AppCloud = {
+    user: () => auth.currentUser,
+    signIn: () => document.getElementById('sign-in').click(),
+    submitReport({ title, body, type, screenshot }) {
+      const u = auth.currentUser;
+      const write = fs.addDoc(fs.collection(db, 'issueReports'), {
+        title, body, type, stage: app.stage, uid: u.uid, email: u.email,
+        status: 'new', createdAt: fs.serverTimestamp(),
+        ...(screenshot ? { screenshot } : {}),   // JPEG data URL, shrunk on the device (Issue #35)
+      });
+      // addDoc waits for the server; don't leave the button spinning forever.
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000));
+      return Promise.race([write, timeout]);
+    },
+  };
+
   const $ = (id) => document.getElementById(id);
   const ui = {
     box: $('account'), signIn: $('sign-in'), button: $('account-btn'), avatar: $('avatar'),
@@ -137,8 +156,8 @@ async function start() {
 
     unsubscribe = fs.onSnapshot(fs.query(todosRef, fs.orderBy('pos')), { includeMetadataChanges: true }, (snap) => {
       const list = snap.docs.map((d) => {
-        const { text, done, p, doneAt = null } = d.data();
-        return { id: d.id, text, done, p, doneAt };
+        const { text, done, p, doneAt = null, starred = false, due = null } = d.data();
+        return { id: d.id, text, done, p, doneAt, starred, due };
       });
       app.setTodos(list);
       pending = snap.metadata.hasPendingWrites;
@@ -153,6 +172,8 @@ async function start() {
     const doc = { text: String(t.text).slice(0, 500), done: !!t.done, p: t.p, pos, createdAt: fs.serverTimestamp() };
     // When it was ticked (for the Done group's date ranges); only if known.
     if (t.done && Number.isFinite(t.doneAt)) doc.doneAt = t.doneAt;
+    if (t.starred === true) doc.starred = true;   // starred on this device (Issue #22)
+    if (typeof t.due === 'string' && /^20\d\d-[01]\d-[0-3]\d$/.test(t.due)) doc.due = t.due;   // Issue #23
     return doc;
   }
 

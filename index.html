@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="format-detection" content="telephone=no, email=no, address=no" />
-  <title>Test App</title>
+  <title>The Shortlist</title>
   <meta name="theme-color" content="#495057" />
   <!-- Home-screen app: name, icons and colour. Files here say "Local"; the shared
        deploy swaps in each stage's icons, name and colour (playbook pwa-icons.md). -->
@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icons/app/local/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Test Local" />
+  <meta name="apple-mobile-web-app-title" content="Shortlist Local" />
   <link rel="stylesheet" href="style.css" />
   <!-- Libraries for the app's screens (vendor/, see vendor/README.md), imported by name -->
   <script type="importmap">
@@ -41,8 +41,10 @@
 </head>
 <body>
   <!-- Coloured stage banner (Dev, Alpha, Staging; LOCAL on your computer; none on Production)
-       so test versions can't be mistaken for the live app, with a link to the pipeline page. -->
+       so test versions can't be mistaken for the live app, with a link to the pipeline page
+       and, on the left, "Report issue" (report.js, Issue #28). -->
   <div id="stage-banner" hidden>
+    <button type="button" id="report-link" aria-label="Report an issue" hidden><span>Report</span><span class="wide-only">issue</span></button>
     <span id="stage-name"></span>
     <a id="pipeline-link" href="../pipeline/" hidden>Pipeline</a>
   </div>
@@ -116,8 +118,11 @@
 
   <!-- The to-do list. One list sorted by priority (a coloured flag on each row),
        Done at the end, and the add bar fixed at the bottom, in thumb reach. -->
-  <main id="app" class="todo-page" aria-label="Test App">
-    <h1><span data-icon="hand-waving" class="wave"></span>Test App</h1>
+  <main id="app" class="todo-page" aria-label="The Shortlist">
+    <h1><span data-icon="list-checks-duotone" class="title-icon"></span>The Shortlist</h1>
+    <!-- Tagline (a nod to awards shortlists) and a decorative divider before the live summary -->
+    <p class="tagline">And the nominees are…</p>
+    <div class="title-rule" aria-hidden="true"><span data-icon="star-four-fill"></span><i></i></div>
     <!-- Live summary of the list ("3 to do · 2 done today"), drawn by app/main.js -->
     <p id="summary" class="muted" aria-live="polite"></p>
     <!-- Latest release headline (whats-new.js); hidden until there is one, and after × until the next release -->
@@ -160,6 +165,7 @@
   <script src="pwa.js"></script>
   <script src="app.js"></script>
   <script src="whats-new.js"></script>
+  <script src="report.js"></script>
   <!-- The to-do screen (Preact components). Must load before sync.js, which uses window.TodoApp from app/store.js. -->
   <script type="module" src="app/main.js"></script>
   <script type="module" src="sync.js"></script>
