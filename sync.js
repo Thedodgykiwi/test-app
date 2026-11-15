@@ -36,6 +36,24 @@ async function start() {
     fs.connectFirestoreEmulator(db, '127.0.0.1', 8081);
   }
 
+  // For the banner's "Report issue" drop-down (report.js, Issue #28). Reports go
+  // to issueReports/{id}; firestore.rules only lets people on the testers list
+  // add one, and nobody can read them back (a GitHub Action collects them).
+  window.AppCloud = {
+    user: () => auth.currentUser,
+    signIn: () => document.getElementById('sign-in').click(),
+    submitReport({ title, body, type }) {
+      const u = auth.currentUser;
+      const write = fs.addDoc(fs.collection(db, 'issueReports'), {
+        title, body, type, stage: app.stage, uid: u.uid, email: u.email,
+        status: 'new', createdAt: fs.serverTimestamp(),
+      });
+      // addDoc waits for the server; don't leave the button spinning forever.
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000));
+      return Promise.race([write, timeout]);
+    },
+  };
+
   const $ = (id) => document.getElementById(id);
   const ui = {
     box: $('account'), signIn: $('sign-in'), button: $('account-btn'), avatar: $('avatar'),

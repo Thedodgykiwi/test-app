@@ -167,7 +167,7 @@ If they say yes:
   and the Firebase plugin/MCP server for Firebase work; run the CLI as
   `npx -y firebase-tools@latest`.
 - Security rules: `firestore.rules` (owner-only, every field validated).
-  Tests: `tests/firestore.rules.test.mjs`; run `npm install` once, then
+  Tests: `tests/firestore.rules.test.mjs` (to-dos and issue reports); run `npm install` once, then
   `npm run test:rules` (uses a throwaway emulator, needs Java). When the data
   model changes, update the tests with the rules. After changing them, re-run
   the rules tests and deploy with
@@ -177,6 +177,26 @@ If they say yes:
   and open `http://localhost:8080/?emulators`.
 - Sign-in is shared by all stages (one web address), but each stage keeps its
   own to-do list. Never delete users' cloud or device data without asking.
+
+## Report issue (stage banner, Issue #28)
+
+- Dev, Alpha, Staging (and local) show **Report issue** at the banner's left
+  end (`report.js`): a drop-down with Title + Description (required) and an
+  optional type. It saves to Firestore `issueReports/{id}` via
+  `window.AppCloud` (set up in `sync.js`).
+- Only signed-in people whose email is in **`access/testers`** (field
+  `emails`, lower-case) can submit (`firestore.rules`). Edit that list in the
+  Firebase console; never put the addresses in the repo.
+- `.github/workflows/issue-reports.yml` runs `tools/issue-reports.mjs` every
+  5 minutes from `dev` (GitHub often runs it late: expect 5–15 min; "Run
+  workflow" collects now). It creates the issue (layout from the playbook,
+  "Reported by: tester"), marks the report `logged`, emails the reporter from
+  Gmail, then deletes their address from the report.
+- Secrets (repo Settings → Secrets → Actions): `FIREBASE_SERVICE_ACCOUNT`
+  (service account key JSON), `GMAIL_USER`, `GMAIL_APP_PASSWORD`. Without the
+  first, the job does nothing; without the Gmail ones, it skips emails.
+- Local test of the job: run it with `FIRESTORE_EMULATOR_HOST` set and
+  `GITHUB_API_URL` pointing at a fake server.
 
 ## Notes
 
