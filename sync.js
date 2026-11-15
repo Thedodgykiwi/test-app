@@ -42,11 +42,12 @@ async function start() {
   window.AppCloud = {
     user: () => auth.currentUser,
     signIn: () => document.getElementById('sign-in').click(),
-    submitReport({ title, body, type }) {
+    submitReport({ title, body, type, screenshot }) {
       const u = auth.currentUser;
       const write = fs.addDoc(fs.collection(db, 'issueReports'), {
         title, body, type, stage: app.stage, uid: u.uid, email: u.email,
         status: 'new', createdAt: fs.serverTimestamp(),
+        ...(screenshot ? { screenshot } : {}),   // JPEG data URL, shrunk on the device (Issue #35)
       });
       // addDoc waits for the server; don't leave the button spinning forever.
       const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000));

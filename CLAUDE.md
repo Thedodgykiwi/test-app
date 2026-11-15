@@ -182,7 +182,8 @@ If they say yes:
 
 - Dev, Alpha, Staging (and local) show **Report issue** at the banner's left
   end (`report.js`): a drop-down with Title + Description (required) and an
-  optional type. It saves to Firestore `issueReports/{id}` via
+  optional type, plus an optional screenshot (Issue #35; shrunk on the device,
+  shown in the issue from the `issue-images` branch). It saves to Firestore `issueReports/{id}` via
   `window.AppCloud` (set up in `sync.js`).
 - Only signed-in people whose email is in **`access/testers`** (field
   `emails`, lower-case) can submit (`firestore.rules`). Edit that list in the
