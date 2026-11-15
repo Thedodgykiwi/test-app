@@ -1,4 +1,4 @@
-# test-app
+# test-app ("The Shortlist")
 
 A small static web app (plain HTML/CSS/JS, no build step) used to test
 building, previewing and releasing through stages on GitHub Pages.
@@ -201,7 +201,7 @@ If they say yes:
   "check-circle", duotone): `node <playbook>/tools/make-app-icons.js --phosphor
   <@phosphor-icons/core package> --glyph check-circle --weight duotone --out
   icons/app` (playbook `pwa-icons.md`). Files in
-  the repo point at `icons/app/local/` and say "Test App Local"; the deploy
+  the repo point at `icons/app/local/` and say "The Shortlist Local"; the deploy
   swaps in each stage's icons, name and theme colour. Don't hand-edit them.
 - **iOS 27 quirk:** Add to Home Screen ignores linked icon files and manifest
   icons and shows a letter tile instead. The deploy therefore embeds each
