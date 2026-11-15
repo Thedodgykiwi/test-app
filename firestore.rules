@@ -30,7 +30,8 @@ rules_version = '2';
 // Only testers may add one: their email must be in access/testers.emails
 // (edited in the Firebase console, never in the repo). Nobody can read,
 // change or delete reports from the app; a GitHub Action (admin access)
-// turns them into GitHub issues and emails the reporter.
+// turns them into GitHub issues and emails the reporter (a receipt, then
+// "it's fixed" when the fix reaches Production, Issue #34).
 //
 // Document: access/testers  { emails: [lower-case addresses] }
 //   Not readable or writable from the app.

@@ -2,7 +2,8 @@ name: Turn reports into issues
 
 # "Report issue" on the stage banner (Issue #28) saves reports to Firestore.
 # Every few minutes this collects new ones, creates a GitHub issue for each
-# and emails the reporter a copy (tools/issue-reports.mjs).
+# and emails the reporter a copy; when an issue's fix reaches Production,
+# emails them again (tools/issue-reports.mjs, Issues #28 and #34).
 # Scheduled runs use this file from the default branch (dev). GitHub runs
 # "every 5 minutes" late when busy: expect 5-15 minutes.
 on:
@@ -39,3 +40,4 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APP_NAME: The Shortlist
+          APP_URL: https://thedodgykiwi.github.io/test-app/   # Production: its release notes and the "fixed" email link

@@ -190,13 +190,21 @@ If they say yes:
 - `.github/workflows/issue-reports.yml` runs `tools/issue-reports.mjs` every
   5 minutes from `dev` (GitHub often runs it late: expect 5–15 min; "Run
   workflow" collects now). It creates the issue (layout from the playbook,
-  "Reported by: tester"), marks the report `logged`, emails the reporter from
-  Gmail, then deletes their address from the report.
+  "Reported by: tester"), marks the report `logged` and emails the reporter a
+  receipt from Gmail (no GitHub links).
+- **"It's fixed" email (Issue #34):** the same job checks `logged` reports'
+  issues. Closed *and* in Production's release notes (the bullet ending
+  "(#n)" in `<APP_URL>/releases.json`) → emails that line as "What changed",
+  marks the report `fixed`. Closed without a release (or "not planned") →
+  `closed`, no email. Either way the reporter's address is deleted then; it
+  is kept until then (Firestore only, unreadable from the app). Closing a
+  test issue by hand never emails anyone.
 - Secrets (repo Settings → Secrets → Actions): `FIREBASE_SERVICE_ACCOUNT`
   (service account key JSON), `GMAIL_USER`, `GMAIL_APP_PASSWORD`. Without the
   first, the job does nothing; without the Gmail ones, it skips emails.
-- Local test of the job: run it with `FIRESTORE_EMULATOR_HOST` set and
-  `GITHUB_API_URL` pointing at a fake server.
+- Local test of the job: run it with `FIRESTORE_EMULATOR_HOST` set,
+  `GITHUB_API_URL` and `APP_URL` pointing at a fake server, and `MAIL_TEST=1`
+  (builds the emails, sends nothing).
 
 ## Notes
 
