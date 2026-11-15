@@ -175,6 +175,11 @@ If they say yes:
 - Local testing without touching the real project: start the emulators with
   `npx -y firebase-tools@latest emulators:start --only auth,firestore --project demo-test-app`
   and open `http://localhost:8080/?emulators`.
+- **Fast first load (Issue #36):** while signed in, the last list shown is kept
+  in browser storage (`cloud-copy-<stage>`, removed on sign-out) and shown at
+  once on the next open, with "Updating…" in the summary, a blue dot and
+  edits paused ("One moment, connecting…") until Firebase is ready; to-dos
+  that changed meanwhile flash briefly when the live list arrives.
 - Sign-in is shared by all stages (one web address), but each stage keeps its
   own to-do list. Never delete users' cloud or device data without asking.
 

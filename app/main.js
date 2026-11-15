@@ -5,7 +5,7 @@
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { todos, loading, collapsed, toggleCollapsed, update, add, keyOf, LEVELS, LABELS } from './store.js';
+import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, keyOf, LEVELS, LABELS } from './store.js';
 
 // Phosphor icon from icons.js
 const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => {
@@ -133,6 +133,7 @@ function showUndo(text, k) {
 // their priority (they keep it, so un-starring puts them back). Star by
 // swiping a to-do to the right, or with the switch in the edit sheet.
 function setStar(t, k, starred) {
+  if (!ready()) return;
   const cur = todos.value.find((x, i) => keyOf(x, i) === k) || t;
   update(cur, { starred });
   window.AppToast?.show(`“${cur.text}” ${starred ? 'starred' : 'unstarred'}`, {
@@ -183,6 +184,7 @@ function Row({ t, k }) {
   const tick = (e) => {
     const done = e.target.checked;
     if (busy.has(k)) return;
+    if (!ready()) { e.target.checked = !done; return; }   // still connecting (Issue #36)
     if (!done) {   // unticking: straight back, no fuss
       update(t, { done: false, doneAt: null });
       focusAfter = [`#${id}`];
@@ -194,7 +196,7 @@ function Row({ t, k }) {
     if (reduceMotion()) markDone(t, k);
     else animateDone(e.target.closest('li'), t, k);
   };
-  const hl = justEdited.value === k;
+  const hl = justEdited.value === k || fresh.value.has(k);   // edited here, or changed elsewhere (Issue #36)
   const { row, handlers } = useSwipe(t, k);
   const ds = dueState(t);
   return html`
@@ -203,7 +205,7 @@ function Row({ t, k }) {
       <div class="todo-row" ref=${row} ...${handlers}>
         <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
         <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}${ds ? `, ${dueLabel(t.due)}` : ''}`}
-          onClick=${() => { if (swallowClick) return; editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '' }; }}>
+          onClick=${() => { if (swallowClick || !ready()) return; editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '' }; }}>
           <span class="t-main">${t.text}</span>
           ${ds && html`<span class=${`due-label due-${ds}`}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}</span>`}</button>
         ${t.p !== 'none' && html`
@@ -321,7 +323,7 @@ function AddBar() {
     <form id="todo-form" class="add-bar" onSubmit=${submit}>
       <div class="add-inner">
         <div class="entry">
-          <input id="todo-input" ref=${input} class="input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" maxlength="500" />
+          <input id="todo-input" ref=${input} class="input" placeholder=${loading.value && updating.value ? 'Connecting…' : 'Add a to-do…'} autocomplete="off" aria-label="New to-do" maxlength="500" />
           <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${p}`}
             aria-label=${`Priority for new to-do: ${LABELS[p]}. Tap to change`} title=${`Priority: ${LABELS[p]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>
@@ -456,7 +458,8 @@ function Summary() {
   const dueTxt = (dueToday ? ` · ${dueToday} due today` : '') + (overdue ? ` · ${overdue} overdue` : '');
   // Non-breaking spaces inside each part, so a narrow screen wraps between parts, not mid-part.
   const keep = (x) => x.replace(/(\d) /g, '$1\u00a0').replace(/ (today|do)\b/g, '\u00a0$1');
-  return keep(left ? `${left} to do${dueTxt}${doneTxt}` : `All done!${doneTxt}`);
+  const updTxt = updating.value ? ' · Updating…' : '';   // showing the saved copy until the server answers (Issue #36)
+  return keep(left ? `${left} to do${dueTxt}${doneTxt}${updTxt}` : `All done!${doneTxt}${updTxt}`);
 }
 
 function App() {
