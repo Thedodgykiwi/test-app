@@ -353,6 +353,10 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .todo-page h1 { margin: .4rem 0 0; display: flex; align-items: center; gap: .5rem; font-size: 1.6rem; padding-right: 5.5rem; }
 .todo-page > .muted { margin: 0; padding-right: 3.6rem; }
 .title-icon { color: #4c6ef5; }
+.tagline { margin: -.4rem 0 0; color: var(--muted); font-size: .98rem; font-style: italic; }
+.title-rule { display: flex; align-items: center; gap: .5rem; margin: .25rem 0 .15rem; color: #4c6ef5; }
+.title-rule .ic { width: .95rem; height: .95rem; flex: none; }
+.title-rule i { flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(90deg, currentColor, transparent 80%); }
 /* Narrow phones: keep the title clear of the Sign in button (shown when signed out). */
 @media (max-width: 389px) { .todo-page h1 { font-size: 1.3rem; } }
 @media (max-width: 339px) { .todo-page h1 { font-size: 1.1rem; } }
