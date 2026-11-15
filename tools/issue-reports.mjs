@@ -57,26 +57,66 @@ async function createIssue(r) {
 
 async function sendReceipt(r, issue) {
   const type = TYPES.includes(r.type) ? r.type[0].toUpperCase() + r.type.slice(1) : 'Not set';
+  const stageName = STAGES[r.stage] || r.stage;
   const text = `Thanks for your report: it's been logged as #${issue.number}.
 
-We'll look at it and you can follow it here:
-${issue.html_url}
+Follow it here: ${issue.html_url}
 
-A copy of what you sent:
-
+WHAT YOU SENT
 Title: ${r.title}
 Type: ${type}
-Stage: ${STAGES[r.stage] || r.stage}
+Stage: ${stageName}
 
+Description:
 ${r.body}
 
-— ${appName}`;
+Sent from ${appName} (${stageName}) using "Report issue".`;
   await mailer.sendMail({
     from: `"${appName}" <${env.GMAIL_USER}>`,
     to: r.email,
     subject: `Logged as #${issue.number}: ${r.title}`,
     text,
+    html: receiptHtml({ r, issue, type, stageName }),
   });
+}
+
+// The email's look: a simple card in the app's style. Email programs ignore
+// most modern CSS, so it uses tables and inline styles only.
+const STAGE_COLOURS = { local: '#495057', dev: '#7048e8', alpha: '#c2255c', staging: '#c25e00', main: '#2f6f4f' };
+const h = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export function receiptHtml({ r, issue, type, stageName }) {
+  const colour = STAGE_COLOURS[r.stage] || '#4263eb';
+  const font = 'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;';
+  const row = (label, value) => `<tr>
+    <td style="${font}padding:6px 0;color:#5f6570;font-size:14px;width:70px;vertical-align:top;">${label}</td>
+    <td style="${font}padding:6px 0;color:#1d1f23;font-size:15px;">${value}</td></tr>`;
+  const pill = (text, bg, fg) => `<span style="display:inline-block;padding:2px 10px;border-radius:999px;background:${bg};color:${fg};font-size:13px;font-weight:600;">${h(text)}</span>`;
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f1f3f6;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f3f6;padding:24px 12px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e3e6eb;">
+  <tr><td style="${font}background:${colour};color:#ffffff;padding:14px 24px;font-size:14px;font-weight:600;letter-spacing:.03em;">${h(appName)} &middot; ${h(stageName)}</td></tr>
+  <tr><td style="padding:28px 24px 8px;">
+    <div style="${font}font-size:22px;font-weight:700;color:#1d1f23;margin:0 0 6px;">Thanks, it's logged as #${issue.number}</div>
+    <div style="${font}font-size:15px;color:#5f6570;line-height:1.5;">We'll take a look. You can follow progress on GitHub.</div>
+  </td></tr>
+  <tr><td style="padding:16px 24px 8px;">
+    <a href="${h(issue.html_url)}" style="${font}display:inline-block;background:#4263eb;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 20px;border-radius:10px;">View #${issue.number} on GitHub</a>
+  </td></tr>
+  <tr><td style="padding:20px 24px 0;">
+    <div style="${font}font-size:12px;font-weight:700;letter-spacing:.08em;color:#5f6570;text-transform:uppercase;border-top:1px solid #e3e6eb;padding-top:18px;">What you sent</div>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+      ${row('Title', `<b>${h(r.title)}</b>`)}
+      ${row('Type', type === 'Not set' ? '<span style="color:#5f6570;">Not set</span>' : pill(type, '#e7ecff', '#3b5bdb'))}
+      ${row('Stage', pill(stageName, colour, '#ffffff'))}
+    </table>
+  </td></tr>
+  <tr><td style="padding:12px 24px 24px;">
+    <div style="${font}font-size:14px;color:#5f6570;margin-bottom:6px;">Description</div>
+    <div style="${font}font-size:15px;color:#1d1f23;line-height:1.5;background:#f6f7f9;border-radius:10px;padding:12px 14px;white-space:pre-wrap;">${h(r.body)}</div>
+  </td></tr>
+  <tr><td style="${font}padding:14px 24px;background:#f6f7f9;color:#8a9099;font-size:12px;border-top:1px solid #e3e6eb;">
+    You're getting this because you used "Report issue" in ${h(appName)} (${h(stageName)}).</td></tr>
+</table></td></tr></table></body></html>`;
 }
 
 const snap = await db.collection('issueReports').where('status', '==', 'new').limit(20).get();   // (no orderBy: that would need an index)
