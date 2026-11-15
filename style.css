@@ -147,6 +147,7 @@ body.has-banner .account { top: 2.8rem; }
 .seg button:hover { background: var(--surface); }
 .seg button[aria-checked="true"] { background: var(--surface); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .seg .ic { width: 1em; height: 1em; }
+.chips .ic { width: 1.1em; height: 1.1em; }
 
 /* Panels (Settings, What's new): bottom sheet on phones, centred box on wider screens */
 dialog.sheet {
@@ -385,7 +386,7 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .todo .text { flex: 1; min-width: 0; justify-content: flex-start; text-align: left; padding: .15rem 0; overflow-wrap: anywhere; }
 .todo.done .text { text-decoration: line-through; color: var(--muted); }
 .row-flag { display: grid; flex: none; }
-.row-flag .ic { width: 1.15em; height: 1.15em; }
+.row-flag .ic { width: 1.25em; height: 1.25em; }
 .todo.just-edited > .todo-row { animation: edited 1.2s ease-out; }
 @keyframes edited { from { background: color-mix(in srgb, var(--accent) 18%, transparent); } to { background: transparent; } }
 /* Rows in the priority panels sit on the gold swipe layer: fade to the card colour, never see-through (Issue #23). */
@@ -553,6 +554,10 @@ body { padding-bottom: 8rem; }
 .prio-toggle .chev .ic { width: 1.15em; height: 1.15em; }
 .prio-toggle:hover .chev { background: color-mix(in srgb, currentColor 12%, transparent); }
 .prio-group.closed .chev { transform: rotate(-90deg); }
+/* Issue #27: priority shown as signal bars (3 = High, 2 = Medium, 1 = Low), so the level reads by shape as well as colour; coloured headings, no coloured panels. */
+.prio-high .prio-toggle { color: var(--high); } .prio-med .prio-toggle { color: var(--med); } .prio-low .prio-toggle { color: var(--low); }
+.prio-toggle .lvl { width: 1.5em; height: 1.5em; margin: -.25em 0; }
+.prio-high .prio-toggle, .prio-med .prio-toggle, .prio-low .prio-toggle, .prio-none .prio-toggle { font-size: .78rem; }
 .fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .28s ease, opacity .2s ease; }
 .fold > .prio-list { min-height: 0; overflow: hidden; padding: 0 3px 6px; margin: 0 -3px -6px; }   /* room for the cards' shadows */
 .prio-group.closed .fold { grid-template-rows: 0fr; opacity: 0; }

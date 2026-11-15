@@ -1,6 +1,6 @@
 // The to-do screen, as Preact components (React-style, no build step; Issue #13).
 // Data and saving live in store.js; this file only draws and handles taps.
-// Layout "B": one list sorted by priority with a coloured flag on each row,
+// Layout "B": one list sorted by priority with coloured signal bars on each row,
 // Done (closed by default) with centred date dividers, add bar at the bottom.
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
@@ -208,7 +208,7 @@ function Row({ t, k }) {
           ${ds && html`<span class=${`due-label due-${ds}`}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}</span>`}</button>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
-            <${Icon} name="flag" cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
+            <${Icon} name=${`prio-${t.p}`} cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
           </span>`}
       </div>
     </li>`;
@@ -254,7 +254,7 @@ function Panel({ p, items, head }) {
       <h2 class="prio-head"><button type="button" class="prio-toggle" data-group=${key} aria-expanded=${!closed} aria-controls=${listId}
         title=${closed ? 'Show this section' : 'Hide this section'}
         onClick=${() => { toggleCollapsed(key); focusAfter = [`[data-group="${key}"]`]; }}>
-        ${head ? html`<${Icon} name=${head[0]} />` : html`<${Icon} name="flag" cls=${`flag-${p}`} />`}${title} · ${items.length}
+        ${head ? html`<${Icon} name=${head[0]} />` : html`<${Icon} name=${`prio-${p}`} cls=${`flag-${p} lvl`} />`}${title} · ${items.length}
         <span class="chev"><${Icon} name="caret-down" /></span>
       </button></h2>
       <div class="fold" id=${listId} inert=${closed}>
@@ -299,7 +299,7 @@ function TodoList() {
     ${movedHint.value && html`<p class="moved-hint">Moved to Done ↓</p>`}`;
 }
 
-// Add bar (fixed at the bottom). The flag picks the new to-do's priority:
+// Add bar (fixed at the bottom). The priority button (signal bars) picks the new to-do's priority:
 // each tap moves none → Low → Medium → High → none; it resets after each add.
 const CYCLE = ['none', 'low', 'med', 'high'];
 function AddBar() {
@@ -325,7 +325,7 @@ function AddBar() {
           <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${p}`}
             aria-label=${`Priority for new to-do: ${LABELS[p]}. Tap to change`} title=${`Priority: ${LABELS[p]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>
-            <span class="word">${p === 'none' ? '' : LABELS[p]}</span><${Icon} name="flag" cls=${`flag-${p}`} />
+            <span class="word">${p === 'none' ? '' : LABELS[p]}</span><${Icon} name=${`prio-${p}`} cls=${`flag-${p}`} />
           </button>
         </div>
         <button type="submit" class="btn primary"><${Icon} name="plus" />Add</button>
@@ -427,7 +427,7 @@ function EditSheet() {
         <div class="seg chips" role="group" aria-labelledby="edit-priority-label">
           ${['high', 'med', 'low', 'none'].map((v) => html`
             <button type="button" class=${`chip ${v}`} data-p=${v} aria-pressed=${p === v} onClick=${() => setP(v)}>
-              <${Icon} name="flag" cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
+              <${Icon} name=${`prio-${v}`} cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
         </div>
         <button type="button" class="star-toggle" role="switch" aria-checked=${star} onClick=${() => setStarOn(!star)}>
           <${Icon} name=${star ? 'star-fill' : 'star'} />Star this to-do<span class="switch" aria-hidden="true"></span>
