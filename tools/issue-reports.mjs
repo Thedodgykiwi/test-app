@@ -69,7 +69,7 @@ const stageOf = (r) => STAGES[r.stage] || r.stage;
 
 async function sendReceipt(r, issue) {
   const type = typeName(r.type), stageName = stageOf(r);
-  const text = `Thanks for your report: it's been logged as #${issue.number}. We'll take a look, and we'll email you again when it's fixed.
+  const text = `Thanks for your report: it's been logged as #${issue.number}. We review every report. If it leads to a change in a future update, we'll let you know.
 
 WHAT YOU SENT
 Title: ${r.title}
@@ -89,7 +89,7 @@ Sent from ${appName} (${stageName}) using "Report issue".`;
       stage: r.stage,
       title: `${appName} · ${stageName}`,
       heading: `Thanks, it's logged as #${issue.number}`,
-      intro: "We'll take a look, and we'll email you again when it's fixed.",
+      intro: "We review every report. If it leads to a change in a future update, we'll let you know.",
       rows: [['Title', `<b>${h(r.title)}</b>`],
         ['Type', type === 'Not set' ? '<span style="color:#5f6570;">Not set</span>' : pill(type, '#e7ecff', '#3b5bdb')],
         ['Stage', pill(stageName, STAGE_COLOURS[r.stage] || '#4263eb', '#ffffff')]],
@@ -130,7 +130,7 @@ async function sendFixed(r, note) {
   const [headline, ...restParts] = note.split(/\s+[—–-]\s+/);
   const joined = restParts.join(' — ');
   const rest = joined && joined[0].toUpperCase() + joined.slice(1);
-  const text = `Good news: the issue you reported has been fixed, and the fix is now live in ${appName}.
+  const text = `Good news: something you reported has led to a change, and it's now live in ${appName}.
 
 WHAT CHANGED
 ${note}
@@ -142,13 +142,13 @@ Thanks for taking the time to report it: it really helps.${appUrl !== '/' ? `\n\
   await mailer.sendMail({
     from: `"${appName}" <${env.GMAIL_USER}>`,
     to: r.email,
-    subject: `Fixed: ${r.title}`,
+    subject: `Now live: ${r.title}`,
     text,
     html: emailCard({
       stage: 'main',
       title: appName,
-      heading: "Good news: it's fixed",
-      intro: `The issue you reported is fixed, and the fix is now live in ${h(appName)}. Thanks for taking the time to report it: it really helps.`,
+      heading: "Good news: it's now live",
+      intro: `Something you reported has led to a change, and it's now live in ${h(appName)}. Thanks for taking the time to report it: it really helps.`,
       button: appUrl !== '/' ? [`Open ${appName}`, appUrl] : null,
       box: ['What changed', rest ? `<b>${h(headline)}</b><br>${h(rest)}` : h(note)],
       rowsHeading: 'You reported',
