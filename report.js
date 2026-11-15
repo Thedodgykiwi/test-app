@@ -95,7 +95,7 @@
         box.innerHTML = `${head}<div class="report-done">
           <div class="report-tick">${ic('check-circle', '✓')}</div>
           <p><b>Thanks! Your report is in.</b></p>
-          <p class="report-note">It becomes a GitHub issue within about 15 minutes, and we'll email you a copy with its number.</p>
+          <p class="report-note">We'll email you a copy shortly.</p>
           <button type="button" class="btn outline" data-close>Done</button></div>`;
         box.querySelector('.report-done [data-close]').focus();
       } catch (e2) {
