@@ -1,11 +1,13 @@
 name: Turn reports into issues
 
-# "Report issue" on the stage banner (Issue #28) saves reports to Firestore.
-# Every few minutes this collects new ones, creates a GitHub issue for each
-# and emails the reporter a copy; when an issue's fix reaches Production,
-# emails them again (tools/issue-reports.mjs, Issues #28 and #34).
+# "Report issue" on the stage banner (Issues #28, #34; playbook
+# guides/report-issue.md). Every few minutes: new reports -> GitHub issues +
+# receipt emails; changes that reached Production -> "it's now live" emails.
+# The steps live in ONE shared place, the app-playbook repo
+# (.github/workflows/issue-reports.yml); change them there, not here.
 # Scheduled runs use this file from the default branch (dev). GitHub runs
 # "every 5 minutes" late when busy: expect 5-15 minutes.
+# Needs repo secrets FIREBASE_SERVICE_ACCOUNT, GMAIL_USER, GMAIL_APP_PASSWORD.
 on:
   schedule:
     - cron: '*/5 * * * *'
@@ -21,23 +23,8 @@ concurrency:
 
 jobs:
   collect:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          sparse-checkout: tools
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      # Installed only for this job (not part of the app or package.json).
-      - run: npm install --prefix tools --no-save --no-package-lock firebase-admin@14 nodemailer@10
-      - run: node tools/issue-reports.mjs
-        # A failed run (e.g. email couldn't send) shows red in Actions; the issue is still created.
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APP_NAME: The Shortlist
-          APP_URL: https://thedodgykiwi.github.io/test-app/   # Production: its release notes and the "fixed" email link
+    uses: Thedodgykiwi/app-playbook/.github/workflows/issue-reports.yml@main
+    with:
+      app_name: The Shortlist
+      app_url: https://thedodgykiwi.github.io/test-app/   # Production address
+    secrets: inherit

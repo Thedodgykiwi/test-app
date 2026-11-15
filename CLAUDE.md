@@ -187,8 +187,8 @@ If they say yes:
 - Only signed-in people whose email is in **`access/testers`** (field
   `emails`, lower-case) can submit (`firestore.rules`). Edit that list in the
   Firebase console; never put the addresses in the repo.
-- `.github/workflows/issue-reports.yml` runs `tools/issue-reports.mjs` every
-  5 minutes from `dev` (GitHub often runs it late: expect 5–15 min; "Run
+- `.github/workflows/issue-reports.yml` calls the playbook's **shared** job
+  (`report-issue.md`; change it there, not here) every 5 minutes from `dev` (GitHub often runs it late: expect 5–15 min; "Run
   workflow" collects now). It creates the issue (layout from the playbook,
   "Reported by: tester"), marks the report `logged` and emails the reporter a
   receipt from Gmail (no GitHub links).
@@ -202,9 +202,7 @@ If they say yes:
 - Secrets (repo Settings → Secrets → Actions): `FIREBASE_SERVICE_ACCOUNT`
   (service account key JSON), `GMAIL_USER`, `GMAIL_APP_PASSWORD`. Without the
   first, the job does nothing; without the Gmail ones, it skips emails.
-- Local test of the job: run it with `FIRESTORE_EMULATOR_HOST` set,
-  `GITHUB_API_URL` and `APP_URL` pointing at a fake server, and `MAIL_TEST=1`
-  (builds the emails, sends nothing).
+- Local test of the job: playbook `report-issue.md`, "Testing the job locally".
 
 ## Notes
 
