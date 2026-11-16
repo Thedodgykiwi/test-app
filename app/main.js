@@ -311,12 +311,17 @@ function Row({ t, k }) {
               const r = e.currentTarget.getBoundingClientRect();
               dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom };
             }}><${Icon} name=${ds === 'today' && t.evening ? 'moon' : DUE_ICON[ds]} />${ds === 'today' && t.evening ? 'Tonight' : dueLabel(t.due)}<${Icon} name="caret-down" cls="caret" /></button>`}
+          ${itemsOf(t).length > 0 && html`<button type="button" class=${`sub-pill${expanded.value.has(k) ? ' open' : ''}`}
+            aria-expanded=${expanded.value.has(k)} aria-label=${`Checklist, ${progress(t)} done. ${expanded.value.has(k) ? 'Hide' : 'Show'} it`}
+            onClick=${() => { if (swallowClick) return; const s = new Set(expanded.value); s.has(k) ? s.delete(k) : s.add(k); expanded.value = s; }}>
+            <${Icon} name="list-checks" />${progress(t)}<${Icon} name="caret-down" cls="caret" /></button>`}
         </div>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name=${`prio-${t.p}`} cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
           </span>`}
       </div>
+      ${!t.done && expanded.value.has(k) && itemsOf(t).length > 0 && html`<div class="row-sub"><${Checklist} t=${t} compact=${true} /></div>`}
     </li>`;
 }
 
@@ -474,6 +479,63 @@ function Understood({ r }) {
     <span class="u-title">→ “${r.text}”</span></div>`;
 }
 
+// ---- Checklist on a to-do (Issue #44) ---------------------------------------
+// A simple list of things needed for the to-do: tick, rename in place, drag
+// the handle to reorder, "Add item…" at the end (Enter moves to the next).
+// Changes save at once. A row with items shows a "2/4" pill; tapping it
+// unfolds the checklist under the row. The edit sheet has the same list.
+const expanded = signal(new Set());   // rows showing their checklist
+const itemsOf = (t) => Array.isArray(t.items) ? t.items : [];
+const progress = (t) => { const it = itemsOf(t); return it.length ? `${it.filter((i) => i.done).length}/${it.length}` : ''; };
+function Checklist({ t, autoFocus, compact }) {
+  const items = itemsOf(t);
+  const save = (next) => { if (ready()) update(t, { items: next }); };
+  const box = useRef(), addRef = useRef();
+  useEffect(() => { if (autoFocus) addRef.current?.focus(); }, [autoFocus]);
+  const [drag, setDrag] = useState(null);
+  const onHandle = (i) => (e) => {
+    e.preventDefault(); const el = e.currentTarget; el.setPointerCapture(e.pointerId);
+    let from = i, list = items.slice();
+    setDrag(i);
+    const move = (ev) => {
+      const rows = [...box.current.querySelectorAll('.cl-item')];
+      // Where it would land: how many other rows have their middle above the pointer.
+      const idx = rows.filter((r, j) => j !== from && ev.clientY > r.getBoundingClientRect().top + r.getBoundingClientRect().height / 2).length;
+      if (idx !== from) { const [it] = list.splice(from, 1); list.splice(idx, 0, it); from = idx; setDrag(idx); save(list); }
+    };
+    const up = () => { setDrag(null); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  };
+  const addItem = (e) => {
+    e.preventDefault(); const v = addRef.current.value.trim().slice(0, 200); if (!v) return;
+    if (items.length >= 50) { window.AppToast?.show('A checklist can hold 50 items', { icon: 'list-checks' }); return; }
+    save([...items, { text: v, done: false }]); addRef.current.value = '';
+  };
+  // Keyboard reorder on the handle: Alt + arrow up / down.
+  const handleKeys = (i) => (e) => {
+    if (!e.altKey || !['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    e.preventDefault(); const j = i + (e.key === 'ArrowUp' ? -1 : 1); if (j < 0 || j >= items.length) return;
+    const list = items.slice(); [list[i], list[j]] = [list[j], list[i]]; save(list);
+    setTimeout(() => box.current?.querySelectorAll('.cl-handle')[j]?.focus());
+  };
+  return html`
+    <div class=${`checklist${compact ? ' compact' : ''}`} ref=${box}>
+      ${items.map((it, i) => html`
+        <div class=${`cl-item${it.done ? ' done' : ''}${drag === i ? ' dragging' : ''}`} key=${i}>
+          <button type="button" class="cl-tick" role="checkbox" aria-checked=${it.done} aria-label=${`Done: ${it.text}`}
+            onClick=${() => save(items.map((x, j) => j === i ? { ...x, done: !x.done } : x))}><${Icon} name=${it.done ? 'check-circle' : 'circle'} /></button>
+          <input class="cl-text" value=${it.text} aria-label="Checklist item" maxlength="200"
+            onBlur=${(e) => { const v = e.target.value.trim(); if (v === it.text) return; save(v ? items.map((x, j) => j === i ? { ...x, text: v } : x) : items.filter((_, j) => j !== i)); }}
+            onKeyDown=${(e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); addRef.current.focus(); } }} />
+          <button type="button" class="cl-handle" aria-label=${`Reorder “${it.text}” (drag, or Alt + arrow keys)`} onPointerDown=${onHandle(i)} onKeyDown=${handleKeys(i)}><${Icon} name="dots-six-vertical" /></button>
+        </div>`)}
+      <form class="cl-add" onSubmit=${addItem}>
+        <span class="cl-plus" aria-hidden="true"><${Icon} name="plus" /></span>
+        <input ref=${addRef} class="cl-text" placeholder=${items.length ? 'Add item…' : 'First item…'} aria-label="Add a checklist item" maxlength="200" autocomplete="off" />
+      </form>
+    </div>`;
+}
+
 function AddBar() {
   const [p, setP] = useState('none');
   const [hint, setHint] = useState(nextHint);
@@ -623,6 +685,8 @@ function EditSheet() {
   // Delete (Issue #40): the first tap arms the button ("Tap again"), the
   // second deletes. It disarms itself after 3 seconds.
   const [armed, setArmed] = useState(false);
+  const [startList, setStartList] = useState(false);   // "Add a checklist" tapped (Issue #44)
+  useEffect(() => setStartList(false), [e]);
   const disarm = useRef();
   useEffect(() => { setArmed(false); clearTimeout(disarm.current); }, [e]);
   const del = () => {
@@ -680,6 +744,9 @@ function EditSheet() {
           <${Icon} name=${star ? 'star-fill' : 'star'} />Star this to-do<span class="switch" aria-hidden="true"></span>
         </button>
         <${DueField} value=${due} onChange=${setDue} open=${!!e} />
+        ${(() => { const t = e && todos.value.find((x, i) => keyOf(x, i) === e.key); if (!t) return null;   // checklist (Issue #44)
+          if (!itemsOf(t).length && !startList) return html`<button type="button" class="star-toggle cl-open" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Add a checklist</button>`;
+          return html`<p class="field-label"><${Icon} name="list-checks" cls="lbl-ic" /> Checklist${progress(t) ? html` · <span class="due-chosen">${progress(t)}</span>` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`; })()}
         <div class="row edit-actions">
           <button type="button" id="edit-delete" class=${`btn ${armed ? 'danger' : 'danger-soft'}`} aria-live="polite" onClick=${del}>
             <${Icon} name="trash" />${armed ? 'Tap again' : 'Delete'}</button>

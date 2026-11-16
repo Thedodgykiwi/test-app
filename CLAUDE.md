@@ -244,6 +244,16 @@ If they say yes:
   today panel, with a moon "Tonight" label. Set by typing "tonight"/"ton"
   (#42 parser) or the due menu's Tonight; Today / any other date clears it
   (`setDue`, edit sheet). `firestore.rules` allows the optional bool.
+- **Checklist (Issue #44):** optional `items: [{ text, done }]` (≤50, text
+  ≤200; `cleanItems` in `sync.js` tidies before saving, since rules can't
+  look inside a list). `Checklist` in `app/main.js`: tick, rename in place
+  (empty = delete), drag the handle or Alt+arrows to reorder, "Add item…".
+  Rows with items show a "2/4" pill that unfolds the list under the row
+  (`expanded` signal); the edit sheet has "Add a checklist" / the same list.
+  Cards use `overflow: clip` (not hidden) so a focused input can't scroll
+  them sideways.
+- **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
+  its own when the date isn't today / tomorrow.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves
