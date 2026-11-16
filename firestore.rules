@@ -39,8 +39,8 @@ rules_version = '2';
 //
 // The parent documents users/{userId} and .../stages/{stage} are never
 // written; nothing else in the database is readable or writable.
-// Users can create to-dos, tick them, change priority and edit the text. There is no
-// delete in the app yet, so deletes are not allowed.
+// Users can create to-dos, tick them, change priority, edit the text and
+// delete them (Issue #40).
 //
 // ===============================================================
 
@@ -127,7 +127,8 @@ service cloud.firestore {
         isValidTodo() &&
         onlyChanges(['done', 'p', 'doneAt', 'text', 'starred', 'due']);
 
-      // No deletes (the app has no delete feature yet).
+      // Owner only: delete one of their own to-dos (Issue #40).
+      allow delete: if isOwner(userId) && isValidStage(stage);
     }
 
     function isTester() {

@@ -5,7 +5,7 @@
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, keyOf, LEVELS, LABELS } from './store.js';
+import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, keyOf, LEVELS, LABELS } from './store.js';
 
 // Phosphor icon from icons.js
 const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => {
@@ -507,6 +507,18 @@ function EditSheet() {
   const [p, setP] = useState('none');
   const [star, setStarOn] = useState(false);
   const [due, setDue] = useState('');
+  // Delete (Issue #40): the first tap arms the button ("Tap again"), the
+  // second deletes. It disarms itself after 3 seconds.
+  const [armed, setArmed] = useState(false);
+  const disarm = useRef();
+  useEffect(() => { setArmed(false); clearTimeout(disarm.current); }, [e]);
+  const del = () => {
+    if (!armed) { setArmed(true); disarm.current = setTimeout(() => setArmed(false), 3000); return; }
+    clearTimeout(disarm.current);
+    const t = todos.value.find((x, i) => keyOf(x, i) === e.key);
+    if (t && remove(t)) window.AppToast?.show(`“${t.text}” deleted`, { icon: 'trash' });
+    editing.value = null;
+  };
   useEffect(() => {
     if (!e) { if (dlg.current.open) dlg.current.close(); return; }
     setP(e.p); setStarOn(!!e.starred); setDue(e.due || ''); text.current.value = e.text;
@@ -556,6 +568,8 @@ function EditSheet() {
         </button>
         <${DueField} value=${due} onChange=${setDue} open=${!!e} />
         <div class="row edit-actions">
+          <button type="button" id="edit-delete" class=${`btn ${armed ? 'danger' : 'danger-soft'}`} aria-live="polite" onClick=${del}>
+            <${Icon} name="trash" />${armed ? 'Tap again' : 'Delete'}</button>
           <button type="button" id="edit-cancel" class="btn ghost" onClick=${close}>Cancel</button>
           <button type="submit" id="edit-save" class="btn primary">Save</button>
         </div>

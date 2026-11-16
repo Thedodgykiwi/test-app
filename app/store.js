@@ -27,7 +27,7 @@ export const updating = signal(false);
 export const fresh = signal(new Set());
 const cacheKey = `cloud-copy-${stage}`;
 const readCache = () => { try { return JSON.parse(localStorage.getItem(cacheKey)); } catch { return null; } };
-let cloud = null;   // set by sync.js while signed in: { add(t), update(t, changes) }
+let cloud = null;   // set by sync.js while signed in: { add(t), update(t, changes), remove(t) }
 let shownCopy = null;   // the saved copy shown at start, to spot what changed
 if (loading.value) {
   const copy = readCache();
@@ -61,6 +61,13 @@ export function update(t, changes) {
   if (!ready()) return;
   todos.value = todos.value.map((x) => (x === t ? { ...x, ...changes } : x));
   if (cloud) cloud.update(t, changes); else save();
+}
+// Delete a to-do wherever it lives (Issue #40).
+export function remove(t) {
+  if (!ready()) return false;
+  todos.value = todos.value.filter((x) => x !== t);
+  if (cloud) cloud.remove(t); else save();
+  return true;
 }
 // Add a to-do. Returns false while we don't yet know which list to add to.
 export function add(text, p) {
