@@ -525,16 +525,22 @@ function DueField({ value, onChange, open }) {
   const lead = (first.getDay() + 6) % 7;   // weeks start on Monday
   const thisMonth = y === t0.getFullYear() && m === t0.getMonth();
   const go = (n) => setMonth(([yy, mm]) => { const d = new Date(yy, mm + n, 1); return [d.getFullYear(), d.getMonth()]; });
-  const choice = !value ? 'none' : value === today.value ? 'today' : value === tomorrow ? 'tomorrow' : '';
-  const pick = (v) => { onChange(v); if (v) { const d = parseDay(v); setMonth([d.getFullYear(), d.getMonth()]); } };
+  const choice = !value ? 'none' : value === today.value ? 'today' : value === tomorrow ? 'tomorrow' : 'pick';
+  // The calendar only shows behind the "Pick" chip (Issue #45), or when the
+  // date is already one the chips can't say.
+  const [picking, setPicking] = useState(false);
+  useEffect(() => { if (open) setPicking(false); }, [open]);
+  const showCal = picking || choice === 'pick';
+  const pick = (v) => { onChange(v); setPicking(false); if (v) { const d = parseDay(v); setMonth([d.getFullYear(), d.getMonth()]); } };
   const monthName = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   return html`
     <p class="field-label" id="edit-due-label">Due${value ? html` · <span class="due-chosen">${(l => l[0].toUpperCase() + l.slice(1))(dueLabel(value).replace(/^Due /, ''))}</span>` : ''}</p>
     <div class="seg chips" role="group" aria-labelledby="edit-due-label">
       ${[['none', 'None', ''], ['today', 'Today', today.value], ['tomorrow', 'Tomorrow', tomorrow]].map(([k, l, v]) => html`
         <button type="button" class="chip" data-due=${k} aria-pressed=${choice === k} onClick=${() => pick(v)}>${l}</button>`)}
+      <button type="button" class="chip" data-due="pick" aria-pressed=${choice === 'pick'} aria-expanded=${showCal} onClick=${() => setPicking(!showCal)}><${Icon} name="calendar-blank" />Pick</button>
     </div>
-    <div class="mini-cal" role="group" aria-label=${`Pick a due date, ${monthName}`}>
+    ${showCal && html`<div class="mini-cal" role="group" aria-label=${`Pick a due date, ${monthName}`}>
       <div class="cal-head">
         <button type="button" class="cal-nav" aria-label="Previous month" disabled=${thisMonth} onClick=${() => go(-1)}><${Icon} name="caret-left" /></button>
         <span>${monthName}</span>
@@ -551,7 +557,7 @@ function DueField({ value, onChange, open }) {
             onClick=${() => pick(v)}>${i + 1}</button>`;
         })}
       </div>
-    </div>`;
+    </div>`}`;
 }
 
 // Edit sheet: change the wording or priority. Opening it doesn't redraw or
