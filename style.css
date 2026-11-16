@@ -661,3 +661,24 @@ button.due-label::after { content: ''; position: absolute; inset: -.55rem -.6rem
 .btn.danger-soft { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
 .btn.danger-soft:hover { background: color-mix(in srgb, var(--danger) 16%, transparent); }
 #edit-delete { margin-right: auto; }
+
+/* Quick add pop-up: press N on a keyboard (Issue #41). Centred, fades in
+   with a small slide up; no movement with Reduce Motion. */
+dialog.quick-add {
+  border: 0; padding: .8rem .8rem .6rem; margin: auto; width: min(520px, 92vw);
+  background: var(--surface); color: var(--text); border-radius: 16px; box-shadow: var(--shadow);
+}
+dialog.quick-add[open] { animation: quick-in .28s cubic-bezier(.2, .8, .2, 1); }
+dialog.quick-add::backdrop { background: rgba(0,0,0,.35); animation: quick-fade .28s ease-out; }
+dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
+.quick-keys { display: flex; gap: .8rem; align-items: center; margin: .5rem .2rem 0; font-size: .78rem; color: var(--muted); }
+.quick-help { margin-left: auto; white-space: nowrap; }
+.quick-added { display: inline-flex; align-items: center; gap: .3rem; min-width: 0; color: var(--ok);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; animation: quick-fade .3s ease-out; }
+.quick-added .ic { flex: none; }
+.quick-keys kbd { font: inherit; font-size: .9em; padding: 0 .35rem; border: 1px solid var(--line); border-radius: 4px; background: var(--hover); }
+@keyframes quick-in { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes quick-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  dialog.quick-add[open] { animation: quick-fade .2s ease-out; }
+}
