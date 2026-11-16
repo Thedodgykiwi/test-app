@@ -69,7 +69,8 @@ await t('due date in wrong format rejected', () => assertFails(updateDoc(p(alice
 await t('due date as number rejected', () => assertFails(updateDoc(p(alice), { due: 20261120 })));
 await t('other user cannot set due date', () => assertFails(updateDoc(p(bob), { due: '2026-11-20' })));
 await t('other user cannot set doneAt', () => assertFails(updateDoc(p(bob), { done: true, doneAt: Date.now() })));
-await t('delete denied', () => assertFails(deleteDoc(p(alice))));
+await t('other user cannot delete', () => assertFails(deleteDoc(p(bob))));
+await t('owner can delete', () => assertSucceeds(deleteDoc(p(alice))));
 await t('parent user doc not writable', () => assertFails(setDoc(doc(alice, 'users', 'alice'), { a: 1 })));
 await t('other collections denied', () => assertFails(setDoc(doc(alice, 'other', 'x'), { a: 1 })));
 
