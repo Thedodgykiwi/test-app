@@ -36,6 +36,25 @@ async function start() {
     fs.connectFirestoreEmulator(db, '127.0.0.1', 8081);
   }
 
+  // For the banner's "Report issue" drop-down (report.js, Issue #28). Reports go
+  // to issueReports/{id}; firestore.rules only lets people on the testers list
+  // add one, and nobody can read them back (a GitHub Action collects them).
+  window.AppCloud = {
+    user: () => auth.currentUser,
+    signIn: () => document.getElementById('sign-in').click(),
+    submitReport({ title, body, type, screenshot }) {
+      const u = auth.currentUser;
+      const write = fs.addDoc(fs.collection(db, 'issueReports'), {
+        title, body, type, stage: app.stage, uid: u.uid, email: u.email,
+        status: 'new', createdAt: fs.serverTimestamp(),
+        ...(screenshot ? { screenshot } : {}),   // JPEG data URL, shrunk on the device (Issue #35)
+      });
+      // addDoc waits for the server; don't leave the button spinning forever.
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000));
+      return Promise.race([write, timeout]);
+    },
+  };
+
   const $ = (id) => document.getElementById(id);
   const ui = {
     box: $('account'), signIn: $('sign-in'), button: $('account-btn'), avatar: $('avatar'),
@@ -75,16 +94,18 @@ async function start() {
   const STATUS = {
     synced: 'All changes saved to your account',
     saving: 'Saving…',
+    updating: 'Updating your list…',
     offline: "Offline: changes will sync when you're back online",
     error: () => `Couldn't sync: ${error}`,
   };
   function showStatus() {
-    const state = error ? 'error' : !navigator.onLine ? 'offline' : pending ? 'saving' : 'synced';
+    const state = error ? 'error' : !navigator.onLine ? 'offline' : pending ? 'saving' : app.updating ? 'updating' : 'synced';
     const text = typeof STATUS[state] === 'function' ? STATUS[state]() : STATUS[state];
     ui.status.hidden = ui.dot.hidden = false;
-    ui.status.className = `sync-status ${state}`;
-    ui.status.replaceChildren(icon({ synced: 'cloud-check', saving: 'cloud-arrow-up', offline: 'cloud-slash', error: 'warning-circle' }[state]), text);
-    ui.dot.className = `sync-dot ${state}`;
+    const look = state === 'updating' ? 'saving' : state;   // same blue as Saving…
+    ui.status.className = `sync-status ${look}`;
+    ui.status.replaceChildren(icon({ synced: 'cloud-check', saving: 'cloud-arrow-up', updating: 'cloud-arrow-down', offline: 'cloud-slash', error: 'warning-circle' }[state]), text);
+    ui.dot.className = `sync-dot ${look}`;
     ui.button.setAttribute('aria-label', `Menu: ${ui.name.textContent}. ${text}`);
     ui.button.title = text;
   }
@@ -109,7 +130,7 @@ async function start() {
       ui.button.setAttribute('aria-label', 'Menu'); ui.button.title = 'Menu';
       if (localStorage.getItem('signed-in')) toast('Signed out. Showing the to-dos saved on this device.');
       localStorage.removeItem('signed-in');
-      app.useLocal();
+      app.useLocal({ forget: true });
       return;
     }
     localStorage.setItem('signed-in', '1');
@@ -137,10 +158,10 @@ async function start() {
 
     unsubscribe = fs.onSnapshot(fs.query(todosRef, fs.orderBy('pos')), { includeMetadataChanges: true }, (snap) => {
       const list = snap.docs.map((d) => {
-        const { text, done, p, doneAt = null } = d.data();
-        return { id: d.id, text, done, p, doneAt };
+        const { text, done, p, doneAt = null, starred = false, due = null } = d.data();
+        return { id: d.id, text, done, p, doneAt, starred, due };
       });
-      app.setTodos(list);
+      app.setTodos(list, { fromServer: !snap.metadata.fromCache });
       pending = snap.metadata.hasPendingWrites;
       if (!pending) error = '';
       showStatus();
@@ -153,6 +174,8 @@ async function start() {
     const doc = { text: String(t.text).slice(0, 500), done: !!t.done, p: t.p, pos, createdAt: fs.serverTimestamp() };
     // When it was ticked (for the Done group's date ranges); only if known.
     if (t.done && Number.isFinite(t.doneAt)) doc.doneAt = t.doneAt;
+    if (t.starred === true) doc.starred = true;   // starred on this device (Issue #22)
+    if (typeof t.due === 'string' && /^20\d\d-[01]\d-[0-3]\d$/.test(t.due)) doc.due = t.due;   // Issue #23
     return doc;
   }
 
