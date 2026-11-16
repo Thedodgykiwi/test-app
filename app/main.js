@@ -504,7 +504,9 @@ function DueField({ value, onChange, open }) {
 // ---- Quick add (Issue #41) ------------------------------------------------
 // On a keyboard, press N (when not typing somewhere) for a small "New to-do"
 // pop-up in the middle of the screen: type, pick a priority if you like,
-// Enter adds, Esc cancels. It fades in with a small slide up (style.css).
+// Enter adds and clears the box for the next one (it stays open, so you
+// can add several in a row); Esc, or Enter on an empty box, closes it.
+// It fades in with a small slide up (style.css).
 const quickOpen = signal(false);
 addEventListener('keydown', (ev) => {
   if (ev.key.toLowerCase() !== 'n' || ev.ctrlKey || ev.metaKey || ev.altKey || ev.repeat) return;
@@ -515,16 +517,19 @@ addEventListener('keydown', (ev) => {
 function QuickAdd() {
   const dlg = useRef(), input = useRef();
   const [p, setP] = useState('none');
+  const [added, setAdded] = useState([]);   // texts added since it opened
   useEffect(() => {
-    if (quickOpen.value) { setP('none'); input.current.value = ''; dlg.current.showModal(); input.current.focus(); }
+    if (quickOpen.value) { setP('none'); setAdded([]); input.current.value = ''; dlg.current.showModal(); input.current.focus(); }
     else if (dlg.current.open) dlg.current.close();
   }, [quickOpen.value]);
   const submit = (e) => {
     e.preventDefault();
     const v = input.current.value.trim().slice(0, 500);
-    if (v && add(v, p)) window.AppToast?.show(`“${v}” added`, { icon: 'check-circle' });
-    quickOpen.value = false;
+    if (!v) { quickOpen.value = false; return; }   // empty Enter = done
+    if (add(v, p)) { setAdded([...added, v]); input.current.value = ''; setP('none'); }
+    input.current.focus();
   };
+  const last = added[added.length - 1];
   return html`
     <dialog id="quick-add" class="quick-add" ref=${dlg} aria-label="New to-do"
       onClose=${() => { quickOpen.value = false; }} onClick=${(ev) => { if (ev.target === dlg.current) quickOpen.value = false; }}>
@@ -536,7 +541,9 @@ function QuickAdd() {
             title=${`Priority: ${LABELS[p]} (click to change)`} onClick=${() => { setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); input.current.focus(); }}>
             <span class="word">${p === 'none' ? '' : LABELS[p]}</span><${Icon} name=${`prio-${p}`} cls=${`flag-${p}`} /></button>
         </div>
-        <p class="quick-keys"><kbd>Enter</kbd> add · <kbd>Esc</kbd> cancel</p>
+        <p class="quick-keys" aria-live="polite">
+          ${added.length ? html`<span class="quick-added" key=${added.length}><${Icon} name="check-circle" />${added.length} added · “${last}”</span>` : ''}
+          <span class="quick-help"><kbd>Enter</kbd> add · <kbd>Esc</kbd> ${added.length ? 'done' : 'cancel'}</span></p>
       </form>
     </dialog>`;
 }
