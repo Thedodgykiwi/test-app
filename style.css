@@ -565,6 +565,13 @@ body { padding-bottom: 8rem; }
   background: var(--gold-swipe); color: #2b1f00; font-weight: 700; font-size: .9rem; border-radius: inherit;
 }
 .swipe-under .ic { width: 1.2em; height: 1.2em; }
+/* Swipe left: "Tomorrow" in blue on the right-hand side (Issue #39). Only one layer shows at a time. */
+:root { --tmr-swipe: #1971c2; --tmr-swipe-text: #fff; }
+:root[data-theme="dark"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; } }
+.swipe-under.left { display: none; justify-content: flex-end; padding: 0 1.1rem 0 0; background: var(--tmr-swipe); color: var(--tmr-swipe-text); }
+.todo.swipe-left > .swipe-under.left { display: flex; }
+.todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
 .todo-row.swiping { transition: none; }
 .todo-row.settle { transition: transform .22s cubic-bezier(.2,.8,.3,1); }
 /* Star switch in the edit sheet */

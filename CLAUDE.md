@@ -224,8 +224,9 @@ If they say yes:
   When the starter's shared pieces improve, copy them over (they're app-owned copies).
 - **Due-date quick menu (Issue #38):** a row's due label ("Due today",
   "Overdue…") is its own button; tapping it opens `DueMenu` in `app/main.js`
-  (Today / Tomorrow, Pick a date…, No date) with an Undo note. Swipe left and
-  choosing swipe actions in Settings is Issue #39 (not built).
+  (Today / Tomorrow, Pick a date…, No date) with an Undo note. Swipe left on a row
+  also sends it to tomorrow (Issue #39, `useSwipe`; same code as swipe right
+  to star). Choosing each swipe's action in Settings is the rest of #39 (not built).
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves

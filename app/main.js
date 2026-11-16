@@ -45,6 +45,7 @@ const today = signal(isoDay(new Date()));   // re-checked when the app comes bac
 const recheckDay = () => { const t = isoDay(new Date()); if (t !== today.value) today.value = t; };
 document.addEventListener('visibilitychange', recheckDay);
 setInterval(recheckDay, 60 * 1000);
+const tomorrowDay = () => { const d = parseDay(today.value); return isoDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)); };
 const validDue = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const daysUntil = (v) => Math.round((parseDay(v) - parseDay(today.value)) / 864e5);
 function dueState(t) {
@@ -146,8 +147,9 @@ function setStar(t, k, starred) {
   });
 }
 
-// Swipe right on a row to star / un-star it. Vertical moves still scroll the
-// page; a tap still opens the editor. Done to-dos don't swipe.
+// Swipe right on a row to star / un-star it; swipe left to send it to tomorrow
+// (Issue #39; not when it's already due tomorrow). Vertical moves still scroll
+// the page; a tap still opens the editor. Done to-dos don't swipe.
 const SWIPE_AT = 72;   // px to drag before letting go stars it
 function useSwipe(t, k) {
   const row = useRef(), s = useRef(null);
@@ -160,12 +162,13 @@ function useSwipe(t, k) {
     const dx = e.clientX - st.x, dy = e.clientY - st.y;
     if (!st.dragging) {
       if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { s.current = null; return; }   // scrolling
-      if (dx < 10 || Math.abs(dx) < Math.abs(dy)) return;
+      if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) return;
       st.dragging = true; row.current.setPointerCapture(st.id); row.current.classList.add('swiping');
     }
-    st.dx = Math.max(0, Math.min(dx, 140));
+    st.dx = Math.max(t.due === tomorrowDay() ? 0 : -140, Math.min(dx, 140));
     row.current.style.transform = `translateX(${st.dx}px)`;
-    row.current.parentElement.classList.toggle('swipe-ready', st.dx >= SWIPE_AT);
+    row.current.parentElement.classList.toggle('swipe-ready', Math.abs(st.dx) >= SWIPE_AT);
+    row.current.parentElement.classList.toggle('swipe-left', st.dx < 0);
   };
   const up = () => {
     const st = s.current; s.current = null; if (!st?.dragging) return;
@@ -173,8 +176,10 @@ function useSwipe(t, k) {
     el.classList.remove('swiping'); el.classList.add('settle'); el.style.transform = '';
     setTimeout(() => el.classList.remove('settle'), 250);
     el.parentElement.classList.remove('swipe-ready');
+    setTimeout(() => el.parentElement?.classList.remove('swipe-left'), 230);   // after it slides back
     swallowClick = true; setTimeout(() => { swallowClick = false; }, 60);   // not also a tap
     if (st.dx >= SWIPE_AT) setTimeout(() => setStar(t, k, !t.starred), 180);
+    else if (st.dx <= -SWIPE_AT) setTimeout(() => setDue(k, tomorrowDay(), 'moved to tomorrow'), 180);
   };
   return { row, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up } };
 }
@@ -228,7 +233,7 @@ function DueMenu() {
     return () => { document.removeEventListener('pointerdown', away, true); removeEventListener('scroll', gone, true); removeEventListener('resize', gone); };
   }, [m]);
   if (!m || !t) return null;
-  const t0 = parseDay(today.value), tomorrow = isoDay(new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + 1));
+  const tomorrow = tomorrowDay();
   const items = [
     t.due !== today.value && ['clock', 'Today', () => setDue(m.key, today.value, 'moved to today')],
     t.due !== tomorrow && ['arrow-right', 'Tomorrow', () => setDue(m.key, tomorrow, 'moved to tomorrow')],
@@ -271,7 +276,8 @@ function Row({ t, k }) {
   const ds = dueState(t);
   return html`
     <li class=${`todo${t.done ? ' done' : ''}${hl ? ' just-edited' : ''}`}>
-      ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>`}
+      ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>
+        <div class="swipe-under left" aria-hidden="true">Tomorrow<${Icon} name="arrow-right" /></div>`}
       <div class="todo-row" ref=${row} ...${handlers}>
         <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
         <div class="text-col">
@@ -570,7 +576,7 @@ setTimeout(() => {
     if (localStorage.getItem(key) || !todos.value.some((t) => !t.done)) return;
     localStorage.setItem(key, '1');
   } catch { return; }
-  window.AppToast?.show('Tip: swipe a to-do to the right to star it', { icon: 'star', duration: 6000 });
+  window.AppToast?.show('Tip: swipe a to-do right to star it, left for tomorrow', { icon: 'star', duration: 6000 });
 }, 2500);
 render(html`<${Summary} />`, document.getElementById('summary'));
 // The add bar and edit sheet sit outside the list (fixed bar, modal sheet).
