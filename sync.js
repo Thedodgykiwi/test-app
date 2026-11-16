@@ -153,6 +153,9 @@ async function start() {
       update(t, changes) {
         fs.updateDoc(fs.doc(todosRef, t.id), changes).catch(failed);
       },
+      remove(t) {
+        fs.deleteDoc(fs.doc(todosRef, t.id)).catch(failed);
+      },
     });
     showStatus();
 
