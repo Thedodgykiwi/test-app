@@ -656,3 +656,8 @@ button.due-label::after { content: ''; position: absolute; inset: -.55rem -.6rem
 .prio-group { transition: padding-bottom .28s ease; }
 .prio-group.closed { padding-bottom: .1rem; }
 @media (prefers-reduced-motion: reduce) { .fold, .prio-toggle .chev, .prio-group { transition: none; } }
+
+/* Edit sheet: Delete on the left of Cancel / Save (Issue #40). */
+.btn.danger-soft { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
+.btn.danger-soft:hover { background: color-mix(in srgb, var(--danger) 16%, transparent); }
+#edit-delete { margin-right: auto; }
