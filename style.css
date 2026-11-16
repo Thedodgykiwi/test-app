@@ -77,6 +77,67 @@ body.has-banner { padding-top: 3rem; }
 #pipeline-link:hover { background: rgba(0, 0, 0, .3); text-decoration: underline; }
 #pipeline-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
+/* "Report issue" (Issue #28): same pill as Pipeline, at the banner's left end,
+   opening a drop-down card just under the banner (report.js). */
+#report-link {
+  position: absolute; left: .6rem; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: .3rem; border: 0; cursor: pointer; font: inherit;
+  color: #fff; font-size: .75rem; letter-spacing: .02em; font-weight: 600;
+  padding: .15rem .5rem; border-radius: 999px; background: rgba(0, 0, 0, .18);
+}
+#report-link .ic { width: 1em; height: 1em; }
+@media (max-width: 420px) { #report-link .wide-only { display: none; } }   /* phones: "Report" only, so the stage name fits */
+#report-link:hover, #report-link[aria-expanded="true"] { background: rgba(0, 0, 0, .3); }
+#report-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.report-box {
+  position: fixed; z-index: 11; top: 2.6rem; left: .6rem; width: min(26rem, calc(100vw - 1.2rem));
+  max-height: calc(100dvh - 3.4rem); overflow-y: auto;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25); padding: .9rem 1rem 1rem;
+}
+.report-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+.report-head h2 { font-size: 1.05rem; margin: 0; }
+.report-box form { display: flex; flex-direction: column; gap: .3rem; }
+.report-box label, .report-label { font-size: .82rem; font-weight: 600; margin: .2rem 0 0; }
+.report-label span { color: var(--muted); font-weight: 400; }
+.report-box input, .report-box textarea {
+  width: 100%; font: inherit; font-size: 1rem; padding: .5rem .6rem; color: var(--text);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+}
+.report-box textarea { resize: vertical; min-height: 6rem; }
+.report-box .bad { border-color: var(--danger); }
+.report-msg { color: var(--danger); font-size: .78rem; margin: 0; min-height: 0; }
+.report-msg:empty { display: none; }
+.report-types { display: flex; flex-wrap: wrap; gap: .35rem; }
+.report-pill {
+  border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  border-radius: 999px; padding: .3rem .75rem; font: inherit; font-size: .82rem; cursor: pointer;
+}
+.report-pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.report-shot-add {
+  display: flex; flex-direction: column; align-items: center; gap: .1rem; position: relative; cursor: pointer;
+  border: 1.5px dashed var(--line); border-radius: 12px; padding: .7rem; text-align: center;
+  background: var(--bg); color: var(--muted); font-size: .85rem;
+}
+.report-shot-add b { color: var(--accent); }
+.report-shot-add span { font-size: .75rem; }
+.report-shot-add .ic { width: 1.4rem; height: 1.4rem; color: var(--accent); }
+.report-shot-add:hover { border-color: var(--accent); }
+.report-shot-add:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.report-shot-add input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }   /* invisible, fills the box */
+.report-shot-prev { position: relative; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); }
+.report-shot-prev img { display: block; width: 100%; max-height: 14rem; object-fit: contain; }
+.report-shot-rm {
+  position: absolute; top: .4rem; right: .4rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(0, 0, 0, .65); color: #fff; font: inherit; font-size: .78rem; padding: .25rem .6rem;
+}
+.report-warn { font-size: .78rem; color: var(--warn); background: var(--warn-bg); border-radius: 8px; padding: .4rem .55rem; margin: .3rem 0 0; }
+.report-note { font-size: .8rem; color: var(--muted); margin: .4rem 0; }
+.report-box .btn.primary { align-self: flex-start; }
+.report-done { text-align: center; padding: .3rem 0 .2rem; }
+.report-done p { margin: .3rem 0; }
+.report-tick .ic { width: 2.4rem; height: 2.4rem; color: var(--accent); }
+
 /* Empty placeholder where the app will go */
 .placeholder {
   width: min(420px, 100%); min-height: 240px;
@@ -147,6 +208,7 @@ body.has-banner .account { top: 2.8rem; }
 .seg button:hover { background: var(--surface); }
 .seg button[aria-checked="true"] { background: var(--surface); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .seg .ic { width: 1em; height: 1em; }
+.chips .ic { width: 1.1em; height: 1.1em; }
 
 /* Panels (Settings, What's new): bottom sheet on phones, centred box on wider screens */
 dialog.sheet {
@@ -352,7 +414,14 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .todo-page { width: min(560px, 100%); margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: .7rem; }   /* minmax(0,…): long one-line text (the "New:" bar) can't widen the page */
 .todo-page h1 { margin: .4rem 0 0; display: flex; align-items: center; gap: .5rem; font-size: 1.6rem; padding-right: 5.5rem; }
 .todo-page > .muted { margin: 0; padding-right: 3.6rem; }
-.wave { color: #e8890c; }
+.title-icon { color: #4c6ef5; }
+.tagline { margin: -.4rem 0 0; color: var(--muted); font-size: .98rem; font-style: italic; }
+.title-rule { display: flex; align-items: center; gap: .5rem; margin: .25rem 0 .15rem; color: #4c6ef5; }
+.title-rule .ic { width: .95rem; height: .95rem; flex: none; }
+.title-rule i { flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(90deg, currentColor, transparent 80%); }
+/* Narrow phones: keep the title clear of the Sign in button (shown when signed out). */
+@media (max-width: 389px) { .todo-page h1 { font-size: 1.3rem; } }
+@media (max-width: 339px) { .todo-page h1 { font-size: 1.1rem; } }
 
 /* "New: …" bar */
 .news { min-width: 0; display: flex; align-items: center; gap: .3rem; padding: .25rem .25rem .25rem .7rem; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); font-size: .85rem; }
@@ -366,7 +435,9 @@ body.has-banner.is-offline { padding-top: 6rem; }
 /* The list */
 #todo-groups { display: grid; gap: .6rem; }
 #todo-groups .empty { color: var(--muted); margin: .5rem 0; text-align: center; }
-.todo { display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; }
+.todo { position: relative; }
+.list > li.todo { display: block; padding: 0; }
+.todo-row { display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; position: relative; border-radius: inherit; }
 .todo input[type="checkbox"] {
   appearance: none; margin: 0; flex: none; width: 1.2rem; height: 1.2rem; border: 1.5px solid var(--input);
   border-radius: 5px; background: var(--surface); display: grid; place-items: center; cursor: pointer;
@@ -376,9 +447,12 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .todo .text { flex: 1; min-width: 0; justify-content: flex-start; text-align: left; padding: .15rem 0; overflow-wrap: anywhere; }
 .todo.done .text { text-decoration: line-through; color: var(--muted); }
 .row-flag { display: grid; flex: none; }
-.row-flag .ic { width: 1.15em; height: 1.15em; }
-.todo.just-edited { animation: edited 1.2s ease-out; }
+.row-flag .ic { width: 1.25em; height: 1.25em; }
+.todo.just-edited > .todo-row { animation: edited 1.2s ease-out; }
 @keyframes edited { from { background: color-mix(in srgb, var(--accent) 18%, transparent); } to { background: transparent; } }
+/* Rows in the priority panels sit on the gold swipe layer: fade to the card colour, never see-through (Issue #23). */
+.prio-list > .todo.just-edited > .todo-row { animation-name: edited-card; }
+@keyframes edited-card { from { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); } to { background: var(--surface); } }
 
 /* Done (closed by default) and its date ranges */
 .group h2, .done-range h3 { margin: 0 0 .35rem; }
@@ -401,6 +475,9 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .add-inner { width: min(560px, 100%); margin: 0 auto; display: flex; gap: .5rem; }
 .entry { position: relative; flex: 1; min-width: 0; }
 #todo-input { padding-right: 6.2rem; }
+/* No priority picked: only the small bars icon sits there, so the hint text gets the room (Issue #37). */
+#todo-input.no-word { padding-right: 2.6rem; }
+#todo-input:placeholder-shown { text-overflow: ellipsis; }   /* smallest phones: a long hint ends in … */
 .flag-btn {
   position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); height: 2rem; padding: 0 .5rem;
   gap: .3rem; font-size: .78rem; font-weight: 600; color: var(--muted);
@@ -419,6 +496,10 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .chips button { gap: .3rem; }
 .chips button[aria-pressed="true"] { background: var(--surface); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .edit-actions { justify-content: flex-end; }
+/* Save always in view: the actions stay pinned to the bottom of the sheet while the rest scrolls (Issue #23). */
+#edit-todo { max-height: 85dvh; padding-bottom: 0; }
+#edit-todo .edit-actions { position: sticky; bottom: 0; z-index: 1; background: var(--surface);
+  margin: 0 -1.1rem; padding: .7rem 1.1rem calc(.9rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
 /* Inside Done: a centred divider per date range ("─ Today · 2 ⌃ ─"); tap it to show/hide its to-dos */
 .done-range h3 { margin: .2rem 0 .35rem; }
 .done-divider {
@@ -438,10 +519,11 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .prio-head { display: flex; align-items: center; gap: .35rem; margin: 0; padding: .45rem .6rem .4rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .prio-head .ic { width: 1.05em; height: 1.05em; }
 .prio-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
-.prio-list > .todo { background: var(--surface); border-radius: 12px; padding: .85rem .9rem; gap: .85rem; }
+.prio-list > .todo { background: var(--surface); border-radius: 12px; overflow: hidden; }
+.prio-list > .todo > .todo-row { padding: .85rem .9rem; gap: .85rem; background: var(--surface); touch-action: pan-y; }
 .prio-list .row-flag { display: none; }   /* the section already says the priority */
 .todo input[type="checkbox"] { width: 1.35rem; height: 1.35rem; border-radius: 6px; }
-.group-done .list > .todo { padding: .8rem .9rem; }
+.group-done .list > .todo > .todo-row { padding: .8rem .9rem; }
 .add-bar {
   background: var(--surface); backdrop-filter: none; border-top: 1px solid var(--line);
   border-radius: 20px 20px 0 0; box-shadow: 0 -6px 20px rgba(16,24,40,.08);
@@ -470,3 +552,107 @@ body { padding-bottom: 8rem; }
 .prio-list > .todo { box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 2px 6px rgba(16, 24, 40, .06); }
 :root[data-theme="dark"] .prio-list > .todo { box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 2px 6px rgba(0, 0, 0, .25); }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] .prio-list > .todo { box-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 2px 6px rgba(0, 0, 0, .25); } }
+
+/* Starred (Issue #22): a gold section at the very top; swipe a to-do right to star it */
+:root { --gold: #b77b00; --gold-bg: #fff6dc; --gold-swipe: #f2b400; }
+:root[data-theme="dark"] { --gold: #ffc94d; --gold-bg: #33290f; --gold-swipe: #c99400; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --gold: #ffc94d; --gold-bg: #33290f; --gold-swipe: #c99400; } }
+.prio-starred { background: var(--gold-bg); }
+.prio-starred .prio-head { color: var(--gold); }
+.prio-starred .row-flag { display: grid; }   /* show which priority a starred to-do has */
+.swipe-under {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: .45rem; padding-left: 1.1rem;
+  background: var(--gold-swipe); color: #2b1f00; font-weight: 700; font-size: .9rem; border-radius: inherit;
+}
+.swipe-under .ic { width: 1.2em; height: 1.2em; }
+/* Swipe left: "Tomorrow" in blue on the right-hand side (Issue #39). Only one layer shows at a time. */
+:root { --tmr-swipe: #1971c2; --tmr-swipe-text: #fff; }
+:root[data-theme="dark"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; } }
+.swipe-under.left { display: none; justify-content: flex-end; padding: 0 1.1rem 0 0; background: var(--tmr-swipe); color: var(--tmr-swipe-text); }
+/* Already due tomorrow: the left swipe brings it forward to today instead, in the Due today purple. */
+:root { --today-swipe: #6741d9; --today-swipe-text: #fff; }
+:root[data-theme="dark"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; } }
+.swipe-under.left.to-today { background: var(--today-swipe); color: var(--today-swipe-text); }
+/* No date yet: the left swipe asks "When?" (grey) and opens the due-date menu. */
+:root { --when-swipe: #5c636e; --when-swipe-text: #fff; }
+:root[data-theme="dark"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; } }
+.swipe-under.left.when { background: var(--when-swipe); color: var(--when-swipe-text); }
+.todo.swipe-left > .swipe-under.left { display: flex; }
+.todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
+.todo-row.swiping { transition: none; }
+.todo-row.settle { transition: transform .22s cubic-bezier(.2,.8,.3,1); }
+/* Star switch in the edit sheet */
+.star-toggle { display: flex; align-items: center; gap: .6rem; width: 100%; padding: .7rem .8rem; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--surface); color: var(--text); font-weight: 600; justify-content: flex-start; }
+.star-toggle[aria-checked="true"] { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
+.star-toggle .switch { margin-left: auto; width: 2.4rem; height: 1.4rem; border-radius: 99px; background: var(--input); position: relative; transition: background .2s; flex: none; }
+.star-toggle .switch::after { content: ""; position: absolute; top: .2rem; left: .2rem; width: 1rem; height: 1rem; border-radius: 50%; background: #fff; transition: left .2s; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+.star-toggle[aria-checked="true"] .switch { background: var(--gold-swipe); }
+.star-toggle[aria-checked="true"] .switch::after { left: 1.2rem; }
+
+/* ---- Due dates (Issue #23) ---- */
+/* Due tomorrow panel: cool blue (Issue #24) */
+:root { --tmr-bg: #e3f2fd; --tmr: #1864ab; --tmr-chip: #d0ebff; --due-bg: #efe9ff; --due: #6741d9; --due-chip: #e5dbff; --over-bg: #ffe3e3; --over: #c92a2a; }
+:root[data-theme="dark"] { --tmr-bg: #13293d; --tmr: #8ec5ff; --tmr-chip: #1c3b5a; --due-bg: #2a2145; --due: #c4b5fd; --due-chip: #3b2f63; --over-bg: #3d1c1c; --over: #ff8787; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-bg: #13293d; --tmr: #8ec5ff; --tmr-chip: #1c3b5a; --due-bg: #2a2145; --due: #c4b5fd; --due-chip: #3b2f63; --over-bg: #3d1c1c; --over: #ff8787; } }
+/* The to-do's words, with its due label underneath. The label is its own button: tap it for the due-date menu (Issue #38). */
+.text-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .2rem; }
+.text-col > .text { flex: none; align-self: stretch; }
+button.due-label { position: relative; }
+button.due-label::after { content: ''; position: absolute; inset: -.55rem -.6rem; }   /* easier to hit than it looks */
+.due-label .ic.caret { width: .8em; height: .8em; opacity: .75; }
+.due-menu { position: fixed; left: 0; top: 0; z-index: 12; visibility: hidden; display: grid; min-width: 11.5rem; padding: .3rem;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+.due-menu button { justify-content: flex-start; white-space: nowrap; text-align: left; gap: .55rem; padding: .65rem .7rem; border-radius: 10px; font-weight: 600; }
+.due-menu button:hover, .due-menu button:focus-visible { background: var(--hover); }
+.due-menu button .ic { width: 1.15em; height: 1.15em; color: var(--muted); }
+.due-menu button.main, .due-menu button.main .ic { color: var(--accent); }
+.due-label { display: inline-flex; align-items: center; gap: .25rem; width: fit-content; font-size: .75rem; font-weight: 600;
+  line-height: 1.5; padding: 0 .5rem; border-radius: 99px; background: var(--hover); color: var(--muted); }
+.due-label .ic { width: 1em; height: 1em; }
+.due-today { background: var(--due-chip); color: var(--due); }
+.due-overdue { background: var(--danger); color: #fff; }
+:root[data-theme="dark"] .due-overdue { color: #1d1f23; }
+.prio-today { background: var(--due-bg); }
+.prio-today .prio-head { color: var(--due); }
+.prio-overdue { background: var(--over-bg); }
+.prio-overdue .prio-head { color: var(--over); }
+.due-tomorrow { background: var(--tmr-chip); color: var(--tmr); }
+.prio-tomorrow { background: var(--tmr-bg); }
+.prio-tomorrow .prio-head { color: var(--tmr); }
+.prio-today .row-flag, .prio-overdue .row-flag, .prio-tomorrow .row-flag { display: grid; }   /* show the priority they came from */
+.due-chosen { color: var(--accent); }
+.mini-cal { border: 1px solid var(--line); border-radius: 12px; padding: .4rem .5rem .5rem; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: .9rem; }
+.cal-nav { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border: 0; border-radius: 50%; background: none; color: var(--text); cursor: pointer; }
+.cal-nav:hover:not(:disabled) { background: var(--hover); }
+.cal-nav:disabled { color: var(--input); cursor: default; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.cal-wd { font-size: .72rem; font-weight: 600; color: var(--muted); padding: .2rem 0; }
+.cal-day { font: inherit; font-size: .88rem; min-height: 2.1rem; border: 0; border-radius: 8px; background: none; color: var(--text); cursor: pointer; }
+.cal-day:hover:not(:disabled):not([aria-pressed="true"]) { background: var(--hover); }
+.cal-day:disabled { color: var(--input); cursor: default; }
+.cal-day.is-today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cal-day[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+
+/* ---- Fold a panel by tapping its heading (Issue #25, option B) ---- */
+.prio-head { padding: 0; }
+.prio-toggle { display: flex; align-items: center; gap: .35rem; width: 100%; padding: .45rem .3rem .4rem .6rem; border: 0; border-radius: 12px;
+  background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer; }
+.prio-toggle .chev { margin-left: auto; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; transition: transform .25s ease; }
+.prio-toggle .chev .ic { width: 1.15em; height: 1.15em; }
+.prio-toggle:hover .chev { background: color-mix(in srgb, currentColor 12%, transparent); }
+.prio-group.closed .chev { transform: rotate(-90deg); }
+/* Issue #27: priority shown as signal bars (3 = High, 2 = Medium, 1 = Low), so the level reads by shape as well as colour; coloured headings, no coloured panels. */
+.prio-high .prio-toggle { color: var(--high); } .prio-med .prio-toggle { color: var(--med); } .prio-low .prio-toggle { color: var(--low); }
+.prio-toggle .lvl { width: 1.5em; height: 1.5em; margin: -.25em 0; }
+.prio-high .prio-toggle, .prio-med .prio-toggle, .prio-low .prio-toggle, .prio-none .prio-toggle { font-size: .78rem; }
+.fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .28s ease, opacity .2s ease; }
+.fold > .prio-list { min-height: 0; overflow: hidden; padding: 0 3px 6px; margin: 0 -3px -6px; }   /* room for the cards' shadows */
+.prio-group.closed .fold { grid-template-rows: 0fr; opacity: 0; }
+.prio-group { transition: padding-bottom .28s ease; }
+.prio-group.closed { padding-bottom: .1rem; }
+@media (prefers-reduced-motion: reduce) { .fold, .prio-toggle .chev, .prio-group { transition: none; } }

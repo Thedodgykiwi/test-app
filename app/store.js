@@ -16,13 +16,39 @@ const loadLocal = () => JSON.parse(localStorage.getItem(storageKey) || '[]')
   .map((t) => ({ ...t, p: LEVELS.includes(t.p) ? t.p : 'none' }));
 
 export const todos = signal(loadLocal());
-// Signed in last time? Wait for the account's list instead of flashing this
-// device's list first. If sign-in can't load (e.g. offline), fall back.
+// Signed in last time? Show the account's list from last time straight away
+// (a copy kept on this device, Issue #36), then swap in the live list once
+// Firebase is ready. No copy yet (first sign-in on this device): show
+// "Loading…" instead of flashing this device's own list.
 export const loading = signal(!!window.FIREBASE_CONFIG && localStorage.getItem('signed-in') === '1');
+// True while the list on screen is the saved copy, until the server answers ("Updating…").
+export const updating = signal(false);
+// Keys of to-dos that changed when the live list replaced the saved copy (briefly highlighted).
+export const fresh = signal(new Set());
+const cacheKey = `cloud-copy-${stage}`;
+const readCache = () => { try { return JSON.parse(localStorage.getItem(cacheKey)); } catch { return null; } };
 let cloud = null;   // set by sync.js while signed in: { add(t), update(t, changes) }
+let shownCopy = null;   // the saved copy shown at start, to spot what changed
 if (loading.value) {
-  todos.value = [];
-  setTimeout(() => { if (loading.value && !cloud) window.TodoApp.useLocal(); }, 5000);
+  const copy = readCache();
+  if (Array.isArray(copy)) {
+    todos.value = copy; shownCopy = copy; updating.value = true;
+    // The account button's blue "working" dot until sync.js takes over.
+    const dot = document.getElementById('sync-dot');
+    if (dot) { dot.className = 'sync-dot saving'; dot.hidden = false; }
+  }
+  else {
+    todos.value = [];
+    // Sign-in can't load (e.g. offline on a first visit): fall back to this device's list.
+    setTimeout(() => { if (loading.value && !cloud) window.TodoApp.useLocal(); }, 5000);
+  }
+}
+
+// Not ready to save yet (showing the saved copy before Firebase starts)? Say so.
+export function ready() {
+  if (!loading.value || cloud) return true;
+  window.AppToast?.show('One moment, connecting…', { duration: 1800 });
+  return false;
 }
 
 const save = () => { if (!cloud && !loading.value) localStorage.setItem(storageKey, JSON.stringify(todos.value)); };
@@ -32,12 +58,13 @@ export const keyOf = (t, i) => t.id || i;
 
 // Change a to-do and save it wherever it lives.
 export function update(t, changes) {
+  if (!ready()) return;
   todos.value = todos.value.map((x) => (x === t ? { ...x, ...changes } : x));
   if (cloud) cloud.update(t, changes); else save();
 }
 // Add a to-do. Returns false while we don't yet know which list to add to.
 export function add(text, p) {
-  if (!text || (loading.value && !cloud)) return false;
+  if (!text || !ready()) return false;
   const item = { text, done: false, p };
   if (cloud) cloud.add(item); else { todos.value = [...todos.value, item]; save(); }
   return true;
@@ -59,10 +86,32 @@ export function toggleCollapsed(key) {
 window.TodoApp = {
   stage,
   localTodos: loadLocal,
+  get updating() { return updating.value; },
   // Signed in: show the account's to-dos and save changes through `api`.
-  useCloud(api) { cloud = api; todos.value = []; loading.value = true; },
-  // To-dos from the account (first load and live updates).
-  setTodos(list) { todos.value = list; loading.value = false; },
-  // Signed out: back to the to-dos saved on this device.
-  useLocal() { cloud = null; todos.value = loadLocal(); loading.value = false; },
+  // Keep the saved copy on screen (if any) until the account's list arrives.
+  useCloud(api) { cloud = api; if (!shownCopy) todos.value = []; loading.value = true; },
+  // To-dos from the account (first load and live updates). `fromServer`: the
+  // server has answered (not just Firestore's copy on this device).
+  setTodos(list, { fromServer = true } = {}) {
+    if (shownCopy) {
+      // Briefly highlight anything that differs from the saved copy we showed.
+      const before = new Map(shownCopy.map((t) => [t.id, JSON.stringify(t)]));
+      const changed = list.filter((t) => before.get(t.id) !== JSON.stringify(t)).map((t) => t.id);
+      if (changed.length) {
+        fresh.value = new Set([...fresh.value, ...changed]);
+        setTimeout(() => { fresh.value = new Set(); }, 1300);
+      }
+      shownCopy = list;
+    }
+    todos.value = list; loading.value = false;
+    if (fromServer || !navigator.onLine) { updating.value = false; shownCopy = null; }
+    try { localStorage.setItem(cacheKey, JSON.stringify(list)); } catch { /* storage full: no copy, fine */ }
+  },
+  // Signed out (or sign-in couldn't load): back to the to-dos saved on this device.
+  // `forget`: really signed out, so also drop the copy of the account's list.
+  useLocal({ forget = false } = {}) {
+    cloud = null; shownCopy = null; updating.value = false;
+    if (forget) localStorage.removeItem(cacheKey);
+    todos.value = loadLocal(); loading.value = false;
+  },
 };

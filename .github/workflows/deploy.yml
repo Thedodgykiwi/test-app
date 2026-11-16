@@ -22,5 +22,5 @@ jobs:
   deploy:
     uses: Thedodgykiwi/app-playbook/.github/workflows/deploy-stages.yml@main
     with:
-      app_name: Test App    # repo files say "Test App Local"
-      short_name: Test      # repo files say "Test Local" (home-screen short name)
+      app_name: The Shortlist    # repo files say "The Shortlist Local"
+      short_name: Shortlist      # repo files say "Shortlist Local" (home-screen short name)

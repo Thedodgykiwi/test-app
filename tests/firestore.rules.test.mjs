@@ -57,10 +57,61 @@ await t('untick clears doneAt', () => assertSucceeds(updateDoc(p(alice), { done:
 await t('doneAt as text rejected', () => assertFails(updateDoc(p(alice), { done: true, doneAt: 'today' })));
 await t('negative doneAt rejected', () => assertFails(updateDoc(p(alice), { doneAt: -5 })));
 await t('doneAt far future rejected', () => assertFails(setDoc(p(alice, 'dev', 'd3'), { ...good(), doneAt: 1e14 })));
+await t('create starred', () => assertSucceeds(setDoc(p(alice, 'dev', 's1'), { ...good(), starred: true })));
+await t('star a to-do', () => assertSucceeds(updateDoc(p(alice), { starred: true })));
+await t('unstar a to-do', () => assertSucceeds(updateDoc(p(alice), { starred: false })));
+await t('starred as text rejected', () => assertFails(updateDoc(p(alice), { starred: 'yes' })));
+await t('other user cannot star', () => assertFails(updateDoc(p(bob), { starred: true })));
+await t('set a due date', () => assertSucceeds(updateDoc(p(alice), { due: '2026-11-20' })));
+await t('clear a due date', () => assertSucceeds(updateDoc(p(alice), { due: null })));
+await t('create with due date', () => assertSucceeds(setDoc(p(alice, 'dev', 'due1'), { ...good(), due: '2026-12-01' })));
+await t('due date in wrong format rejected', () => assertFails(updateDoc(p(alice), { due: 'next tuesday' })));
+await t('due date as number rejected', () => assertFails(updateDoc(p(alice), { due: 20261120 })));
+await t('other user cannot set due date', () => assertFails(updateDoc(p(bob), { due: '2026-11-20' })));
 await t('other user cannot set doneAt', () => assertFails(updateDoc(p(bob), { done: true, doneAt: Date.now() })));
 await t('delete denied', () => assertFails(deleteDoc(p(alice))));
 await t('parent user doc not writable', () => assertFails(setDoc(doc(alice, 'users', 'alice'), { a: 1 })));
 await t('other collections denied', () => assertFails(setDoc(doc(alice, 'other', 'x'), { a: 1 })));
+
+// ---- Issue reports from the stage banner (Issue #28) ----
+// Made-up addresses only (this repo is public).
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'access', 'testers'), { emails: ['tester@example.com'] }));
+const tester = env.authenticatedContext('tess', { email: 'tester@example.com', email_verified: true }).firestore();
+const testerCaps = env.authenticatedContext('tess2', { email: 'Tester@Example.com', email_verified: true }).firestore();
+const unverified = env.authenticatedContext('tess3', { email: 'tester@example.com', email_verified: false }).firestore();
+const stranger = env.authenticatedContext('sam', { email: 'stranger@example.com', email_verified: true }).firestore();
+const report = (uid = 'tess', email = 'tester@example.com') => ({
+  title: 'Done list does not scroll', body: 'On iPhone the Done list stops at 5 items.', type: 'bug',
+  stage: 'dev', uid, email, status: 'new', createdAt: serverTimestamp(),
+});
+const r = (db, id) => doc(db, 'issueReports', id);
+await t('tester can send a report', () => assertSucceeds(setDoc(r(tester, 'r1'), report())));
+await t('tester can send a report with no type', () => assertSucceeds(setDoc(r(tester, 'r2'), { ...report(), type: null })));
+await t('tester email matched ignoring capitals', () => assertSucceeds(setDoc(r(testerCaps, 'r3'), report('tess2', 'Tester@Example.com'))));
+await t('signed-out cannot report', () => assertFails(setDoc(r(anon, 'r4'), report())));
+await t('non-tester cannot report', () => assertFails(setDoc(r(stranger, 'r5'), report('sam', 'stranger@example.com'))));
+await t('unverified email cannot report', () => assertFails(setDoc(r(unverified, 'r6'), report('tess3'))));
+await t('report as someone else rejected', () => assertFails(setDoc(r(tester, 'r7'), report('other'))));
+await t('report with another email rejected', () => assertFails(setDoc(r(tester, 'r8'), report('tess', 'boss@example.com'))));
+await t('report without title rejected', () => assertFails(setDoc(r(tester, 'r9'), { ...report(), title: '' })));
+await t('report without description rejected', () => assertFails(setDoc(r(tester, 'r10'), { ...report(), body: '' })));
+await t('report title > 120 rejected', () => assertFails(setDoc(r(tester, 'r11'), { ...report(), title: 'a'.repeat(121) })));
+await t('report body > 5000 rejected', () => assertFails(setDoc(r(tester, 'r12'), { ...report(), body: 'a'.repeat(5001) })));
+await t('unknown report type rejected', () => assertFails(setDoc(r(tester, 'r13'), { ...report(), type: 'urgent' })));
+await t('report from unknown stage rejected', () => assertFails(setDoc(r(tester, 'r14'), { ...report(), stage: 'prod' })));
+await t('report already marked done rejected', () => assertFails(setDoc(r(tester, 'r15'), { ...report(), status: 'logged' })));
+await t('report with extra field rejected', () => assertFails(setDoc(r(tester, 'r16'), { ...report(), issue: 99 })));
+await t('report with own createdAt rejected', () => assertFails(setDoc(r(tester, 'r17'), { ...report(), createdAt: Timestamp.fromMillis(0) })));
+await t('report with a screenshot', () => assertSucceeds(setDoc(r(tester, 'r20'), { ...report(), screenshot: 'data:image/jpeg;base64,' + 'A'.repeat(600000) })));
+await t('screenshot too big rejected', () => assertFails(setDoc(r(tester, 'r21'), { ...report(), screenshot: 'data:image/jpeg;base64,' + 'A'.repeat(760000) })));
+await t('screenshot not a JPEG rejected', () => assertFails(setDoc(r(tester, 'r22'), { ...report(), screenshot: 'data:image/svg+xml;base64,AAAA' })));
+await t('screenshot with junk rejected', () => assertFails(setDoc(r(tester, 'r23'), { ...report(), screenshot: 'data:image/jpeg;base64,<script>' })));
+await t('screenshot must be text', () => assertFails(setDoc(r(tester, 'r24'), { ...report(), screenshot: 42 })));
+await t('tester cannot read reports back', () => assertFails(getDoc(r(tester, 'r1'))));
+await t('tester cannot edit a report', () => assertFails(updateDoc(r(tester, 'r1'), { title: 'changed' })));
+await t('tester cannot delete a report', () => assertFails(deleteDoc(r(tester, 'r1'))));
+await t('testers list not readable', () => assertFails(getDoc(doc(tester, 'access', 'testers'))));
+await t('testers list not writable', () => assertFails(setDoc(doc(stranger, 'access', 'testers'), { emails: ['stranger@example.com'] })));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
