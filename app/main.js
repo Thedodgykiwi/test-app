@@ -501,6 +501,46 @@ function DueField({ value, onChange, open }) {
 
 // Edit sheet: change the wording or priority. Opening it doesn't redraw or
 // move the list behind; the list changes only on Save.
+// ---- Quick add (Issue #41) ------------------------------------------------
+// On a keyboard, press N (when not typing somewhere) for a small "New to-do"
+// pop-up in the middle of the screen: type, pick a priority if you like,
+// Enter adds, Esc cancels. It fades in with a small slide up (style.css).
+const quickOpen = signal(false);
+addEventListener('keydown', (ev) => {
+  if (ev.key.toLowerCase() !== 'n' || ev.ctrlKey || ev.metaKey || ev.altKey || ev.repeat) return;
+  if (ev.target.closest?.('input, textarea, select, [contenteditable]') || document.querySelector('dialog[open]')) return;
+  ev.preventDefault();
+  quickOpen.value = true;
+});
+function QuickAdd() {
+  const dlg = useRef(), input = useRef();
+  const [p, setP] = useState('none');
+  useEffect(() => {
+    if (quickOpen.value) { setP('none'); input.current.value = ''; dlg.current.showModal(); input.current.focus(); }
+    else if (dlg.current.open) dlg.current.close();
+  }, [quickOpen.value]);
+  const submit = (e) => {
+    e.preventDefault();
+    const v = input.current.value.trim().slice(0, 500);
+    if (v && add(v, p)) window.AppToast?.show(`“${v}” added`, { icon: 'check-circle' });
+    quickOpen.value = false;
+  };
+  return html`
+    <dialog id="quick-add" class="quick-add" ref=${dlg} aria-label="New to-do"
+      onClose=${() => { quickOpen.value = false; }} onClick=${(ev) => { if (ev.target === dlg.current) quickOpen.value = false; }}>
+      <form onSubmit=${submit}>
+        <div class="entry">
+          <input ref=${input} id="quick-input" class=${`input${p === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
+            aria-label="New to-do" maxlength="500" autocomplete="off" />
+          <button type="button" class=${`flag-btn p-${p}`} aria-label=${`Priority for new to-do: ${LABELS[p]}. Click to change`}
+            title=${`Priority: ${LABELS[p]} (click to change)`} onClick=${() => { setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); input.current.focus(); }}>
+            <span class="word">${p === 'none' ? '' : LABELS[p]}</span><${Icon} name=${`prio-${p}`} cls=${`flag-${p}`} /></button>
+        </div>
+        <p class="quick-keys"><kbd>Enter</kbd> add · <kbd>Esc</kbd> cancel</p>
+      </form>
+    </dialog>`;
+}
+
 function EditSheet() {
   const dlg = useRef(), text = useRef();
   const e = editing.value;
@@ -614,4 +654,4 @@ render(html`<${Summary} />`, document.getElementById('summary'));
 // The add bar and edit sheet sit outside the list (fixed bar, modal sheet).
 const extras = document.createElement('div');
 document.body.append(extras);
-render(html`<${AddBar} /><${EditSheet} /><${DueMenu} />`, extras);
+render(html`<${AddBar} /><${EditSheet} /><${QuickAdd} /><${DueMenu} />`, extras);
