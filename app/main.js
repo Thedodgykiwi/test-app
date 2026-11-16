@@ -46,6 +46,8 @@ const recheckDay = () => { const t = isoDay(new Date()); if (t !== today.value) 
 document.addEventListener('visibilitychange', recheckDay);
 setInterval(recheckDay, 60 * 1000);
 const tomorrowDay = () => { const d = parseDay(today.value); return isoDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)); };
+// "Next week" = the coming Monday (a week on, if today is Monday).
+const nextWeekDay = () => { const d = parseDay(today.value); return isoDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() + (((8 - d.getDay()) % 7) || 7))); };
 const validDue = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const daysUntil = (v) => Math.round((parseDay(v) - parseDay(today.value)) / 864e5);
 function dueState(t) {
@@ -148,8 +150,9 @@ function setStar(t, k, starred) {
 }
 
 // Swipe right on a row to star / un-star it; swipe left to send it to tomorrow,
-// or, when it's already due tomorrow, to bring it forward to today (Issue #39;
-// the same choices as the due label's menu). Vertical moves still scroll
+// or, when it's already due tomorrow, to bring it forward to today; a to-do
+// with no date asks "When?" and opens the due-date menu (Issue #39; the same
+// choices as the due label's menu). Vertical moves still scroll
 // the page; a tap still opens the editor. Done to-dos don't swipe.
 const SWIPE_AT = 72;   // px to drag before letting go stars it
 function useSwipe(t, k) {
@@ -180,7 +183,14 @@ function useSwipe(t, k) {
     setTimeout(() => el.parentElement?.classList.remove('swipe-left'), 230);   // after it slides back
     swallowClick = true; setTimeout(() => { swallowClick = false; }, 60);   // not also a tap
     if (st.dx >= SWIPE_AT) setTimeout(() => setStar(t, k, !t.starred), 180);
-    else if (st.dx <= -SWIPE_AT) setTimeout(() => (t.due === tomorrowDay() ? setDue(k, today.value, 'moved to today') : setDue(k, tomorrowDay(), 'moved to tomorrow')), 180);
+    else if (st.dx <= -SWIPE_AT) setTimeout(() => {
+      if (!ready()) return;
+      if (!validDue(t.due)) {   // no date yet: ask when, in a menu by the row's right-hand end
+        const r = el.getBoundingClientRect();
+        dueMenu.value = { key: k, right: r.right - 12, top: r.top + 6, bottom: r.bottom - 6 };
+      } else if (t.due === tomorrowDay()) setDue(k, today.value, 'moved to today');
+      else setDue(k, tomorrowDay(), 'moved to tomorrow');
+    }, 180);
   };
   return { row, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up } };
 }
@@ -190,8 +200,9 @@ const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, s
 
 // ---- Due-date quick menu (Issue #38) ---------------------------------------
 // Tap a row's due label ("Due today", "Overdue…") for a small menu: Today /
-// Tomorrow (whichever it isn't already), Pick a date… (the edit sheet) and No
-// date. A change shows an Undo note, like starring.
+// Tomorrow / Next week (whichever it isn't already), Pick a date… (the edit
+// sheet) and No date. A change shows an Undo note, like starring. Swiping a
+// to-do with no date left opens the same menu (Issue #39).
 function setDue(k, due, said) {
   const cur = todos.value.find((x, i) => keyOf(x, i) === k);
   if (!cur || !ready()) return;
@@ -213,7 +224,7 @@ function DueMenu() {
   const t = m && todos.value.find((x, i) => keyOf(x, i) === m.key);
   const close = (refocus) => {
     const k = dueMenu.value?.key; dueMenu.value = null;
-    if (refocus) document.querySelector(`[data-due-btn="${k}"]`)?.focus({ preventScroll: true });
+    if (refocus) (document.querySelector(`[data-due-btn="${k}"]`) || document.querySelector(`[data-edit="${k}"]`))?.focus({ preventScroll: true });
   };
   useEffect(() => { if (m && !t) dueMenu.value = null; }, [m, t]);   // the to-do went away (ticked elsewhere)
   // Place it under the label, or above when the add bar is in the way; keep it on screen.
@@ -223,7 +234,7 @@ function DueMenu() {
     const floor = (document.getElementById('todo-form')?.getBoundingClientRect().top || innerHeight) - 8;
     const below = m.bottom + 6;
     el.style.top = `${below + h <= floor ? below : Math.max(8, m.top - h - 6)}px`;
-    el.style.left = `${Math.max(8, Math.min(m.left, innerWidth - w - 8))}px`;
+    el.style.left = `${Math.max(8, Math.min(m.right != null ? m.right - w : m.left, innerWidth - w - 8))}px`;
     el.style.visibility = 'visible';
     el.querySelector('button')?.focus({ preventScroll: true });
     // Close on a tap elsewhere, Escape, scrolling or resizing.
@@ -234,12 +245,15 @@ function DueMenu() {
     return () => { document.removeEventListener('pointerdown', away, true); removeEventListener('scroll', gone, true); removeEventListener('resize', gone); };
   }, [m]);
   if (!m || !t) return null;
-  const tomorrow = tomorrowDay();
+  const tomorrow = tomorrowDay(), nextWeek = nextWeekDay();
+  const has = validDue(t.due);
   const items = [
     t.due !== today.value && ['clock', 'Today', () => setDue(m.key, today.value, 'moved to today')],
     t.due !== tomorrow && ['arrow-right', 'Tomorrow', () => setDue(m.key, tomorrow, 'moved to tomorrow')],
-    ['calendar-blank', 'Pick a date…', () => openEditor(t, m.key)],
-    ['x', 'No date', () => setDue(m.key, null, 'has no due date now')],
+    nextWeek !== tomorrow && t.due !== nextWeek && ['calendar-blank', `Next week · ${dueLabel(nextWeek).replace(/^Due /, '')}`,
+      () => setDue(m.key, nextWeek, `is due ${dueLabel(nextWeek).replace(/^Due /, '')}`)],
+    ['pencil-simple', 'Pick a date…', () => openEditor(t, m.key)],
+    has && ['x', 'No date', () => setDue(m.key, null, 'has no due date now')],
   ].filter(Boolean);
   const keys = (e) => {
     const btns = [...box.current.querySelectorAll('button')], i = btns.indexOf(document.activeElement);
@@ -278,7 +292,8 @@ function Row({ t, k }) {
   return html`
     <li class=${`todo${t.done ? ' done' : ''}${hl ? ' just-edited' : ''}`}>
       ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>
-        ${t.due === tomorrowDay()
+        ${!validDue(t.due) ? html`<div class="swipe-under left when" aria-hidden="true">When?<${Icon} name="calendar-blank" /></div>`
+          : t.due === tomorrowDay()
           ? html`<div class="swipe-under left to-today" aria-hidden="true">Today<${Icon} name="clock" /></div>`
           : html`<div class="swipe-under left" aria-hidden="true">Tomorrow<${Icon} name="arrow-right" /></div>`}`}
       <div class="todo-row" ref=${row} ...${handlers}>

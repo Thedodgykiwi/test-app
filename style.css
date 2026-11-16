@@ -575,6 +575,11 @@ body { padding-bottom: 8rem; }
 :root[data-theme="dark"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; } }
 .swipe-under.left.to-today { background: var(--today-swipe); color: var(--today-swipe-text); }
+/* No date yet: the left swipe asks "When?" (grey) and opens the due-date menu. */
+:root { --when-swipe: #5c636e; --when-swipe-text: #fff; }
+:root[data-theme="dark"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; } }
+.swipe-under.left.when { background: var(--when-swipe); color: var(--when-swipe-text); }
 .todo.swipe-left > .swipe-under.left { display: flex; }
 .todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
 .todo-row.swiping { transition: none; }
@@ -599,9 +604,9 @@ body { padding-bottom: 8rem; }
 button.due-label { position: relative; }
 button.due-label::after { content: ''; position: absolute; inset: -.55rem -.6rem; }   /* easier to hit than it looks */
 .due-label .ic.caret { width: .8em; height: .8em; opacity: .75; }
-.due-menu { position: fixed; z-index: 12; visibility: hidden; display: grid; min-width: 11.5rem; padding: .3rem;
+.due-menu { position: fixed; left: 0; top: 0; z-index: 12; visibility: hidden; display: grid; min-width: 11.5rem; padding: .3rem;
   background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
-.due-menu button { justify-content: flex-start; gap: .55rem; padding: .65rem .7rem; border-radius: 10px; font-weight: 600; }
+.due-menu button { justify-content: flex-start; white-space: nowrap; text-align: left; gap: .55rem; padding: .65rem .7rem; border-radius: 10px; font-weight: 600; }
 .due-menu button:hover, .due-menu button:focus-visible { background: var(--hover); }
 .due-menu button .ic { width: 1.15em; height: 1.15em; color: var(--muted); }
 .due-menu button.main, .due-menu button.main .ic { color: var(--accent); }
