@@ -570,6 +570,11 @@ body { padding-bottom: 8rem; }
 :root[data-theme="dark"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; } }
 .swipe-under.left { display: none; justify-content: flex-end; padding: 0 1.1rem 0 0; background: var(--tmr-swipe); color: var(--tmr-swipe-text); }
+/* Already due tomorrow: the left swipe brings it forward to today instead, in the Due today purple. */
+:root { --today-swipe: #6741d9; --today-swipe-text: #fff; }
+:root[data-theme="dark"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; } }
+.swipe-under.left.to-today { background: var(--today-swipe); color: var(--today-swipe-text); }
 .todo.swipe-left > .swipe-under.left { display: flex; }
 .todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
 .todo-row.swiping { transition: none; }

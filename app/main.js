@@ -147,8 +147,9 @@ function setStar(t, k, starred) {
   });
 }
 
-// Swipe right on a row to star / un-star it; swipe left to send it to tomorrow
-// (Issue #39; not when it's already due tomorrow). Vertical moves still scroll
+// Swipe right on a row to star / un-star it; swipe left to send it to tomorrow,
+// or, when it's already due tomorrow, to bring it forward to today (Issue #39;
+// the same choices as the due label's menu). Vertical moves still scroll
 // the page; a tap still opens the editor. Done to-dos don't swipe.
 const SWIPE_AT = 72;   // px to drag before letting go stars it
 function useSwipe(t, k) {
@@ -165,7 +166,7 @@ function useSwipe(t, k) {
       if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) return;
       st.dragging = true; row.current.setPointerCapture(st.id); row.current.classList.add('swiping');
     }
-    st.dx = Math.max(t.due === tomorrowDay() ? 0 : -140, Math.min(dx, 140));
+    st.dx = Math.max(-140, Math.min(dx, 140));
     row.current.style.transform = `translateX(${st.dx}px)`;
     row.current.parentElement.classList.toggle('swipe-ready', Math.abs(st.dx) >= SWIPE_AT);
     row.current.parentElement.classList.toggle('swipe-left', st.dx < 0);
@@ -179,7 +180,7 @@ function useSwipe(t, k) {
     setTimeout(() => el.parentElement?.classList.remove('swipe-left'), 230);   // after it slides back
     swallowClick = true; setTimeout(() => { swallowClick = false; }, 60);   // not also a tap
     if (st.dx >= SWIPE_AT) setTimeout(() => setStar(t, k, !t.starred), 180);
-    else if (st.dx <= -SWIPE_AT) setTimeout(() => setDue(k, tomorrowDay(), 'moved to tomorrow'), 180);
+    else if (st.dx <= -SWIPE_AT) setTimeout(() => (t.due === tomorrowDay() ? setDue(k, today.value, 'moved to today') : setDue(k, tomorrowDay(), 'moved to tomorrow')), 180);
   };
   return { row, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up } };
 }
@@ -277,7 +278,9 @@ function Row({ t, k }) {
   return html`
     <li class=${`todo${t.done ? ' done' : ''}${hl ? ' just-edited' : ''}`}>
       ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>
-        <div class="swipe-under left" aria-hidden="true">Tomorrow<${Icon} name="arrow-right" /></div>`}
+        ${t.due === tomorrowDay()
+          ? html`<div class="swipe-under left to-today" aria-hidden="true">Today<${Icon} name="clock" /></div>`
+          : html`<div class="swipe-under left" aria-hidden="true">Tomorrow<${Icon} name="arrow-right" /></div>`}`}
       <div class="todo-row" ref=${row} ...${handlers}>
         <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
         <div class="text-col">

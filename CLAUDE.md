@@ -225,7 +225,7 @@ If they say yes:
 - **Due-date quick menu (Issue #38):** a row's due label ("Due today",
   "Overdue…") is its own button; tapping it opens `DueMenu` in `app/main.js`
   (Today / Tomorrow, Pick a date…, No date) with an Undo note. Swipe left on a row
-  also sends it to tomorrow (Issue #39, `useSwipe`; same code as swipe right
+  also sends it to tomorrow, or brings a due-tomorrow one forward to today (Issue #39, `useSwipe`; same code as swipe right
   to star). Choosing each swipe's action in Settings is the rest of #39 (not built).
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
