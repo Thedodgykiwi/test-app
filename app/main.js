@@ -203,18 +203,18 @@ const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, s
 // Tomorrow / Next week (whichever it isn't already), Pick a date… (the edit
 // sheet) and No date. A change shows an Undo note, like starring. Swiping a
 // to-do with no date left opens the same menu (Issue #39).
-function setDue(k, due, said) {
+function setDue(k, due, said, evening = false) {
   const cur = todos.value.find((x, i) => keyOf(x, i) === k);
   if (!cur || !ready()) return;
-  const before = validDue(cur.due) ? cur.due : null;
-  update(cur, { due });
+  const before = validDue(cur.due) ? cur.due : null, beforeEv = !!cur.evening;
+  update(cur, cur.evening || evening ? { due, evening } : { due });   // any other date clears "Tonight" (Issue #43)
   justEdited.value = k; setTimeout(() => { if (justEdited.value === k) justEdited.value = null; }, 1300);
   focusAfter = [`[data-due-btn="${k}"]`, `[data-edit="${k}"]`];
   window.AppToast?.show(`“${cur.text}” ${said}`, {
-    icon: due ? 'calendar-blank' : 'x',
+    icon: evening ? 'moon' : due ? 'calendar-blank' : 'x',
     action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() {
       const now = todos.value.find((x, i) => keyOf(x, i) === k);
-      if (now) update(now, { due: before });
+      if (now) update(now, beforeEv || evening ? { due: before, evening: beforeEv } : { due: before });
       focusAfter = [`[data-due-btn="${k}"]`, `[data-edit="${k}"]`];
     } },
   });
@@ -248,7 +248,8 @@ function DueMenu() {
   const tomorrow = tomorrowDay(), nextWeek = nextWeekDay();
   const has = validDue(t.due);
   const items = [
-    t.due !== today.value && ['clock', 'Today', () => setDue(m.key, today.value, 'moved to today')],
+    (t.due !== today.value || t.evening) && ['clock', 'Today', () => setDue(m.key, today.value, 'moved to today')],
+    !(t.due === today.value && t.evening) && ['moon', 'Tonight', () => setDue(m.key, today.value, 'moved to tonight', true)],   // Issue #43
     t.due !== tomorrow && ['arrow-right', 'Tomorrow', () => setDue(m.key, tomorrow, 'moved to tomorrow')],
     nextWeek !== tomorrow && t.due !== nextWeek && ['calendar-blank', `Next week · ${dueLabel(nextWeek).replace(/^Due /, '')}`,
       () => setDue(m.key, nextWeek, `is due ${dueLabel(nextWeek).replace(/^Due /, '')}`)],
@@ -302,14 +303,14 @@ function Row({ t, k }) {
           <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}${ds ? `, ${dueLabel(t.due)}` : ''}`}
             onClick=${() => { if (swallowClick || !ready()) return; openEditor(t, k); }}>
             <span class="t-main">${t.text}</span></button>
-          ${ds && html`<button type="button" class=${`due-label due-${ds}`} data-due-btn=${k} aria-haspopup="menu" aria-expanded=${dueMenu.value?.key === k}
+          ${ds && html`<button type="button" class=${`due-label due-${ds}${ds === 'today' && t.evening ? ' tn' : ''}`} data-due-btn=${k} aria-haspopup="menu" aria-expanded=${dueMenu.value?.key === k}
             aria-label=${`${dueLabel(t.due)}. Change the due date`}
             onClick=${(e) => {   // tap the label for a quick menu: Tomorrow, Pick a date, No date (Issue #38)
               if (swallowClick || !ready()) return;
               if (dueMenu.value?.key === k) { dueMenu.value = null; return; }
               const r = e.currentTarget.getBoundingClientRect();
               dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom };
-            }}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}<${Icon} name="caret-down" cls="caret" /></button>`}
+            }}><${Icon} name=${ds === 'today' && t.evening ? 'moon' : DUE_ICON[ds]} />${ds === 'today' && t.evening ? 'Tonight' : dueLabel(t.due)}<${Icon} name="caret-down" cls="caret" /></button>`}
         </div>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
@@ -363,7 +364,9 @@ function Panel({ p, items, head }) {
         <span class="chev"><${Icon} name="caret-down" /></span>
       </button></h2>
       <div class="fold" id=${listId} inert=${closed}>
-        <ul class="todos prio-list">${items.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
+        <ul class="todos prio-list">${items.map(([t, i], n) => html`
+          ${p === 'today' && t.evening && !items[n - 1]?.[0].evening && html`<li class="tonight-divider" aria-hidden="true"><${Icon} name="moon" />Tonight</li>`}
+          <${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
       </div>
     </section>`;
 }
@@ -387,7 +390,8 @@ function TodoList() {
   const starred = active.filter(([t]) => t.starred).sort(([a], [b]) => (RANK[ds.get(a)] ?? 3) - (RANK[ds.get(b)] ?? 3));
   const unstarred = active.filter(([t]) => !t.starred);
   const overdue = unstarred.filter(([t]) => ds.get(t) === 'overdue').sort(byDue);
-  const dueToday = unstarred.filter(([t]) => ds.get(t) === 'today');
+  // Evening ("Tonight") to-dos sort after the day's others, under a small divider (Issue #43).
+  const dueToday = unstarred.filter(([t]) => ds.get(t) === 'today').sort(([a], [b]) => (a.evening ? 1 : 0) - (b.evening ? 1 : 0));
   const dueTomorrow = unstarred.filter(([t]) => ds.get(t) === 'tomorrow');
   const rest = unstarred.filter(([t]) => !['overdue', 'today', 'tomorrow'].includes(ds.get(t)));
   const groups = [['starred', starred], ['overdue', overdue], ['today', dueToday], ['tomorrow', dueTomorrow],
@@ -430,7 +434,8 @@ function nextHint() {
 // "Put out trash", due tomorrow; "H call the venue" → "Call the venue", High.
 // Live chips under the box show what was understood before you add.
 const DATE_WORDS = [
-  [/^(today|tod|tonight|ton)$/i, () => today.value, 'today'],
+  [/^(today|tod)$/i, () => today.value, 'today'],
+  [/^(tonight|ton)$/i, () => today.value, 'tonight'],   // "Tonight": due today, evening (Issue #43)
   [/^(tomorrow|tmrw|tmr|tom)$/i, tomorrowDay, 'tomorrow'],
   [/^(next week|nxt week|nw)$/i, nextWeekDay, 'next week'],
 ];
@@ -452,19 +457,19 @@ export function parseEntry(raw) {
   }
   if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; }   // only keywords typed: keep them as the title
   if (text) text = text[0].toUpperCase() + text.slice(1);
-  return { text: text.slice(0, 500), due, dueWord, p };
+  return { text: text.slice(0, 500), due, dueWord, p, evening: dueWord === 'tonight' };
 }
 // Adds what was typed, with whatever was understood. The priority button's
 // own choice is the fallback. Returns the parsed entry, or null if nothing added.
 function addParsed(raw, pFallback) {
   const r = parseEntry(raw);
-  if (!r.text || !add(r.text, r.p || pFallback, r.due || undefined)) return null;
+  if (!r.text || !add(r.text, r.p || pFallback, r.due || undefined, r.evening)) return null;
   return r;
 }
 function Understood({ r }) {
   if (!r || (!r.due && !r.p)) return null;
   return html`<div class="understood" aria-live="polite">
-    ${r.due && html`<span class="u-chip due"><${Icon} name="calendar-blank" />Due ${r.dueWord}</span>`}
+    ${r.due && html`<span class="u-chip due"><${Icon} name=${r.evening ? 'moon' : 'calendar-blank'} />${r.evening ? 'Tonight' : `Due ${r.dueWord}`}</span>`}
     ${r.p && html`<span class=${`u-chip p-${r.p}`}><${Icon} name=${`prio-${r.p}`} cls=${`flag-${r.p}`} />${LABELS[r.p]}</span>`}
     <span class="u-title">→ “${r.text}”</span></div>`;
 }
@@ -643,7 +648,7 @@ function EditSheet() {
       if (v && v !== t.text) changes.text = v;
       if (p !== t.p) changes.p = p;
       if (star !== !!t.starred) changes.starred = star;   // Issue #22
-      if (due !== (validDue(t.due) ? t.due : '')) changes.due = due || null;   // Issue #23
+      if (due !== (validDue(t.due) ? t.due : '')) { changes.due = due || null; if (t.evening) changes.evening = false; }   // Issue #23 (#43: a new date clears "Tonight")
       if (Object.keys(changes).length) {
         update(t, changes);
         justEdited.value = e.key; setTimeout(() => { justEdited.value = null; }, 1300);

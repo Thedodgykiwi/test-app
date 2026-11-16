@@ -239,6 +239,11 @@ If they say yes:
   middle) set due/priority and leave the title; live chips (`Understood`)
   under the add box and quick add show what was understood. Keyword-only text
   stays a plain title. `add(text, p, due)` takes the due date.
+- **Tonight (Issue #43):** an `evening: true` flag on a to-do due today. It
+  sorts after the day's others under a "Tonight" divider inside the Due
+  today panel, with a moon "Tonight" label. Set by typing "tonight"/"ton"
+  (#42 parser) or the due menu's Tonight; Today / any other date clears it
+  (`setDue`, edit sheet). `firestore.rules` allows the optional bool.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves

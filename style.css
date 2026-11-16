@@ -692,3 +692,13 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
 .u-chip.due { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .u-chip.p-high { color: var(--high); } .u-chip.p-med { color: var(--med); } .u-chip.p-low { color: var(--low); }
 .u-title { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* "Tonight" (Issue #43): evening to-dos in Due today, after a small divider. */
+:root { --tn-bg: #e7e9f7; --tn: #3b3f8c; --tn-chip: #d9dcf2; }
+:root[data-theme="dark"] { --tn: #b4b9ff; --tn-chip: #2b2f5e; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tn: #b4b9ff; --tn-chip: #2b2f5e; } }
+.tonight-divider { display: flex; align-items: center; gap: .35rem; margin: .5rem .2rem .15rem; list-style: none;
+  font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tn); }
+.tonight-divider::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--tn) 25%, transparent); }
+.tonight-divider .ic { width: 1em; height: 1em; }
+.due-label.tn { background: var(--tn-chip); color: var(--tn); }
