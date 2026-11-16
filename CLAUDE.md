@@ -227,6 +227,18 @@ If they say yes:
   (Today / Tomorrow / Next week = the coming Monday, Pick a date…, No date) with an Undo note. Swipe left on a row
   also sends it to tomorrow, or brings a due-tomorrow one forward to today; a to-do with no date shows "When?" and opens the same menu (Issue #39, `useSwipe`; same code as swipe right
   to star). Choosing each swipe's action in Settings is the rest of #39 (not built).
+- **Delete (Issue #40):** red Delete on the left of Cancel / Save in the edit
+  sheet; first tap arms it ("Tap again"), disarms after 3 s. `remove()` in
+  `app/store.js`; `firestore.rules` allows owner-only deletes.
+- **Quick add (Issue #41):** press N on a keyboard (not while typing, not
+  with a sheet open) for a centred pop-up (`QuickAdd` in `app/main.js`); Enter
+  adds and clears so several can be added in a row, Esc or empty Enter closes.
+- **Words understood (Issue #42):** `parseEntry()` in `app/main.js`: a date
+  word (today/tod/tonight/ton, tomorrow/tom/tmrw, next week/nw) and/or a
+  priority letter L/M/H at the **start or end** of the text (never the
+  middle) set due/priority and leave the title; live chips (`Understood`)
+  under the add box and quick add show what was understood. Keyword-only text
+  stays a plain title. `add(text, p, due)` takes the due date.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves
