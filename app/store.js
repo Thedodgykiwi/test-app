@@ -69,10 +69,12 @@ export function remove(t) {
   if (cloud) cloud.remove(t); else save();
   return true;
 }
-// Add a to-do. Returns false while we don't yet know which list to add to.
-export function add(text, p) {
+// Add a to-do (optionally with a due date, Issue #42). Returns false while
+// we don't yet know which list to add to.
+export function add(text, p, due) {
   if (!text || !ready()) return false;
   const item = { text, done: false, p };
+  if (due) item.due = due;
   if (cloud) cloud.add(item); else { todos.value = [...todos.value, item]; save(); }
   return true;
 }

@@ -682,3 +682,13 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
 @media (prefers-reduced-motion: reduce) {
   dialog.quick-add[open] { animation: quick-fade .2s ease-out; }
 }
+
+/* Words understood in a new to-do (Issue #42): chips under the add box. */
+.add-inner { flex-wrap: wrap; }
+.understood { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; font-size: .8rem; margin-top: -.1rem; animation: quick-fade .2s ease-out; }
+.quick-add .understood { margin: .45rem .2rem 0; }
+.u-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .55rem; border-radius: 999px; font-weight: 600; background: var(--hover); color: var(--text); }
+.u-chip .ic { width: 1em; height: 1em; }
+.u-chip.due { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.u-chip.p-high { color: var(--high); } .u-chip.p-med { color: var(--med); } .u-chip.p-low { color: var(--low); }
+.u-title { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

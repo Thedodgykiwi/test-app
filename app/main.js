@@ -423,10 +423,59 @@ function nextHint() {
   try { localStorage.setItem(hintKey, h); } catch { /* storage blocked */ }
   return h;
 }
+// ---- Words understood in a new to-do (Issue #42) ---------------------------
+// A date word and/or a priority letter at the START or END of what's typed
+// (never the middle, so "Tom's leaving do" stays as written) sets the due
+// date / priority and comes out of the title: "put out trash tomorrow" →
+// "Put out trash", due tomorrow; "H call the venue" → "Call the venue", High.
+// Live chips under the box show what was understood before you add.
+const DATE_WORDS = [
+  [/^(today|tod|tonight|ton)$/i, () => today.value, 'today'],
+  [/^(tomorrow|tmrw|tmr|tom)$/i, tomorrowDay, 'tomorrow'],
+  [/^(next week|nxt week|nw)$/i, nextWeekDay, 'next week'],
+];
+const DATE_RE = 'today|tod|tonight|ton|tomorrow|tmrw|tmr|tom|next week|nxt week|nw';
+const PRIO_WORDS = { l: 'low', m: 'med', h: 'high' };
+export function parseEntry(raw) {
+  let text = raw.trim(), due = '', dueWord = '', p = '';
+  const takeEnd = (re, atStart) => {
+    const m = atStart ? text.match(new RegExp(`^(${re})(?=[\\s,.:;!-]|$)`, 'i')) : text.match(new RegExp(`(?:^|[\\s,.:;!-])(${re})[.!]?$`, 'i'));
+    if (!m) return null;
+    text = atStart ? text.slice(m[0].length) : text.slice(0, text.length - m[0].length);
+    text = text.replace(/^[\s,.:;-]+|[\s,.:;-]+$/g, '');
+    return m[1];
+  };
+  // Two passes so "tod pick up suit l" and "l pick up suit tod" both work.
+  for (let pass = 0; pass < 2; pass++) for (const atStart of [false, true]) {
+    if (!due) { const w = takeEnd(DATE_RE, atStart); if (w) { const [, fn, label] = DATE_WORDS.find(([re]) => re.test(w)); due = fn(); dueWord = label; continue; } }
+    if (!p) { const w = takeEnd('[lmh]', atStart); if (w) p = PRIO_WORDS[w.toLowerCase()]; }
+  }
+  if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; }   // only keywords typed: keep them as the title
+  if (text) text = text[0].toUpperCase() + text.slice(1);
+  return { text: text.slice(0, 500), due, dueWord, p };
+}
+// Adds what was typed, with whatever was understood. The priority button's
+// own choice is the fallback. Returns the parsed entry, or null if nothing added.
+function addParsed(raw, pFallback) {
+  const r = parseEntry(raw);
+  if (!r.text || !add(r.text, r.p || pFallback, r.due || undefined)) return null;
+  return r;
+}
+function Understood({ r }) {
+  if (!r || (!r.due && !r.p)) return null;
+  return html`<div class="understood" aria-live="polite">
+    ${r.due && html`<span class="u-chip due"><${Icon} name="calendar-blank" />Due ${r.dueWord}</span>`}
+    ${r.p && html`<span class=${`u-chip p-${r.p}`}><${Icon} name=${`prio-${r.p}`} cls=${`flag-${r.p}`} />${LABELS[r.p]}</span>`}
+    <span class="u-title">→ “${r.text}”</span></div>`;
+}
+
 function AddBar() {
   const [p, setP] = useState('none');
   const [hint, setHint] = useState(nextHint);
+  const [r, setR] = useState(null);   // what the typed words mean (Issue #42)
   const input = useRef(), flag = useRef(), tapped = useRef(false);
+  const onInput = () => setR(parseEntry(input.current.value));
+  const shownP = r?.p || p;   // a typed letter shows on the priority button too
   // Replay the little "pop" when the flag is tapped (not on the reset after adding).
   useEffect(() => {
     if (!tapped.current) return;
@@ -436,21 +485,22 @@ function AddBar() {
   }, [p]);
   const submit = (e) => {
     e.preventDefault();
-    if (add(input.current.value.trim(), p)) { input.current.value = ''; setP('none'); setHint(nextHint()); }
+    if (addParsed(input.current.value, p)) { input.current.value = ''; setP('none'); setR(null); setHint(nextHint()); }
     input.current.focus();
   };
   return html`
     <form id="todo-form" class="add-bar" onSubmit=${submit}>
       <div class="add-inner">
         <div class="entry">
-          <input id="todo-input" ref=${input} class=${`input${p === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
-          <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${p}`}
-            aria-label=${`Priority for new to-do: ${LABELS[p]}. Tap to change`} title=${`Priority: ${LABELS[p]} (tap to change)`}
+          <input id="todo-input" ref=${input} onInput=${onInput} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
+          <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${shownP}`}
+            aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Tap to change`} title=${`Priority: ${LABELS[shownP]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>
-            <span class="word">${p === 'none' ? '' : LABELS[p]}</span><${Icon} name=${`prio-${p}`} cls=${`flag-${p}`} />
+            <span class="word">${shownP === 'none' ? '' : LABELS[shownP]}</span><${Icon} name=${`prio-${shownP}`} cls=${`flag-${shownP}`} />
           </button>
         </div>
         <button type="submit" class="btn primary"><${Icon} name="plus" />Add</button>
+        <${Understood} r=${r} />
       </div>
     </form>`;
 }
@@ -518,6 +568,9 @@ function QuickAdd() {
   const dlg = useRef(), input = useRef();
   const [p, setP] = useState('none');
   const [added, setAdded] = useState([]);   // texts added since it opened
+  const [r, setR] = useState(null);   // Issue #42
+  const onInput = () => setR(parseEntry(input.current.value));
+  const shownP = r?.p || p;
   useEffect(() => {
     if (quickOpen.value) { setP('none'); setAdded([]); input.current.value = ''; dlg.current.showModal(); input.current.focus(); }
     else if (dlg.current.open) dlg.current.close();
@@ -525,8 +578,9 @@ function QuickAdd() {
   const submit = (e) => {
     e.preventDefault();
     const v = input.current.value.trim().slice(0, 500);
-    if (!v) { quickOpen.value = false; return; }   // empty Enter = done
-    if (add(v, p)) { setAdded([...added, v]); input.current.value = ''; setP('none'); }
+    if (!parseEntry(v).text) { quickOpen.value = false; return; }   // empty Enter = done
+    const res = addParsed(v, p);
+    if (res) { setAdded([...added, res.text]); input.current.value = ''; setP('none'); setR(null); }
     input.current.focus();
   };
   const last = added[added.length - 1];
@@ -535,12 +589,13 @@ function QuickAdd() {
       onClose=${() => { quickOpen.value = false; }} onClick=${(ev) => { if (ev.target === dlg.current) quickOpen.value = false; }}>
       <form onSubmit=${submit}>
         <div class="entry">
-          <input ref=${input} id="quick-input" class=${`input${p === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
+          <input ref=${input} id="quick-input" onInput=${onInput} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
             aria-label="New to-do" maxlength="500" autocomplete="off" />
-          <button type="button" class=${`flag-btn p-${p}`} aria-label=${`Priority for new to-do: ${LABELS[p]}. Click to change`}
-            title=${`Priority: ${LABELS[p]} (click to change)`} onClick=${() => { setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); input.current.focus(); }}>
-            <span class="word">${p === 'none' ? '' : LABELS[p]}</span><${Icon} name=${`prio-${p}`} cls=${`flag-${p}`} /></button>
+          <button type="button" class=${`flag-btn p-${shownP}`} aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Click to change`}
+            title=${`Priority: ${LABELS[shownP]} (click to change)`} onClick=${() => { setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); input.current.focus(); }}>
+            <span class="word">${shownP === 'none' ? '' : LABELS[shownP]}</span><${Icon} name=${`prio-${shownP}`} cls=${`flag-${shownP}`} /></button>
         </div>
+        <${Understood} r=${r} />
         <p class="quick-keys" aria-live="polite">
           ${added.length ? html`<span class="quick-added" key=${added.length}><${Icon} name="check-circle" />${added.length} added · “${last}”</span>` : ''}
           <span class="quick-help"><kbd>Enter</kbd> add · <kbd>Esc</kbd> ${added.length ? 'done' : 'cancel'}</span></p>
