@@ -175,6 +175,11 @@ If they say yes:
 - Local testing without touching the real project: start the emulators with
   `npx -y firebase-tools@latest emulators:start --only auth,firestore --project demo-test-app`
   and open `http://localhost:8080/?emulators`.
+- **Fast first load (Issue #36):** while signed in, the last list shown is kept
+  in browser storage (`cloud-copy-<stage>`, removed on sign-out) and shown at
+  once on the next open, with "Updating…" in the summary, a blue dot and
+  edits paused ("One moment, connecting…") until Firebase is ready; to-dos
+  that changed meanwhile flash briefly when the live list arrives.
 - Sign-in is shared by all stages (one web address), but each stage keeps its
   own to-do list. Never delete users' cloud or device data without asking.
 
@@ -217,6 +222,15 @@ If they say yes:
   at the end, add bar in a panel at the bottom (clear of the home bar). `whats-new.js` is only the "New:"
   bar now; the panel is menu.js's. `sync.js` fills in the menu's account part.
   When the starter's shared pieces improve, copy them over (they're app-owned copies).
+- **Due-date quick menu (Issue #38):** a row's due label ("Due today",
+  "Overdue…") is its own button; tapping it opens `DueMenu` in `app/main.js`
+  (Today / Tomorrow / Next week = the coming Monday, Pick a date…, No date) with an Undo note. Swipe left on a row
+  also sends it to tomorrow, or brings a due-tomorrow one forward to today; a to-do with no date shows "When?" and opens the same menu (Issue #39, `useSwipe`; same code as swipe right
+  to star). Choosing each swipe's action in Settings is the rest of #39 (not built).
+- **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
+  award-night line per open and after each add (never the same twice running).
+  Keep each to about 22 characters so it fits a phone; the box only reserves
+  room for the priority word once a priority is picked.
 - Icons: **Phosphor Icons, Regular style only** (since the new look; home-screen
   icons stay duotone), stored in `icons.js` (no CDN). Use `icon('name')` in JS or
   `<span data-icon="name"></span>` in HTML. To add one, copy the inside of its

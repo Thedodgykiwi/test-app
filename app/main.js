@@ -5,7 +5,7 @@
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { todos, loading, collapsed, toggleCollapsed, update, add, keyOf, LEVELS, LABELS } from './store.js';
+import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, keyOf, LEVELS, LABELS } from './store.js';
 
 // Phosphor icon from icons.js
 const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => {
@@ -15,6 +15,7 @@ const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => 
 // Short-lived UI state shared between components
 const editing = signal(null);     // { key, text, p } while the edit sheet is open
 const justEdited = signal(null);  // key of the row to highlight briefly after saving
+const dueMenu = signal(null);     // { key, left, top, bottom } while a row's due-date menu is open (Issue #38)
 const movedHint = signal(false);  // "Moved to Done ↓" after ticking while Done is closed
 let focusAfter = null;            // [selector, fallback] to focus after the next draw
 
@@ -44,6 +45,9 @@ const today = signal(isoDay(new Date()));   // re-checked when the app comes bac
 const recheckDay = () => { const t = isoDay(new Date()); if (t !== today.value) today.value = t; };
 document.addEventListener('visibilitychange', recheckDay);
 setInterval(recheckDay, 60 * 1000);
+const tomorrowDay = () => { const d = parseDay(today.value); return isoDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)); };
+// "Next week" = the coming Monday (a week on, if today is Monday).
+const nextWeekDay = () => { const d = parseDay(today.value); return isoDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() + (((8 - d.getDay()) % 7) || 7))); };
 const validDue = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const daysUntil = (v) => Math.round((parseDay(v) - parseDay(today.value)) / 864e5);
 function dueState(t) {
@@ -133,6 +137,7 @@ function showUndo(text, k) {
 // their priority (they keep it, so un-starring puts them back). Star by
 // swiping a to-do to the right, or with the switch in the edit sheet.
 function setStar(t, k, starred) {
+  if (!ready()) return;
   const cur = todos.value.find((x, i) => keyOf(x, i) === k) || t;
   update(cur, { starred });
   window.AppToast?.show(`“${cur.text}” ${starred ? 'starred' : 'unstarred'}`, {
@@ -144,8 +149,11 @@ function setStar(t, k, starred) {
   });
 }
 
-// Swipe right on a row to star / un-star it. Vertical moves still scroll the
-// page; a tap still opens the editor. Done to-dos don't swipe.
+// Swipe right on a row to star / un-star it; swipe left to send it to tomorrow,
+// or, when it's already due tomorrow, to bring it forward to today; a to-do
+// with no date asks "When?" and opens the due-date menu (Issue #39; the same
+// choices as the due label's menu). Vertical moves still scroll
+// the page; a tap still opens the editor. Done to-dos don't swipe.
 const SWIPE_AT = 72;   // px to drag before letting go stars it
 function useSwipe(t, k) {
   const row = useRef(), s = useRef(null);
@@ -158,12 +166,13 @@ function useSwipe(t, k) {
     const dx = e.clientX - st.x, dy = e.clientY - st.y;
     if (!st.dragging) {
       if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { s.current = null; return; }   // scrolling
-      if (dx < 10 || Math.abs(dx) < Math.abs(dy)) return;
+      if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) return;
       st.dragging = true; row.current.setPointerCapture(st.id); row.current.classList.add('swiping');
     }
-    st.dx = Math.max(0, Math.min(dx, 140));
+    st.dx = Math.max(-140, Math.min(dx, 140));
     row.current.style.transform = `translateX(${st.dx}px)`;
-    row.current.parentElement.classList.toggle('swipe-ready', st.dx >= SWIPE_AT);
+    row.current.parentElement.classList.toggle('swipe-ready', Math.abs(st.dx) >= SWIPE_AT);
+    row.current.parentElement.classList.toggle('swipe-left', st.dx < 0);
   };
   const up = () => {
     const st = s.current; s.current = null; if (!st?.dragging) return;
@@ -171,18 +180,101 @@ function useSwipe(t, k) {
     el.classList.remove('swiping'); el.classList.add('settle'); el.style.transform = '';
     setTimeout(() => el.classList.remove('settle'), 250);
     el.parentElement.classList.remove('swipe-ready');
+    setTimeout(() => el.parentElement?.classList.remove('swipe-left'), 230);   // after it slides back
     swallowClick = true; setTimeout(() => { swallowClick = false; }, 60);   // not also a tap
     if (st.dx >= SWIPE_AT) setTimeout(() => setStar(t, k, !t.starred), 180);
+    else if (st.dx <= -SWIPE_AT) setTimeout(() => {
+      if (!ready()) return;
+      if (!validDue(t.due)) {   // no date yet: ask when, in a menu by the row's right-hand end
+        const r = el.getBoundingClientRect();
+        dueMenu.value = { key: k, right: r.right - 12, top: r.top + 6, bottom: r.bottom - 6 };
+      } else if (t.due === tomorrowDay()) setDue(k, today.value, 'moved to today');
+      else setDue(k, tomorrowDay(), 'moved to tomorrow');
+    }, 180);
   };
   return { row, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up } };
 }
 let swallowClick = false;
+
+const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '' }; };
+
+// ---- Due-date quick menu (Issue #38) ---------------------------------------
+// Tap a row's due label ("Due today", "Overdue…") for a small menu: Today /
+// Tomorrow / Next week (whichever it isn't already), Pick a date… (the edit
+// sheet) and No date. A change shows an Undo note, like starring. Swiping a
+// to-do with no date left opens the same menu (Issue #39).
+function setDue(k, due, said) {
+  const cur = todos.value.find((x, i) => keyOf(x, i) === k);
+  if (!cur || !ready()) return;
+  const before = validDue(cur.due) ? cur.due : null;
+  update(cur, { due });
+  justEdited.value = k; setTimeout(() => { if (justEdited.value === k) justEdited.value = null; }, 1300);
+  focusAfter = [`[data-due-btn="${k}"]`, `[data-edit="${k}"]`];
+  window.AppToast?.show(`“${cur.text}” ${said}`, {
+    icon: due ? 'calendar-blank' : 'x',
+    action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() {
+      const now = todos.value.find((x, i) => keyOf(x, i) === k);
+      if (now) update(now, { due: before });
+      focusAfter = [`[data-due-btn="${k}"]`, `[data-edit="${k}"]`];
+    } },
+  });
+}
+function DueMenu() {
+  const m = dueMenu.value, box = useRef();
+  const t = m && todos.value.find((x, i) => keyOf(x, i) === m.key);
+  const close = (refocus) => {
+    const k = dueMenu.value?.key; dueMenu.value = null;
+    if (refocus) (document.querySelector(`[data-due-btn="${k}"]`) || document.querySelector(`[data-edit="${k}"]`))?.focus({ preventScroll: true });
+  };
+  useEffect(() => { if (m && !t) dueMenu.value = null; }, [m, t]);   // the to-do went away (ticked elsewhere)
+  // Place it under the label, or above when the add bar is in the way; keep it on screen.
+  useEffect(() => {
+    if (!m || !box.current) return;
+    const el = box.current, h = el.offsetHeight, w = el.offsetWidth;
+    const floor = (document.getElementById('todo-form')?.getBoundingClientRect().top || innerHeight) - 8;
+    const below = m.bottom + 6;
+    el.style.top = `${below + h <= floor ? below : Math.max(8, m.top - h - 6)}px`;
+    el.style.left = `${Math.max(8, Math.min(m.right != null ? m.right - w : m.left, innerWidth - w - 8))}px`;
+    el.style.visibility = 'visible';
+    el.querySelector('button')?.focus({ preventScroll: true });
+    // Close on a tap elsewhere, Escape, scrolling or resizing.
+    const away = (e) => { if (!el.contains(e.target) && !e.target.closest?.('[data-due-btn]')) close(false); };
+    const gone = () => close(false);
+    document.addEventListener('pointerdown', away, true);
+    addEventListener('scroll', gone, true); addEventListener('resize', gone);
+    return () => { document.removeEventListener('pointerdown', away, true); removeEventListener('scroll', gone, true); removeEventListener('resize', gone); };
+  }, [m]);
+  if (!m || !t) return null;
+  const tomorrow = tomorrowDay(), nextWeek = nextWeekDay();
+  const has = validDue(t.due);
+  const items = [
+    t.due !== today.value && ['clock', 'Today', () => setDue(m.key, today.value, 'moved to today')],
+    t.due !== tomorrow && ['arrow-right', 'Tomorrow', () => setDue(m.key, tomorrow, 'moved to tomorrow')],
+    nextWeek !== tomorrow && t.due !== nextWeek && ['calendar-blank', `Next week · ${dueLabel(nextWeek).replace(/^Due /, '')}`,
+      () => setDue(m.key, nextWeek, `is due ${dueLabel(nextWeek).replace(/^Due /, '')}`)],
+    ['pencil-simple', 'Pick a date…', () => openEditor(t, m.key)],
+    has && ['x', 'No date', () => setDue(m.key, null, 'has no due date now')],
+  ].filter(Boolean);
+  const keys = (e) => {
+    const btns = [...box.current.querySelectorAll('button')], i = btns.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); close(true); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
+    else if (e.key === 'Tab') close(false);
+  };
+  return html`
+    <div class="due-menu" ref=${box} role="menu" aria-label=${`Due date for “${t.text}”`} onKeyDown=${keys}>
+      ${items.map(([ic, label, run], i) => html`
+        <button type="button" role="menuitem" class=${i === 0 ? 'main' : ''} onClick=${() => { dueMenu.value = null; run(); }}><${Icon} name=${ic} />${label}</button>`)}
+    </div>`;
+}
 
 function Row({ t, k }) {
   const id = `todo-${k}`;
   const tick = (e) => {
     const done = e.target.checked;
     if (busy.has(k)) return;
+    if (!ready()) { e.target.checked = !done; return; }   // still connecting (Issue #36)
     if (!done) {   // unticking: straight back, no fuss
       update(t, { done: false, doneAt: null });
       focusAfter = [`#${id}`];
@@ -194,18 +286,31 @@ function Row({ t, k }) {
     if (reduceMotion()) markDone(t, k);
     else animateDone(e.target.closest('li'), t, k);
   };
-  const hl = justEdited.value === k;
+  const hl = justEdited.value === k || fresh.value.has(k);   // edited here, or changed elsewhere (Issue #36)
   const { row, handlers } = useSwipe(t, k);
   const ds = dueState(t);
   return html`
     <li class=${`todo${t.done ? ' done' : ''}${hl ? ' just-edited' : ''}`}>
-      ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>`}
+      ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>
+        ${!validDue(t.due) ? html`<div class="swipe-under left when" aria-hidden="true">When?<${Icon} name="calendar-blank" /></div>`
+          : t.due === tomorrowDay()
+          ? html`<div class="swipe-under left to-today" aria-hidden="true">Today<${Icon} name="clock" /></div>`
+          : html`<div class="swipe-under left" aria-hidden="true">Tomorrow<${Icon} name="arrow-right" /></div>`}`}
       <div class="todo-row" ref=${row} ...${handlers}>
         <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
-        <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}${ds ? `, ${dueLabel(t.due)}` : ''}`}
-          onClick=${() => { if (swallowClick) return; editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '' }; }}>
-          <span class="t-main">${t.text}</span>
-          ${ds && html`<span class=${`due-label due-${ds}`}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}</span>`}</button>
+        <div class="text-col">
+          <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}${ds ? `, ${dueLabel(t.due)}` : ''}`}
+            onClick=${() => { if (swallowClick || !ready()) return; openEditor(t, k); }}>
+            <span class="t-main">${t.text}</span></button>
+          ${ds && html`<button type="button" class=${`due-label due-${ds}`} data-due-btn=${k} aria-haspopup="menu" aria-expanded=${dueMenu.value?.key === k}
+            aria-label=${`${dueLabel(t.due)}. Change the due date`}
+            onClick=${(e) => {   // tap the label for a quick menu: Tomorrow, Pick a date, No date (Issue #38)
+              if (swallowClick || !ready()) return;
+              if (dueMenu.value?.key === k) { dueMenu.value = null; return; }
+              const r = e.currentTarget.getBoundingClientRect();
+              dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom };
+            }}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}<${Icon} name="caret-down" cls="caret" /></button>`}
+        </div>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name=${`prio-${t.p}`} cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
@@ -302,8 +407,25 @@ function TodoList() {
 // Add bar (fixed at the bottom). The priority button (signal bars) picks the new to-do's priority:
 // each tap moves none → Low → Medium → High → none; it resets after each add.
 const CYCLE = ['none', 'low', 'med', 'high'];
+// The add box's hint: a different award-night line each time the app opens and
+// after each add, never the same twice in a row (Issue #37). Keep lines to about
+// 22 characters so they fit the box on a phone.
+const HINTS = [
+  'Which gets the nod?', 'And the nominee is…', "Who's in the running?", 'Any late entries?', 'Who makes the cut?',
+  'Nominate a to-do…', 'One for the shortlist?', 'Up for Best To-Do?', 'Shortlist material?', 'Add a nominee…',
+];
+const hintKey = `add-hint:${window.STAGE || 'local'}`;
+function nextHint() {
+  let last = null;
+  try { last = localStorage.getItem(hintKey); } catch { /* storage blocked */ }
+  const pool = HINTS.filter((h) => h !== last);
+  const h = pool[Math.floor(Math.random() * pool.length)];
+  try { localStorage.setItem(hintKey, h); } catch { /* storage blocked */ }
+  return h;
+}
 function AddBar() {
   const [p, setP] = useState('none');
+  const [hint, setHint] = useState(nextHint);
   const input = useRef(), flag = useRef(), tapped = useRef(false);
   // Replay the little "pop" when the flag is tapped (not on the reset after adding).
   useEffect(() => {
@@ -314,14 +436,14 @@ function AddBar() {
   }, [p]);
   const submit = (e) => {
     e.preventDefault();
-    if (add(input.current.value.trim(), p)) { input.current.value = ''; setP('none'); }
+    if (add(input.current.value.trim(), p)) { input.current.value = ''; setP('none'); setHint(nextHint()); }
     input.current.focus();
   };
   return html`
     <form id="todo-form" class="add-bar" onSubmit=${submit}>
       <div class="add-inner">
         <div class="entry">
-          <input id="todo-input" ref=${input} class="input" placeholder="Add a to-do…" autocomplete="off" aria-label="New to-do" maxlength="500" />
+          <input id="todo-input" ref=${input} class=${`input${p === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
           <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${p}`}
             aria-label=${`Priority for new to-do: ${LABELS[p]}. Tap to change`} title=${`Priority: ${LABELS[p]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>
@@ -456,7 +578,8 @@ function Summary() {
   const dueTxt = (dueToday ? ` · ${dueToday} due today` : '') + (overdue ? ` · ${overdue} overdue` : '');
   // Non-breaking spaces inside each part, so a narrow screen wraps between parts, not mid-part.
   const keep = (x) => x.replace(/(\d) /g, '$1\u00a0').replace(/ (today|do)\b/g, '\u00a0$1');
-  return keep(left ? `${left} to do${dueTxt}${doneTxt}` : `All done!${doneTxt}`);
+  const updTxt = updating.value ? ' · Updating…' : '';   // showing the saved copy until the server answers (Issue #36)
+  return keep(left ? `${left} to do${dueTxt}${doneTxt}${updTxt}` : `All done!${doneTxt}${updTxt}`);
 }
 
 function App() {
@@ -471,10 +594,10 @@ setTimeout(() => {
     if (localStorage.getItem(key) || !todos.value.some((t) => !t.done)) return;
     localStorage.setItem(key, '1');
   } catch { return; }
-  window.AppToast?.show('Tip: swipe a to-do to the right to star it', { icon: 'star', duration: 6000 });
+  window.AppToast?.show('Tip: swipe a to-do right to star it, left for tomorrow', { icon: 'star', duration: 6000 });
 }, 2500);
 render(html`<${Summary} />`, document.getElementById('summary'));
 // The add bar and edit sheet sit outside the list (fixed bar, modal sheet).
 const extras = document.createElement('div');
 document.body.append(extras);
-render(html`<${AddBar} /><${EditSheet} />`, extras);
+render(html`<${AddBar} /><${EditSheet} /><${DueMenu} />`, extras);

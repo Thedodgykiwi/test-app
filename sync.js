@@ -94,16 +94,18 @@ async function start() {
   const STATUS = {
     synced: 'All changes saved to your account',
     saving: 'Saving…',
+    updating: 'Updating your list…',
     offline: "Offline: changes will sync when you're back online",
     error: () => `Couldn't sync: ${error}`,
   };
   function showStatus() {
-    const state = error ? 'error' : !navigator.onLine ? 'offline' : pending ? 'saving' : 'synced';
+    const state = error ? 'error' : !navigator.onLine ? 'offline' : pending ? 'saving' : app.updating ? 'updating' : 'synced';
     const text = typeof STATUS[state] === 'function' ? STATUS[state]() : STATUS[state];
     ui.status.hidden = ui.dot.hidden = false;
-    ui.status.className = `sync-status ${state}`;
-    ui.status.replaceChildren(icon({ synced: 'cloud-check', saving: 'cloud-arrow-up', offline: 'cloud-slash', error: 'warning-circle' }[state]), text);
-    ui.dot.className = `sync-dot ${state}`;
+    const look = state === 'updating' ? 'saving' : state;   // same blue as Saving…
+    ui.status.className = `sync-status ${look}`;
+    ui.status.replaceChildren(icon({ synced: 'cloud-check', saving: 'cloud-arrow-up', updating: 'cloud-arrow-down', offline: 'cloud-slash', error: 'warning-circle' }[state]), text);
+    ui.dot.className = `sync-dot ${look}`;
     ui.button.setAttribute('aria-label', `Menu: ${ui.name.textContent}. ${text}`);
     ui.button.title = text;
   }
@@ -128,7 +130,7 @@ async function start() {
       ui.button.setAttribute('aria-label', 'Menu'); ui.button.title = 'Menu';
       if (localStorage.getItem('signed-in')) toast('Signed out. Showing the to-dos saved on this device.');
       localStorage.removeItem('signed-in');
-      app.useLocal();
+      app.useLocal({ forget: true });
       return;
     }
     localStorage.setItem('signed-in', '1');
@@ -159,7 +161,7 @@ async function start() {
         const { text, done, p, doneAt = null, starred = false, due = null } = d.data();
         return { id: d.id, text, done, p, doneAt, starred, due };
       });
-      app.setTodos(list);
+      app.setTodos(list, { fromServer: !snap.metadata.fromCache });
       pending = snap.metadata.hasPendingWrites;
       if (!pending) error = '';
       showStatus();

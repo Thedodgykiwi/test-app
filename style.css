@@ -475,6 +475,9 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .add-inner { width: min(560px, 100%); margin: 0 auto; display: flex; gap: .5rem; }
 .entry { position: relative; flex: 1; min-width: 0; }
 #todo-input { padding-right: 6.2rem; }
+/* No priority picked: only the small bars icon sits there, so the hint text gets the room (Issue #37). */
+#todo-input.no-word { padding-right: 2.6rem; }
+#todo-input:placeholder-shown { text-overflow: ellipsis; }   /* smallest phones: a long hint ends in … */
 .flag-btn {
   position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); height: 2rem; padding: 0 .5rem;
   gap: .3rem; font-size: .78rem; font-weight: 600; color: var(--muted);
@@ -562,6 +565,23 @@ body { padding-bottom: 8rem; }
   background: var(--gold-swipe); color: #2b1f00; font-weight: 700; font-size: .9rem; border-radius: inherit;
 }
 .swipe-under .ic { width: 1.2em; height: 1.2em; }
+/* Swipe left: "Tomorrow" in blue on the right-hand side (Issue #39). Only one layer shows at a time. */
+:root { --tmr-swipe: #1971c2; --tmr-swipe-text: #fff; }
+:root[data-theme="dark"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; } }
+.swipe-under.left { display: none; justify-content: flex-end; padding: 0 1.1rem 0 0; background: var(--tmr-swipe); color: var(--tmr-swipe-text); }
+/* Already due tomorrow: the left swipe brings it forward to today instead, in the Due today purple. */
+:root { --today-swipe: #6741d9; --today-swipe-text: #fff; }
+:root[data-theme="dark"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; } }
+.swipe-under.left.to-today { background: var(--today-swipe); color: var(--today-swipe-text); }
+/* No date yet: the left swipe asks "When?" (grey) and opens the due-date menu. */
+:root { --when-swipe: #5c636e; --when-swipe-text: #fff; }
+:root[data-theme="dark"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; } }
+.swipe-under.left.when { background: var(--when-swipe); color: var(--when-swipe-text); }
+.todo.swipe-left > .swipe-under.left { display: flex; }
+.todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
 .todo-row.swiping { transition: none; }
 .todo-row.settle { transition: transform .22s cubic-bezier(.2,.8,.3,1); }
 /* Star switch in the edit sheet */
@@ -578,7 +598,18 @@ body { padding-bottom: 8rem; }
 :root { --tmr-bg: #e3f2fd; --tmr: #1864ab; --tmr-chip: #d0ebff; --due-bg: #efe9ff; --due: #6741d9; --due-chip: #e5dbff; --over-bg: #ffe3e3; --over: #c92a2a; }
 :root[data-theme="dark"] { --tmr-bg: #13293d; --tmr: #8ec5ff; --tmr-chip: #1c3b5a; --due-bg: #2a2145; --due: #c4b5fd; --due-chip: #3b2f63; --over-bg: #3d1c1c; --over: #ff8787; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-bg: #13293d; --tmr: #8ec5ff; --tmr-chip: #1c3b5a; --due-bg: #2a2145; --due: #c4b5fd; --due-chip: #3b2f63; --over-bg: #3d1c1c; --over: #ff8787; } }
-.todo-row .text:has(.due-label) { display: flex; flex-direction: column; align-items: flex-start; gap: .2rem; }
+/* The to-do's words, with its due label underneath. The label is its own button: tap it for the due-date menu (Issue #38). */
+.text-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .2rem; }
+.text-col > .text { flex: none; align-self: stretch; }
+button.due-label { position: relative; }
+button.due-label::after { content: ''; position: absolute; inset: -.55rem -.6rem; }   /* easier to hit than it looks */
+.due-label .ic.caret { width: .8em; height: .8em; opacity: .75; }
+.due-menu { position: fixed; left: 0; top: 0; z-index: 12; visibility: hidden; display: grid; min-width: 11.5rem; padding: .3rem;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+.due-menu button { justify-content: flex-start; white-space: nowrap; text-align: left; gap: .55rem; padding: .65rem .7rem; border-radius: 10px; font-weight: 600; }
+.due-menu button:hover, .due-menu button:focus-visible { background: var(--hover); }
+.due-menu button .ic { width: 1.15em; height: 1.15em; color: var(--muted); }
+.due-menu button.main, .due-menu button.main .ic { color: var(--accent); }
 .due-label { display: inline-flex; align-items: center; gap: .25rem; width: fit-content; font-size: .75rem; font-weight: 600;
   line-height: 1.5; padding: 0 .5rem; border-radius: 99px; background: var(--hover); color: var(--muted); }
 .due-label .ic { width: 1em; height: 1em; }
