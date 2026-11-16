@@ -222,6 +222,10 @@ If they say yes:
   at the end, add bar in a panel at the bottom (clear of the home bar). `whats-new.js` is only the "New:"
   bar now; the panel is menu.js's. `sync.js` fills in the menu's account part.
   When the starter's shared pieces improve, copy them over (they're app-owned copies).
+- **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
+  award-night line per open and after each add (never the same twice running).
+  Keep each to about 22 characters so it fits a phone; the box only reserves
+  room for the priority word once a priority is picked.
 - Icons: **Phosphor Icons, Regular style only** (since the new look; home-screen
   icons stay duotone), stored in `icons.js` (no CDN). Use `icon('name')` in JS or
   `<span data-icon="name"></span>` in HTML. To add one, copy the inside of its

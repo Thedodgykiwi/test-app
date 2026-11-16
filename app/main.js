@@ -304,8 +304,25 @@ function TodoList() {
 // Add bar (fixed at the bottom). The priority button (signal bars) picks the new to-do's priority:
 // each tap moves none → Low → Medium → High → none; it resets after each add.
 const CYCLE = ['none', 'low', 'med', 'high'];
+// The add box's hint: a different award-night line each time the app opens and
+// after each add, never the same twice in a row (Issue #37). Keep lines to about
+// 22 characters so they fit the box on a phone.
+const HINTS = [
+  'Which gets the nod?', 'And the nominee is…', "Who's in the running?", 'Any late entries?', 'Who makes the cut?',
+  'Nominate a to-do…', 'One for the shortlist?', 'Up for Best To-Do?', 'Shortlist material?', 'Add a nominee…',
+];
+const hintKey = `add-hint:${window.STAGE || 'local'}`;
+function nextHint() {
+  let last = null;
+  try { last = localStorage.getItem(hintKey); } catch { /* storage blocked */ }
+  const pool = HINTS.filter((h) => h !== last);
+  const h = pool[Math.floor(Math.random() * pool.length)];
+  try { localStorage.setItem(hintKey, h); } catch { /* storage blocked */ }
+  return h;
+}
 function AddBar() {
   const [p, setP] = useState('none');
+  const [hint, setHint] = useState(nextHint);
   const input = useRef(), flag = useRef(), tapped = useRef(false);
   // Replay the little "pop" when the flag is tapped (not on the reset after adding).
   useEffect(() => {
@@ -316,14 +333,14 @@ function AddBar() {
   }, [p]);
   const submit = (e) => {
     e.preventDefault();
-    if (add(input.current.value.trim(), p)) { input.current.value = ''; setP('none'); }
+    if (add(input.current.value.trim(), p)) { input.current.value = ''; setP('none'); setHint(nextHint()); }
     input.current.focus();
   };
   return html`
     <form id="todo-form" class="add-bar" onSubmit=${submit}>
       <div class="add-inner">
         <div class="entry">
-          <input id="todo-input" ref=${input} class="input" placeholder=${loading.value && updating.value ? 'Connecting…' : 'Add a to-do…'} autocomplete="off" aria-label="New to-do" maxlength="500" />
+          <input id="todo-input" ref=${input} class=${`input${p === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
           <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${p}`}
             aria-label=${`Priority for new to-do: ${LABELS[p]}. Tap to change`} title=${`Priority: ${LABELS[p]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>

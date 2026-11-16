@@ -475,6 +475,9 @@ body.has-banner.is-offline { padding-top: 6rem; }
 .add-inner { width: min(560px, 100%); margin: 0 auto; display: flex; gap: .5rem; }
 .entry { position: relative; flex: 1; min-width: 0; }
 #todo-input { padding-right: 6.2rem; }
+/* No priority picked: only the small bars icon sits there, so the hint text gets the room (Issue #37). */
+#todo-input.no-word { padding-right: 2.6rem; }
+#todo-input:placeholder-shown { text-overflow: ellipsis; }   /* smallest phones: a long hint ends in … */
 .flag-btn {
   position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); height: 2rem; padding: 0 .5rem;
   gap: .3rem; font-size: .78rem; font-weight: 600; color: var(--muted);
