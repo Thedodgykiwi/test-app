@@ -222,6 +222,10 @@ If they say yes:
   at the end, add bar in a panel at the bottom (clear of the home bar). `whats-new.js` is only the "New:"
   bar now; the panel is menu.js's. `sync.js` fills in the menu's account part.
   When the starter's shared pieces improve, copy them over (they're app-owned copies).
+- **Due-date quick menu (Issue #38):** a row's due label ("Due today",
+  "Overdue…") is its own button; tapping it opens `DueMenu` in `app/main.js`
+  (Today / Tomorrow, Pick a date…, No date) with an Undo note. Swipe left and
+  choosing swipe actions in Settings is Issue #39 (not built).
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves
