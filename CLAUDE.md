@@ -265,7 +265,10 @@ If they say yes:
   a Tonight to-do ("tod 6pm" too); "ton 9am" drops the time. Edit sheet time is
   a 15-minute list; for Tonight, times before 5pm are greyed out; tapping Today
   leaves Tonight (and clears an evening time). `setDue` drops times that no
-  longer fit. Reminders at that time: not built (Issue #51).
+  longer fit. **No past times today:** passed times are greyed out in the
+  sheet ("Add a time" starts at the next free quarter-hour); typed "tod 6am"
+  after 6am keeps Today, drops the time and shows a "6am has passed" chip; a
+  time alone that has passed ("6am") means tomorrow. Reminders: not built (Issue #51).
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random

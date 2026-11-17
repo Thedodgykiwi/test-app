@@ -78,6 +78,9 @@ const EVENING = '17:00';
 const isEveningTime = (v) => validTime(v) && v >= EVENING;
 // The edit sheet's time list: every 15 minutes (plus the to-do's own time if it's in between).
 const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}`);
+// A time that has already gone by today can't be chosen (Issue #50 follow-up).
+const nowTime = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const isPast = (due, v) => due === today.value && validTime(v) && v < nowTime();
 const withTime = (label, t) => validTime(t.time) ? `${label} · ${fmtTime(t.time)}` : label;
 const DUE_ICON = { overdue: 'warning', today: 'clock', tomorrow: 'calendar-blank', upcoming: 'calendar-blank' };
 
@@ -493,12 +496,16 @@ export function parseEntry(raw) {
     if (!time) { const w = takeEnd(TIME_RE, atStart); if (w && toTime(w)) { time = toTime(w); continue; } }
     if (!p) { const w = takeEnd('[lmh]', atStart); if (w) p = PRIO_WORDS[w.toLowerCase()]; }
   }
-  if (time && !due) { due = today.value; dueWord = 'today'; }   // a time alone means today
+  let pastTime = '';
+  if (time && !due) {   // a time alone means today, or tomorrow once it has gone by
+    if (time < nowTime()) { due = tomorrowDay(); dueWord = 'tomorrow'; } else { due = today.value; dueWord = 'today'; }
+  }
+  if (time && due === today.value && time < nowTime()) { pastTime = time; time = ''; }   // "tod 6am" at 1pm: the time has gone, so it's left off
   if (dueWord === 'today' && isEveningTime(time)) dueWord = 'tonight';   // "tod 6pm" is a Tonight one
   if (dueWord === 'tonight' && time && !isEveningTime(time)) time = '';   // "ton 9am": tonight wins, time dropped
   if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; time = ''; }   // only keywords typed: keep them as the title
   if (text) text = text[0].toUpperCase() + text.slice(1);
-  return { text: text.slice(0, 500), due, dueWord, p, time, evening: dueWord === 'tonight' };
+  return { text: text.slice(0, 500), due, dueWord, p, time, pastTime, evening: dueWord === 'tonight' };
 }
 // Adds what was typed, with whatever was understood. The priority button's
 // own choice is the fallback. Returns the parsed entry, or null if nothing added.
@@ -512,6 +519,7 @@ function Understood({ r }) {
   return html`<div class="understood" aria-live="polite">
     ${r.due && html`<span class="u-chip due"><${Icon} name=${r.evening ? 'moon' : 'calendar-blank'} />${r.evening ? 'Tonight' : `Due ${r.dueWord}`}</span>`}
     ${r.time && html`<span class="u-chip due"><${Icon} name="clock" />at ${fmtTime(r.time)}</span>`}
+    ${r.pastTime && html`<span class="u-chip past"><${Icon} name="clock" />${fmtTime(r.pastTime)} has passed</span>`}
     ${r.p && html`<span class=${`u-chip p-${r.p}`}><${Icon} name=${`prio-${r.p}`} cls=${`flag-${r.p}`} />${LABELS[r.p]}</span>`}
     <span class="u-title">→ “${r.text}”</span></div>`;
 }
@@ -789,16 +797,18 @@ function EditSheet() {
               <${Icon} name=${`prio-${v}`} cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
         </div>
         <${DueField} value=${due} tonight=${evening && due === today.value} open=${!!e}
-          onChange=${(v) => { setDue(v); setEvening(false); if (!v || (v === today.value && isEveningTime(time))) setTime(''); }} />
+          onChange=${(v) => { setDue(v); setEvening(false); if (!v || (v === today.value && (isEveningTime(time) || isPast(v, time)))) setTime(''); }} />
         ${due && (time
           ? html`<div class="time-row"><label for="edit-time">At</label>
               <select id="edit-time" class="input time-input" value=${time}
                 onChange=${(ev) => { const v = ev.target.value; setTime(v); if (due === today.value) setEvening(isEveningTime(v)); }}>
-                ${[...new Set([...TIME_OPTIONS, time])].sort().map((v) => html`<option value=${v} disabled=${evening && due === today.value && !isEveningTime(v) && v !== time}>${fmtTime(v)}</option>`)}
+                ${[...new Set([...TIME_OPTIONS, time])].sort().map((v) => html`<option value=${v} disabled=${v !== time && ((evening && due === today.value && !isEveningTime(v)) || isPast(due, v))}>${fmtTime(v)}</option>`)}
               </select>
               ${evening && due === today.value && html`<span class="time-note"><${Icon} name="moon" />Tonight: 5pm on</span>`}
               <button type="button" class="btn ghost" id="edit-time-remove" onClick=${() => setTime('')}>Remove time</button></div>`
-          : html`<button type="button" class="add-time" id="edit-time-add" onClick=${() => { setTime(evening && due === today.value ? '19:00' : '09:00'); setTimeout(() => document.getElementById('edit-time')?.focus()); }}><${Icon} name="plus" />Add a time</button>`)}
+          : html`<button type="button" class="add-time" id="edit-time-add" onClick=${() => { const want = evening && due === today.value ? '19:00' : '09:00';
+            // Start at the next free quarter-hour today if that time has passed.
+            setTime(isPast(due, want) ? (TIME_OPTIONS.find((v) => !isPast(due, v)) || '23:45') : want); setTimeout(() => document.getElementById('edit-time')?.focus()); }}><${Icon} name="plus" />Add a time</button>`)}
         <div class="row edit-actions">
           <button type="button" id="edit-delete" class=${`btn ${armed ? 'danger' : 'danger-soft'}`} aria-live="polite" onClick=${del}>
             <${Icon} name="trash" />${armed ? 'Tap again' : 'Delete'}</button>
