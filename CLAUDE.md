@@ -260,7 +260,9 @@ If they say yes:
   "Add a checklist" (`.sheet-adds`, stacks on very small phones) opens a
   textarea saved with Save. Rows with a note show a "Note" pill
   (`noteOpen` signal; outlined, not filled, so it differs from the checklist pill
-  without drawing too much attention: a dark filled pill was tried and rejected) that unfolds `NoteText` under the row; http(s) links are tappable.
+  without drawing too much attention: a dark filled pill was tried and rejected) that unfolds `NoteText` under the row; http(s) and www. links are tappable.
+  Tapping the open note's text edits it in place (saves on leaving the box,
+  Esc cancels, emptied = note removed), like the checklist.
 - **Edit sheet layout (Issues #46, #47):** star is a round toggle in the header
   (`#edit-star`, gold when on); "Add a checklist" sits right under the text box.
   Starred panel sorts by due state, then High/Medium/Low/none (Issue #48).

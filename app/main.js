@@ -352,7 +352,7 @@ function Row({ t, k }) {
           </span>`}
       </div>
       ${!t.done && expanded.value.has(k) && itemsOf(t).length > 0 && html`<div class="row-sub"><${Checklist} t=${t} compact=${true} /></div>`}
-      ${noteOpen.value.has(k) && noteOf(t) && html`<div class="row-sub"><${NoteText} text=${noteOf(t)} /></div>`}
+      ${noteOpen.value.has(k) && noteOf(t) && html`<div class="row-sub"><${NoteText} t=${t} k=${k} /></div>`}
     </li>`;
 }
 
@@ -594,9 +594,30 @@ const expanded = signal(new Set());   // rows showing their checklist
 // under the row, with web links made tappable.
 const noteOpen = signal(new Set());
 const noteOf = (t) => typeof t.note === 'string' ? t.note.trim() : '';
-function NoteText({ text }) {
-  const parts = text.split(/(https?:\/\/[^\s]+)/g);
-  return html`<p class="row-note">${parts.map((s, i) => i % 2 ? html`<a href=${s} target="_blank" rel="noopener noreferrer">${s}</a>` : s)}</p>`;
+// The open note can be edited in place, like the checklist: tap the text (not
+// a link) to edit; it saves when you leave the box, and an emptied note is
+// removed. Links (http…, www.…) stay tappable while reading.
+function NoteText({ t, k }) {
+  const text = noteOf(t);
+  const [editing, setEditing] = useState(false);
+  const box = useRef();
+  useEffect(() => { if (editing && box.current) { const b = box.current; b.focus(); b.setSelectionRange(b.value.length, b.value.length); grow(b); } }, [editing]);
+  const grow = (b) => { b.style.height = 'auto'; b.style.height = `${b.scrollHeight}px`; };
+  const save = (v) => {
+    setEditing(false);
+    const nt = v.trim().slice(0, 2000);
+    if (nt === text || !ready()) return;
+    update(t, { note: nt || null });
+    if (!nt) { const s = new Set(noteOpen.value); s.delete(k); noteOpen.value = s; }
+  };
+  if (editing) return html`<textarea ref=${box} class="row-note row-note-edit" aria-label="Note" maxlength="2000" value=${text}
+    onInput=${(e) => grow(e.target)} onBlur=${(e) => save(e.target.value)}
+    onKeyDown=${(e) => { if (e.key === 'Escape') { e.preventDefault(); setEditing(false); } }}></textarea>`;
+  const parts = text.split(/((?:https?:\/\/|www\.)[^\s]+)/g);
+  return html`<div class="row-note row-note-read" role="button" tabindex="0" aria-label="Note: tap to edit"
+    onClick=${(e) => { if (e.target.closest('a')) return; setEditing(true); }}
+    onKeyDown=${(e) => { if (e.key === 'Enter' && !e.target.closest('a')) { e.preventDefault(); setEditing(true); } }}>
+    ${parts.map((s, i) => i % 2 ? html`<a href=${s.startsWith('www.') ? `https://${s}` : s} target="_blank" rel="noopener noreferrer">${s}</a>` : s)}</div>`;
 }
 const itemsOf = (t) => Array.isArray(t.items) ? t.items : [];
 const progress = (t) => { const it = itemsOf(t); return it.length ? `${it.filter((i) => i.done).length}/${it.length}` : ''; };
