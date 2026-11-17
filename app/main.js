@@ -72,6 +72,12 @@ function fmtTime(v) {   // "13:00" → "1pm", "09:30" → "9:30am"
   const [h, m] = v.split(':').map(Number);
   return `${h % 12 || 12}${m ? `:${String(m).padStart(2, '0')}` : ''}${h >= 12 ? 'pm' : 'am'}`;
 }
+// "Tonight" means 5pm onwards (Issue #50 follow-up): a to-do due today at 5pm
+// or later is a Tonight one, and a Tonight one can't have an earlier time.
+const EVENING = '17:00';
+const isEveningTime = (v) => validTime(v) && v >= EVENING;
+// The edit sheet's time list: every 15 minutes (plus the to-do's own time if it's in between).
+const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}`);
 const withTime = (label, t) => validTime(t.time) ? `${label} · ${fmtTime(t.time)}` : label;
 const DUE_ICON = { overdue: 'warning', today: 'clock', tomorrow: 'calendar-blank', upcoming: 'calendar-blank' };
 
@@ -204,7 +210,7 @@ function useSwipe(t, k) {
 }
 let swallowClick = false;
 
-const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '', time: validTime(t.time) ? t.time : '' }; };
+const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '', time: validTime(t.time) ? t.time : '', evening: !!t.evening }; };
 
 // ---- Due-date quick menu (Issue #38) ---------------------------------------
 // Tap a row's due label ("Due today", "Overdue…") for a small menu: Today /
@@ -214,15 +220,19 @@ const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, s
 function setDue(k, due, said, evening = false) {
   const cur = todos.value.find((x, i) => keyOf(x, i) === k);
   if (!cur || !ready()) return;
-  const before = validDue(cur.due) ? cur.due : null, beforeEv = !!cur.evening;
-  update(cur, cur.evening || evening ? { due, evening } : { due });   // any other date clears "Tonight" (Issue #43)
+  const before = validDue(cur.due) ? cur.due : null, beforeEv = !!cur.evening, beforeTime = validTime(cur.time) ? cur.time : null;
+  const ch = cur.evening || evening ? { due, evening } : { due };   // any other date clears "Tonight" (Issue #43)
+  // A time that no longer fits goes: a daytime one when moved to Tonight, an
+  // evening one when moved to (daytime) Today, any time when the date is removed.
+  if (beforeTime && (!due || (evening && !isEveningTime(beforeTime)) || (!evening && due === today.value && isEveningTime(beforeTime)))) ch.time = null;
+  update(cur, ch);
   justEdited.value = k; setTimeout(() => { if (justEdited.value === k) justEdited.value = null; }, 1300);
   focusAfter = [`[data-due-btn="${k}"]`, `[data-edit="${k}"]`];
   window.AppToast?.show(`“${cur.text}” ${said}`, {
     icon: evening ? 'moon' : due ? 'calendar-blank' : 'x',
     action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() {
       const now = todos.value.find((x, i) => keyOf(x, i) === k);
-      if (now) update(now, beforeEv || evening ? { due: before, evening: beforeEv } : { due: before });
+      if (now) update(now, { ...(beforeEv || evening ? { due: before, evening: beforeEv } : { due: before }), ...('time' in ch ? { time: beforeTime } : {}) });
       focusAfter = [`[data-due-btn="${k}"]`, `[data-edit="${k}"]`];
     } },
   });
@@ -483,7 +493,9 @@ export function parseEntry(raw) {
     if (!time) { const w = takeEnd(TIME_RE, atStart); if (w && toTime(w)) { time = toTime(w); continue; } }
     if (!p) { const w = takeEnd('[lmh]', atStart); if (w) p = PRIO_WORDS[w.toLowerCase()]; }
   }
-  if (time && !due) { due = today.value; dueWord = +time.slice(0, 2) >= 18 ? 'tonight' : 'today'; }   // a time alone means today
+  if (time && !due) { due = today.value; dueWord = 'today'; }   // a time alone means today
+  if (dueWord === 'today' && isEveningTime(time)) dueWord = 'tonight';   // "tod 6pm" is a Tonight one
+  if (dueWord === 'tonight' && time && !isEveningTime(time)) time = '';   // "ton 9am": tonight wins, time dropped
   if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; time = ''; }   // only keywords typed: keep them as the title
   if (text) text = text[0].toUpperCase() + text.slice(1);
   return { text: text.slice(0, 500), due, dueWord, p, time, evening: dueWord === 'tonight' };
@@ -600,7 +612,7 @@ function AddBar() {
 // Due date picker in the edit sheet (Issue #23): None / Today / Tomorrow chips
 // and a small month calendar. Value is 'YYYY-MM-DD' or '' for none.
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-function DueField({ value, onChange, open }) {
+function DueField({ value, onChange, open, tonight }) {
   const t0 = parseDay(today.value);
   const tomorrow = isoDay(new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + 1));
   const start = value ? parseDay(value) : t0;
@@ -621,7 +633,7 @@ function DueField({ value, onChange, open }) {
   const pick = (v) => { onChange(v); setPicking(false); if (v) { const d = parseDay(v); setMonth([d.getFullYear(), d.getMonth()]); } };
   const monthName = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   return html`
-    <p class="field-label" id="edit-due-label">Due${value ? html` · <span class="due-chosen">${(l => l[0].toUpperCase() + l.slice(1))(dueLabel(value).replace(/^Due /, ''))}</span>` : ''}</p>
+    <p class="field-label" id="edit-due-label">Due${value ? html` · <span class="due-chosen">${tonight ? 'Tonight' : (l => l[0].toUpperCase() + l.slice(1))(dueLabel(value).replace(/^Due /, ''))}</span>` : ''}</p>
     <div class="seg chips" role="group" aria-labelledby="edit-due-label">
       ${[['none', 'None', ''], ['today', 'Today', today.value], ['tomorrow', 'Tomorrow', tomorrow]].map(([k, l, v]) => html`
         <button type="button" class="chip" data-due=${k} aria-pressed=${choice === k} onClick=${() => pick(v)}>${l}</button>`)}
@@ -708,6 +720,7 @@ function EditSheet() {
   const [star, setStarOn] = useState(false);
   const [due, setDue] = useState('');
   const [time, setTime] = useState('');   // Issue #50
+  const [evening, setEvening] = useState(false);   // Tonight (5pm on) in the sheet
   // Delete (Issue #40): the first tap arms the button ("Tap again"), the
   // second deletes. It disarms itself after 3 seconds.
   const [armed, setArmed] = useState(false);
@@ -724,7 +737,7 @@ function EditSheet() {
   };
   useEffect(() => {
     if (!e) { if (dlg.current.open) dlg.current.close(); return; }
-    setP(e.p); setStarOn(!!e.starred); setDue(e.due || ''); setTime(e.time || ''); text.current.value = e.text;
+    setP(e.p); setStarOn(!!e.starred); setDue(e.due || ''); setTime(e.time || ''); setEvening(!!e.evening); text.current.value = e.text;
     dlg.current.showModal();
     text.current.focus({ preventScroll: true });
     text.current.setSelectionRange(e.text.length, e.text.length);
@@ -746,7 +759,9 @@ function EditSheet() {
       if (star !== !!t.starred) changes.starred = star;   // Issue #22
       const tm = due ? time : '';
       if (tm !== (validTime(t.time) ? t.time : '')) changes.time = tm || null;   // Issue #50
-      if (due !== (validDue(t.due) ? t.due : '')) { changes.due = due || null; if (t.evening) changes.evening = false; }   // Issue #23 (#43: a new date clears "Tonight")
+      if (due !== (validDue(t.due) ? t.due : '')) changes.due = due || null;
+      const ev = evening && due === today.value;
+      if (ev !== !!t.evening) changes.evening = ev;   // #43; 5pm on = Tonight (#50)   // Issue #23 (#43: a new date clears "Tonight")
       if (Object.keys(changes).length) {
         update(t, changes);
         justEdited.value = e.key; setTimeout(() => { justEdited.value = null; }, 1300);
@@ -773,12 +788,17 @@ function EditSheet() {
             <button type="button" class=${`chip ${v}`} data-p=${v} aria-pressed=${p === v} onClick=${() => setP(v)}>
               <${Icon} name=${`prio-${v}`} cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
         </div>
-        <${DueField} value=${due} onChange=${(v) => { setDue(v); if (!v) setTime(''); }} open=${!!e} />
+        <${DueField} value=${due} tonight=${evening && due === today.value} open=${!!e}
+          onChange=${(v) => { setDue(v); setEvening(false); if (!v || (v === today.value && isEveningTime(time))) setTime(''); }} />
         ${due && (time
           ? html`<div class="time-row"><label for="edit-time">At</label>
-              <input type="time" id="edit-time" class="input time-input" value=${time} onChange=${(ev) => setTime(validTime(ev.target.value) ? ev.target.value : '')} />
+              <select id="edit-time" class="input time-input" value=${time}
+                onChange=${(ev) => { const v = ev.target.value; setTime(v); if (due === today.value) setEvening(isEveningTime(v)); }}>
+                ${[...new Set([...TIME_OPTIONS, time])].sort().map((v) => html`<option value=${v} disabled=${evening && due === today.value && !isEveningTime(v) && v !== time}>${fmtTime(v)}</option>`)}
+              </select>
+              ${evening && due === today.value && html`<span class="time-note"><${Icon} name="moon" />Tonight: 5pm on</span>`}
               <button type="button" class="btn ghost" id="edit-time-remove" onClick=${() => setTime('')}>Remove time</button></div>`
-          : html`<button type="button" class="add-time" id="edit-time-add" onClick=${() => { setTime('09:00'); setTimeout(() => document.getElementById('edit-time')?.focus()); }}><${Icon} name="plus" />Add a time</button>`)}
+          : html`<button type="button" class="add-time" id="edit-time-add" onClick=${() => { setTime(evening && due === today.value ? '19:00' : '09:00'); setTimeout(() => document.getElementById('edit-time')?.focus()); }}><${Icon} name="plus" />Add a time</button>`)}
         <div class="row edit-actions">
           <button type="button" id="edit-delete" class=${`btn ${armed ? 'danger' : 'danger-soft'}`} aria-live="polite" onClick=${del}>
             <${Icon} name="trash" />${armed ? 'Tap again' : 'Delete'}</button>

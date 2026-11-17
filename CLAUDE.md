@@ -259,9 +259,13 @@ If they say yes:
   on a to-do with a date. Edit sheet: "Add a time" under Due, then a time
   box + "Remove time"; clearing the date clears it. Typed: 4pm, 4:30pm, 13:00
   or 1300 at the start/end (`TIME_RE`/`toTime` in `parseEntry`); a time with
-  no date word means today (tonight from 6pm); a bare number stays in the
+  no date word means today; a bare number stays in the
   title. Row label adds " · 4pm"; Due today/tomorrow sort timed ones first,
-  earliest first. Reminders at that time: not built (separate issue).
+  earliest first. **Tonight = 5pm on** (`EVENING`): today + a time from 5pm is
+  a Tonight to-do ("tod 6pm" too); "ton 9am" drops the time. Edit sheet time is
+  a 15-minute list; for Tonight, times before 5pm are greyed out; tapping Today
+  leaves Tonight (and clears an evening time). `setDue` drops times that no
+  longer fit. Reminders at that time: not built (Issue #51).
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random

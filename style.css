@@ -746,3 +746,5 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
 .time-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .time-row label { font-weight: 600; }
 .time-input { width: auto; min-height: 40px; }
+.time-note { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--muted); }
+select.time-input option:disabled { color: var(--muted); }
