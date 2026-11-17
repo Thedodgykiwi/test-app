@@ -259,8 +259,8 @@ If they say yes:
   null clears it; `firestore.rules` checks it). Edit sheet: "Add a note" beside
   "Add a checklist" (`.sheet-adds`, stacks on very small phones) opens a
   textarea saved with Save. Rows with a note show a "Note" pill
-  (`noteOpen` signal; dark grey with light text, inverted in dark mode, so it differs
-  from the checklist pill) that unfolds `NoteText` under the row; http(s) links are tappable.
+  (`noteOpen` signal; outlined, not filled, so it differs from the checklist pill
+  without drawing too much attention: a dark filled pill was tried and rejected) that unfolds `NoteText` under the row; http(s) links are tappable.
 - **Edit sheet layout (Issues #46, #47):** star is a round toggle in the header
   (`#edit-star`, gold when on); "Add a checklist" sits right under the text box.
   Starred panel sorts by due state, then High/Medium/Low/none (Issue #48).
