@@ -771,3 +771,5 @@ select.time-input option:disabled { color: var(--muted); }
 /* Line the Tonight label up with the panel heading's icon and text (Issue #54). */
 .tonight-divider { margin-left: 0; }
 .tonight-toggle { margin-left: 0; padding-left: 10px; }
+/* Starred to-dos: a touch heavier, not bold (Issue #55). */
+.todo.starred .t-main { font-weight: 560; }
