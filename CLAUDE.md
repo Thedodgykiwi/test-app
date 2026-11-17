@@ -255,6 +255,20 @@ If they say yes:
 - **Edit sheet layout (Issues #46, #47):** star is a round toggle in the header
   (`#edit-star`, gold when on); "Add a checklist" sits right under the text box.
   Starred panel sorts by due state, then High/Medium/Low/none (Issue #48).
+- **Scheduled time (Issue #50, option B):** optional `time: 'HH:MM'` (24-hour)
+  on a to-do with a date. Edit sheet: "Add a time" under Due, then a time
+  box + "Remove time"; clearing the date clears it. Typed: 4pm, 4:30pm, 13:00
+  or 1300 at the start/end (`TIME_RE`/`toTime` in `parseEntry`); a time with
+  no date word means today; a bare number stays in the
+  title. Row label adds " · 4pm"; Due today/tomorrow sort timed ones first,
+  earliest first. **Tonight = 5pm on** (`EVENING`): today + a time from 5pm is
+  a Tonight to-do ("tod 6pm" too); "ton 9am" drops the time. Edit sheet time is
+  a 15-minute list; for Tonight, times before 5pm are greyed out; tapping Today
+  leaves Tonight (and clears an evening time). `setDue` drops times that no
+  longer fit. **No past times today:** passed times are greyed out in the
+  sheet ("Add a time" starts at the next free quarter-hour); typed "tod 6am"
+  after 6am keeps Today, drops the time and shows a "6am has passed" chip; a
+  time alone that has passed ("6am") means tomorrow. Reminders: not built (Issue #51).
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random

@@ -724,7 +724,7 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
 .cl-tick .ic, .cl-plus .ic { width: 1.25rem; height: 1.25rem; }
 .cl-plus { color: var(--muted); }
 .cl-item.done .cl-tick { color: var(--ok); }
-.cl-item.done .cl-text { color: var(--muted); text-decoration: line-through; }
+.cl-item.done .cl-text { color: var(--muted); }
 .cl-text { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: .95rem; color: var(--text); padding: .45rem .2rem; outline: none; }
 .cl-text:focus { box-shadow: inset 0 -2px 0 var(--accent); }
 .cl-handle { color: var(--muted); opacity: .6; cursor: grab; touch-action: none; }
@@ -738,3 +738,14 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
   border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: .4rem; cursor: pointer; }
 .icon-star:hover { background: var(--hover); }
 .icon-star.on { color: var(--gold); border-color: var(--gold); background: var(--gold-bg); }
+
+/* Scheduled time in the edit sheet (Issue #50, option B). */
+.add-time { align-self: flex-start; display: inline-flex; align-items: center; gap: .4rem; min-height: 40px; padding: 0 .9rem;
+  border: 1px dashed var(--line); border-radius: 10px; background: var(--surface); color: var(--accent); font: inherit; font-weight: 500; cursor: pointer; }
+.add-time:hover { background: var(--hover); }
+.time-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.time-row label { font-weight: 600; }
+.time-input { width: auto; min-height: 40px; }
+.time-note { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--muted); }
+select.time-input option:disabled { color: var(--muted); }
+.u-chip.past { background: var(--hover); color: var(--muted); }
