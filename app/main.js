@@ -312,7 +312,7 @@ function Row({ t, k }) {
   const { row, handlers } = useSwipe(t, k);
   const ds = dueState(t);
   return html`
-    <li class=${`todo${t.done ? ' done' : ''}${hl ? ' just-edited' : ''}`}>
+    <li class=${`todo${t.done ? ' done' : ''}${t.starred && !t.done ? ' starred' : ''}${hl ? ' just-edited' : ''}`}>
       ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>
         ${!validDue(t.due) ? html`<div class="swipe-under left when" aria-hidden="true">When?<${Icon} name="calendar-blank" /></div>`
           : t.due === tomorrowDay()
