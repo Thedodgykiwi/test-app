@@ -269,6 +269,12 @@ If they say yes:
   sheet ("Add a time" starts at the next free quarter-hour); typed "tod 6am"
   after 6am keeps Today, drops the time and shows a "6am has passed" chip; a
   time alone that has passed ("6am") means tomorrow. Reminders: not built (Issue #51).
+- **Archive done to-dos (Issue #49, option B):** "Tidy up" on the Done heading
+  (shown when there are done to-dos older than today) opens `TidyMenu`: Older
+  than 30 days / Older than 7 days / Everything except today, each with a
+  count. Sets `archived: true` (kept, hidden everywhere, not counted); Undo in
+  the note sets it back. `firestore.rules` allows the optional bool. A way to
+  see archived ones again isn't built yet.
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
