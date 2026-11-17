@@ -781,3 +781,6 @@ select.time-input option:disabled { color: var(--muted); }
 .row-note { margin: 0; padding: .6rem .75rem; background: var(--hover); border-radius: 10px; font-size: .9rem; line-height: 1.45;
   color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
 .row-note a { color: var(--accent); }
+/* Note pill: darker grey with light text so it's told apart from the checklist pill (Issue #57). */
+.sub-pill.note-pill { background: color-mix(in srgb, var(--text) 72%, var(--bg)); color: var(--bg); }
+.sub-pill.note-pill:hover, .sub-pill.note-pill.open { background: color-mix(in srgb, var(--text) 85%, var(--bg)); }
