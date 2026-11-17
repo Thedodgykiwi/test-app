@@ -767,3 +767,4 @@ select.time-input option:disabled { color: var(--muted); }
   background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .tonight-toggle:hover { background: color-mix(in srgb, var(--tn) 12%, transparent); }
 .tonight-toggle .chevron { width: .9em; height: .9em; }
+.u-chip.star { background: var(--gold-bg); color: var(--gold); }

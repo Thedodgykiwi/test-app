@@ -238,7 +238,8 @@ If they say yes:
   priority letter L/M/H at the **start or end** of the text (never the
   middle) set due/priority and leave the title; live chips (`Understood`)
   under the add box and quick add show what was understood. Keyword-only text
-  stays a plain title. `add(text, p, due)` takes the due date.
+  stays a plain title. `add(text, p, due, evening, time, starred)`. A single **S**
+  at the start or end stars it (Issue #53; "Starred" chip).
 - **Tonight (Issue #43):** an `evening: true` flag on a to-do due today. It
   sorts after the day's others under a "Tonight" divider inside the Due
   today panel, with a moon "Tonight" label. Set by typing "tonight"/"ton"
