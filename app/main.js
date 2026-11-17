@@ -218,7 +218,7 @@ function useSwipe(t, k) {
 }
 let swallowClick = false;
 
-const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '', time: validTime(t.time) ? t.time : '', evening: !!t.evening }; };
+const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '', time: validTime(t.time) ? t.time : '', evening: !!t.evening, note: noteOf(t) }; };
 
 // ---- Due-date quick menu (Issue #38) ---------------------------------------
 // Tap a row's due label ("Due today", "Overdue…") for a small menu: Today /
@@ -341,6 +341,10 @@ function Row({ t, k }) {
             aria-expanded=${expanded.value.has(k)} aria-label=${`Checklist, ${progress(t)} done. ${expanded.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(expanded.value); s.has(k) ? s.delete(k) : s.add(k); expanded.value = s; }}>
             <${Icon} name="list-checks" />${progress(t)}<${Icon} name="caret-down" cls="caret" /></button>`}
+          ${noteOf(t) && html`<button type="button" class=${`sub-pill note-pill${noteOpen.value.has(k) ? ' open' : ''}`}
+            aria-expanded=${noteOpen.value.has(k)} aria-label=${`Note. ${noteOpen.value.has(k) ? 'Hide' : 'Show'} it`}
+            onClick=${() => { if (swallowClick) return; const s = new Set(noteOpen.value); s.has(k) ? s.delete(k) : s.add(k); noteOpen.value = s; }}>
+            <${Icon} name="note" />Note<${Icon} name="caret-down" cls="caret" /></button>`}
         </div>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
@@ -348,6 +352,7 @@ function Row({ t, k }) {
           </span>`}
       </div>
       ${!t.done && expanded.value.has(k) && itemsOf(t).length > 0 && html`<div class="row-sub"><${Checklist} t=${t} compact=${true} /></div>`}
+      ${noteOpen.value.has(k) && noteOf(t) && html`<div class="row-sub"><${NoteText} text=${noteOf(t)} /></div>`}
     </li>`;
 }
 
@@ -583,6 +588,16 @@ function Understood({ r }) {
 // Changes save at once. A row with items shows a "2/4" pill; tapping it
 // unfolds the checklist under the row. The edit sheet has the same list.
 const expanded = signal(new Set());   // rows showing their checklist
+// ---- Note on a to-do (Issue #57, option A) ----------------------------------
+// Optional plain-text note (up to 2000 characters). Rows with one show a
+// "Note" pill beside Due / the checklist pill; tapping it unfolds the note
+// under the row, with web links made tappable.
+const noteOpen = signal(new Set());
+const noteOf = (t) => typeof t.note === 'string' ? t.note.trim() : '';
+function NoteText({ text }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return html`<p class="row-note">${parts.map((s, i) => i % 2 ? html`<a href=${s} target="_blank" rel="noopener noreferrer">${s}</a>` : s)}</p>`;
+}
 const itemsOf = (t) => Array.isArray(t.items) ? t.items : [];
 const progress = (t) => { const it = itemsOf(t); return it.length ? `${it.filter((i) => i.done).length}/${it.length}` : ''; };
 function Checklist({ t, autoFocus, compact }) {
@@ -786,6 +801,9 @@ function EditSheet() {
   // second deletes. It disarms itself after 3 seconds.
   const [armed, setArmed] = useState(false);
   const [startList, setStartList] = useState(false);   // "Add a checklist" tapped (Issue #44)
+  const [note, setNote] = useState('');   // Issue #57
+  const [noteOn, setNoteOn] = useState(false);
+  const noteRef = useRef();
   useEffect(() => setStartList(false), [e]);
   const disarm = useRef();
   useEffect(() => { setArmed(false); clearTimeout(disarm.current); }, [e]);
@@ -798,7 +816,7 @@ function EditSheet() {
   };
   useEffect(() => {
     if (!e) { if (dlg.current.open) dlg.current.close(); return; }
-    setP(e.p); setStarOn(!!e.starred); setDue(e.due || ''); setTime(e.time || ''); setEvening(!!e.evening); text.current.value = e.text;
+    setP(e.p); setStarOn(!!e.starred); setDue(e.due || ''); setTime(e.time || ''); setEvening(!!e.evening); setNote(e.note || ''); setNoteOn(!!e.note); text.current.value = e.text;
     dlg.current.showModal();
     text.current.focus({ preventScroll: true });
     text.current.setSelectionRange(e.text.length, e.text.length);
@@ -818,6 +836,8 @@ function EditSheet() {
       if (v && v !== t.text) changes.text = v;
       if (p !== t.p) changes.p = p;
       if (star !== !!t.starred) changes.starred = star;   // Issue #22
+      const nt = note.trim().slice(0, 2000);
+      if (nt !== noteOf(t)) changes.note = nt || null;   // Issue #57
       const tm = due ? time : '';
       if (tm !== (validTime(t.time) ? t.time : '')) changes.time = tm || null;   // Issue #50
       if (due !== (validDue(t.due) ? t.due : '')) changes.due = due || null;
@@ -841,8 +861,16 @@ function EditSheet() {
         <label for="edit-text" class="visually-hidden">To-do</label>
         <textarea id="edit-text" ref=${text} class="textarea" rows="2" maxlength="500" required></textarea>
         ${(() => { const t = e && todos.value.find((x, i) => keyOf(x, i) === e.key); if (!t) return null;   // checklist (Issue #44; under the text, #46)
-          if (!itemsOf(t).length && !startList) return html`<button type="button" class="star-toggle cl-open" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Add a checklist</button>`;
-          return html`<p class="field-label"><${Icon} name="list-checks" cls="lbl-ic" /> Checklist${progress(t) ? html` · <span class="due-chosen">${progress(t)}</span>` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`; })()}
+          const listBtn = !itemsOf(t).length && !startList, noteBtn = !noteOn;
+          return html`
+            ${(listBtn || noteBtn) && html`<div class="sheet-adds">
+              ${listBtn && html`<button type="button" class="star-toggle cl-open" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Add a checklist</button>`}
+              ${noteBtn && html`<button type="button" class="star-toggle cl-open" id="edit-note-add" onClick=${() => { setNoteOn(true); setTimeout(() => noteRef.current?.focus()); }}><${Icon} name="note" />Add a note</button>`}
+            </div>`}
+            ${!listBtn && html`<p class="field-label"><${Icon} name="list-checks" cls="lbl-ic" /> Checklist${progress(t) ? html` · <span class="due-chosen">${progress(t)}</span>` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`}
+            ${noteOn && html`<label class="field-label" for="edit-note"><${Icon} name="note" cls="lbl-ic" /> Note</label>
+              <textarea id="edit-note" ref=${noteRef} class="textarea note-input" rows="3" maxlength="2000" placeholder="Details, links, who to ask…"
+                value=${note} onInput=${(ev) => setNote(ev.target.value)}></textarea>`}`; })()}
         <p class="field-label" id="edit-priority-label">Priority</p>
         <div class="seg chips" role="group" aria-labelledby="edit-priority-label">
           ${['high', 'med', 'low', 'none'].map((v) => html`

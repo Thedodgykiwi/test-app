@@ -255,6 +255,11 @@ If they say yes:
   (`expanded` signal); the edit sheet has "Add a checklist" / the same list.
   Cards use `overflow: clip` (not hidden) so a focused input can't scroll
   them sideways.
+- **Note (Issue #57, option A):** optional `note` (plain text, ≤2000 chars,
+  null clears it; `firestore.rules` checks it). Edit sheet: "Add a note" beside
+  "Add a checklist" (`.sheet-adds`, stacks on very small phones) opens a
+  textarea saved with Save. Rows with a note show a "Note" pill
+  (`noteOpen` signal) that unfolds `NoteText` under the row; http(s) links are tappable.
 - **Edit sheet layout (Issues #46, #47):** star is a round toggle in the header
   (`#edit-star`, gold when on); "Add a checklist" sits right under the text box.
   Starred panel sorts by due state, then High/Medium/Low/none (Issue #48).
