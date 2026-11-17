@@ -394,9 +394,16 @@ function Panel({ p, items, head }) {
         <span class="chev"><${Icon} name="caret-down" /></span>
       </button></h2>
       <div class="fold" id=${listId} inert=${closed}>
-        <ul class="todos prio-list">${items.map(([t, i], n) => html`
-          ${p === 'today' && t.evening && !items[n - 1]?.[0].evening && html`<li class="tonight-divider" aria-hidden="true"><${Icon} name="moon" />Tonight</li>`}
-          <${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
+        <ul class="todos prio-list">${items.map(([t, i], n) => {
+          // Tonight's to-dos can be folded away while focusing on the day (Issue #52).
+          const tnClosed = collapsed.value.has('tonight'), ev = p === 'today' && t.evening;
+          return html`
+          ${ev && !items[n - 1]?.[0].evening && html`<li class="tonight-divider"><button type="button" class="tonight-toggle" data-group="tonight"
+            aria-expanded=${!tnClosed} title=${tnClosed ? 'Show tonight' : 'Hide tonight'}
+            onClick=${() => { toggleCollapsed('tonight'); focusAfter = ['[data-group="tonight"]']; }}>
+            <${Icon} name="moon" />Tonight · ${items.filter(([x]) => x.evening).length}<${Icon} name=${tnClosed ? 'caret-down' : 'caret-up'} cls="chevron" /></button></li>`}
+          ${!(ev && tnClosed) && html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`}`;
+        })}</ul>
       </div>
     </section>`;
 }
