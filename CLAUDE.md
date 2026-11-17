@@ -245,7 +245,8 @@ If they say yes:
   today panel, with a moon "Tonight" label. Set by typing "tonight"/"ton"
   (#42 parser) or the due menu's Tonight; Today / any other date clears it
   (`setDue`, edit sheet). `firestore.rules` allows the optional bool. The
-  divider ("Tonight · 2") folds those rows away (Issue #52; `collapsed` key `tonight`).
+  divider ("Tonight · 2") folds those rows away (Issue #52; `collapsed` key `tonight`);
+  ticking off the last daytime Due today to-do unfolds it again (`markDone`, Issue #56).
 - **Checklist (Issue #44):** optional `items: [{ text, done }]` (≤50, text
   ≤200; `cleanItems` in `sync.js` tidies before saving, since rules can't
   look inside a list). `Checklist` in `app/main.js`: tick, rename in place

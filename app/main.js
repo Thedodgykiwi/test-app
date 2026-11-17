@@ -96,6 +96,11 @@ function markDone(t, k) {
   // animation (e.g. sign-in finishing just after the page opens).
   const cur = todos.value.find((x, i) => keyOf(x, i) === k) || t;
   update(cur, { done: true, doneAt: Date.now() });   // when it was ticked, for Done's date groups
+  // Day done? If Tonight is folded away, unfold it so what's left shows (Issue #56).
+  if (cur.due === today.value && !cur.evening && !cur.starred && collapsed.value.has('tonight')) {
+    const left = todos.value.filter((x) => !x.done && !x.archived && !x.starred && x.due === today.value);
+    if (!left.some((x) => !x.evening) && left.some((x) => x.evening)) toggleCollapsed('tonight');
+  }
   if (!reduceMotion()) {
     // Bump Done's count once it has re-drawn.
     requestAnimationFrame(() => document.querySelector('#todo-groups [data-group="done"]')
