@@ -243,7 +243,8 @@ If they say yes:
   sorts after the day's others under a "Tonight" divider inside the Due
   today panel, with a moon "Tonight" label. Set by typing "tonight"/"ton"
   (#42 parser) or the due menu's Tonight; Today / any other date clears it
-  (`setDue`, edit sheet). `firestore.rules` allows the optional bool.
+  (`setDue`, edit sheet). `firestore.rules` allows the optional bool. The
+  divider ("Tonight · 2") folds those rows away (Issue #52; `collapsed` key `tonight`).
 - **Checklist (Issue #44):** optional `items: [{ text, done }]` (≤50, text
   ≤200; `cleanItems` in `sync.js` tidies before saving, since rules can't
   look inside a list). `Checklist` in `app/main.js`: tick, rename in place

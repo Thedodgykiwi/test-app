@@ -762,3 +762,8 @@ select.time-input option:disabled { color: var(--muted); }
 .tidy-item:hover:not([disabled]), .tidy-item:focus-visible { background: var(--hover); }
 .tidy-item[disabled] { opacity: .45; cursor: default; }
 .tidy-n { font-size: .8rem; font-weight: 600; color: var(--muted); background: var(--hover); border-radius: 99px; padding: .1rem .5rem; }
+/* Tonight divider folds (Issue #52). */
+.tonight-toggle { display: inline-flex; align-items: center; gap: .35rem; min-height: 32px; padding: 0 .3rem; margin-left: -.3rem; border: 0; border-radius: 8px;
+  background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.tonight-toggle:hover { background: color-mix(in srgb, var(--tn) 12%, transparent); }
+.tonight-toggle .chevron { width: .9em; height: .9em; }
