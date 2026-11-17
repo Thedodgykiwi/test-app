@@ -528,7 +528,7 @@ function toTime(w) {
   return m && +m[1] < 24 ? `${m[1].padStart(2, '0')}:${m[2]}` : '';
 }
 export function parseEntry(raw) {
-  let text = raw.trim(), due = '', dueWord = '', p = '', time = '';
+  let text = raw.trim(), due = '', dueWord = '', p = '', time = '', starred = false;
   const takeEnd = (re, atStart) => {
     const m = atStart ? text.match(new RegExp(`^(${re})(?=[\\s,.:;!-]|$)`, 'i')) : text.match(new RegExp(`(?:^|[\\s,.:;!-])(${re})[.!]?$`, 'i'));
     if (!m) return null;
@@ -536,11 +536,12 @@ export function parseEntry(raw) {
     text = text.replace(/^[\s,.:;-]+|[\s,.:;-]+$/g, '');
     return m[1];
   };
-  // Two passes so "tod pick up suit l" and "l pick up suit tod" both work.
-  for (let pass = 0; pass < 2; pass++) for (const atStart of [false, true]) {
+  // A few passes so "tod pick up suit l" and "l pick up suit tod" both work.
+  for (let pass = 0; pass < 4; pass++) for (const atStart of [false, true]) {
     if (!due) { const w = takeEnd(DATE_RE, atStart); if (w) { const [, fn, label] = DATE_WORDS.find(([re]) => re.test(w)); due = fn(); dueWord = label; continue; } }
     if (!time) { const w = takeEnd(TIME_RE, atStart); if (w && toTime(w)) { time = toTime(w); continue; } }
-    if (!p) { const w = takeEnd('[lmh]', atStart); if (w) p = PRIO_WORDS[w.toLowerCase()]; }
+    if (!p) { const w = takeEnd('[lmh]', atStart); if (w) { p = PRIO_WORDS[w.toLowerCase()]; continue; } }
+    if (!starred && takeEnd('s', atStart)) starred = true;   // a single S stars it (Issue #53)
   }
   let pastTime = '';
   if (time && !due) {   // a time alone means today, or tomorrow once it has gone by
@@ -549,23 +550,24 @@ export function parseEntry(raw) {
   if (time && due === today.value && time < nowTime()) { pastTime = time; time = ''; }   // "tod 6am" at 1pm: the time has gone, so it's left off
   if (dueWord === 'today' && isEveningTime(time)) dueWord = 'tonight';   // "tod 6pm" is a Tonight one
   if (dueWord === 'tonight' && time && !isEveningTime(time)) time = '';   // "ton 9am": tonight wins, time dropped
-  if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; time = ''; }   // only keywords typed: keep them as the title
+  if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; time = ''; starred = false; }   // only keywords typed: keep them as the title
   if (text) text = text[0].toUpperCase() + text.slice(1);
-  return { text: text.slice(0, 500), due, dueWord, p, time, pastTime, evening: dueWord === 'tonight' };
+  return { text: text.slice(0, 500), due, dueWord, p, time, pastTime, starred, evening: dueWord === 'tonight' };
 }
 // Adds what was typed, with whatever was understood. The priority button's
 // own choice is the fallback. Returns the parsed entry, or null if nothing added.
 function addParsed(raw, pFallback) {
   const r = parseEntry(raw);
-  if (!r.text || !add(r.text, r.p || pFallback, r.due || undefined, r.evening, r.time)) return null;
+  if (!r.text || !add(r.text, r.p || pFallback, r.due || undefined, r.evening, r.time, r.starred)) return null;
   return r;
 }
 function Understood({ r }) {
-  if (!r || (!r.due && !r.p)) return null;
+  if (!r || (!r.due && !r.p && !r.starred)) return null;
   return html`<div class="understood" aria-live="polite">
     ${r.due && html`<span class="u-chip due"><${Icon} name=${r.evening ? 'moon' : 'calendar-blank'} />${r.evening ? 'Tonight' : `Due ${r.dueWord}`}</span>`}
     ${r.time && html`<span class="u-chip due"><${Icon} name="clock" />at ${fmtTime(r.time)}</span>`}
     ${r.pastTime && html`<span class="u-chip past"><${Icon} name="clock" />${fmtTime(r.pastTime)} has passed</span>`}
+    ${r.starred && html`<span class="u-chip star"><${Icon} name="star-fill" />Starred</span>`}
     ${r.p && html`<span class=${`u-chip p-${r.p}`}><${Icon} name=${`prio-${r.p}`} cls=${`flag-${r.p}`} />${LABELS[r.p]}</span>`}
     <span class="u-title">→ “${r.text}”</span></div>`;
 }
