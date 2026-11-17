@@ -392,7 +392,9 @@ function TodoList() {
   const ds = new Map(active.map(([t]) => [t, dueState(t)]));
   const byDue = (a, b) => a[0].due.localeCompare(b[0].due);
   const RANK = { overdue: 0, today: 1, tomorrow: 2 };   // inside Starred: overdue, today, tomorrow, then the rest
-  const starred = active.filter(([t]) => t.starred).sort(([a], [b]) => (RANK[ds.get(a)] ?? 3) - (RANK[ds.get(b)] ?? 3));
+  const PRANK = { high: 0, med: 1, low: 2 };   // then High, Medium, Low, no priority (Issue #48)
+  const starred = active.filter(([t]) => t.starred).sort(([a], [b]) =>
+    ((RANK[ds.get(a)] ?? 3) - (RANK[ds.get(b)] ?? 3)) || ((PRANK[a.p] ?? 3) - (PRANK[b.p] ?? 3)));
   const unstarred = active.filter(([t]) => !t.starred);
   const overdue = unstarred.filter(([t]) => ds.get(t) === 'overdue').sort(byDue);
   // Evening ("Tonight") to-dos sort after the day's others, under a small divider (Issue #43).
