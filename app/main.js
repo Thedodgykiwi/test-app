@@ -203,18 +203,18 @@ const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, s
 // Tomorrow / Next week (whichever it isn't already), Pick a date… (the edit
 // sheet) and No date. A change shows an Undo note, like starring. Swiping a
 // to-do with no date left opens the same menu (Issue #39).
-function setDue(k, due, said) {
+function setDue(k, due, said, evening = false) {
   const cur = todos.value.find((x, i) => keyOf(x, i) === k);
   if (!cur || !ready()) return;
-  const before = validDue(cur.due) ? cur.due : null;
-  update(cur, { due });
+  const before = validDue(cur.due) ? cur.due : null, beforeEv = !!cur.evening;
+  update(cur, cur.evening || evening ? { due, evening } : { due });   // any other date clears "Tonight" (Issue #43)
   justEdited.value = k; setTimeout(() => { if (justEdited.value === k) justEdited.value = null; }, 1300);
   focusAfter = [`[data-due-btn="${k}"]`, `[data-edit="${k}"]`];
   window.AppToast?.show(`“${cur.text}” ${said}`, {
-    icon: due ? 'calendar-blank' : 'x',
+    icon: evening ? 'moon' : due ? 'calendar-blank' : 'x',
     action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() {
       const now = todos.value.find((x, i) => keyOf(x, i) === k);
-      if (now) update(now, { due: before });
+      if (now) update(now, beforeEv || evening ? { due: before, evening: beforeEv } : { due: before });
       focusAfter = [`[data-due-btn="${k}"]`, `[data-edit="${k}"]`];
     } },
   });
@@ -248,7 +248,8 @@ function DueMenu() {
   const tomorrow = tomorrowDay(), nextWeek = nextWeekDay();
   const has = validDue(t.due);
   const items = [
-    t.due !== today.value && ['clock', 'Today', () => setDue(m.key, today.value, 'moved to today')],
+    (t.due !== today.value || t.evening) && ['clock', 'Today', () => setDue(m.key, today.value, 'moved to today')],
+    !(t.due === today.value && t.evening) && ['moon', 'Tonight', () => setDue(m.key, today.value, 'moved to tonight', true)],   // Issue #43
     t.due !== tomorrow && ['arrow-right', 'Tomorrow', () => setDue(m.key, tomorrow, 'moved to tomorrow')],
     nextWeek !== tomorrow && t.due !== nextWeek && ['calendar-blank', `Next week · ${dueLabel(nextWeek).replace(/^Due /, '')}`,
       () => setDue(m.key, nextWeek, `is due ${dueLabel(nextWeek).replace(/^Due /, '')}`)],
@@ -302,20 +303,25 @@ function Row({ t, k }) {
           <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}${ds ? `, ${dueLabel(t.due)}` : ''}`}
             onClick=${() => { if (swallowClick || !ready()) return; openEditor(t, k); }}>
             <span class="t-main">${t.text}</span></button>
-          ${ds && html`<button type="button" class=${`due-label due-${ds}`} data-due-btn=${k} aria-haspopup="menu" aria-expanded=${dueMenu.value?.key === k}
+          ${ds && html`<button type="button" class=${`due-label due-${ds}${ds === 'today' && t.evening ? ' tn' : ''}`} data-due-btn=${k} aria-haspopup="menu" aria-expanded=${dueMenu.value?.key === k}
             aria-label=${`${dueLabel(t.due)}. Change the due date`}
             onClick=${(e) => {   // tap the label for a quick menu: Tomorrow, Pick a date, No date (Issue #38)
               if (swallowClick || !ready()) return;
               if (dueMenu.value?.key === k) { dueMenu.value = null; return; }
               const r = e.currentTarget.getBoundingClientRect();
               dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom };
-            }}><${Icon} name=${DUE_ICON[ds]} />${dueLabel(t.due)}<${Icon} name="caret-down" cls="caret" /></button>`}
+            }}><${Icon} name=${ds === 'today' && t.evening ? 'moon' : DUE_ICON[ds]} />${ds === 'today' && t.evening ? 'Tonight' : dueLabel(t.due)}<${Icon} name="caret-down" cls="caret" /></button>`}
+          ${itemsOf(t).length > 0 && html`<button type="button" class=${`sub-pill${expanded.value.has(k) ? ' open' : ''}`}
+            aria-expanded=${expanded.value.has(k)} aria-label=${`Checklist, ${progress(t)} done. ${expanded.value.has(k) ? 'Hide' : 'Show'} it`}
+            onClick=${() => { if (swallowClick) return; const s = new Set(expanded.value); s.has(k) ? s.delete(k) : s.add(k); expanded.value = s; }}>
+            <${Icon} name="list-checks" />${progress(t)}<${Icon} name="caret-down" cls="caret" /></button>`}
         </div>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name=${`prio-${t.p}`} cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
           </span>`}
       </div>
+      ${!t.done && expanded.value.has(k) && itemsOf(t).length > 0 && html`<div class="row-sub"><${Checklist} t=${t} compact=${true} /></div>`}
     </li>`;
 }
 
@@ -363,7 +369,9 @@ function Panel({ p, items, head }) {
         <span class="chev"><${Icon} name="caret-down" /></span>
       </button></h2>
       <div class="fold" id=${listId} inert=${closed}>
-        <ul class="todos prio-list">${items.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
+        <ul class="todos prio-list">${items.map(([t, i], n) => html`
+          ${p === 'today' && t.evening && !items[n - 1]?.[0].evening && html`<li class="tonight-divider" aria-hidden="true"><${Icon} name="moon" />Tonight</li>`}
+          <${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
       </div>
     </section>`;
 }
@@ -384,10 +392,13 @@ function TodoList() {
   const ds = new Map(active.map(([t]) => [t, dueState(t)]));
   const byDue = (a, b) => a[0].due.localeCompare(b[0].due);
   const RANK = { overdue: 0, today: 1, tomorrow: 2 };   // inside Starred: overdue, today, tomorrow, then the rest
-  const starred = active.filter(([t]) => t.starred).sort(([a], [b]) => (RANK[ds.get(a)] ?? 3) - (RANK[ds.get(b)] ?? 3));
+  const PRANK = { high: 0, med: 1, low: 2 };   // then High, Medium, Low, no priority (Issue #48)
+  const starred = active.filter(([t]) => t.starred).sort(([a], [b]) =>
+    ((RANK[ds.get(a)] ?? 3) - (RANK[ds.get(b)] ?? 3)) || ((PRANK[a.p] ?? 3) - (PRANK[b.p] ?? 3)));
   const unstarred = active.filter(([t]) => !t.starred);
   const overdue = unstarred.filter(([t]) => ds.get(t) === 'overdue').sort(byDue);
-  const dueToday = unstarred.filter(([t]) => ds.get(t) === 'today');
+  // Evening ("Tonight") to-dos sort after the day's others, under a small divider (Issue #43).
+  const dueToday = unstarred.filter(([t]) => ds.get(t) === 'today').sort(([a], [b]) => (a.evening ? 1 : 0) - (b.evening ? 1 : 0));
   const dueTomorrow = unstarred.filter(([t]) => ds.get(t) === 'tomorrow');
   const rest = unstarred.filter(([t]) => !['overdue', 'today', 'tomorrow'].includes(ds.get(t)));
   const groups = [['starred', starred], ['overdue', overdue], ['today', dueToday], ['tomorrow', dueTomorrow],
@@ -423,10 +434,117 @@ function nextHint() {
   try { localStorage.setItem(hintKey, h); } catch { /* storage blocked */ }
   return h;
 }
+// ---- Words understood in a new to-do (Issue #42) ---------------------------
+// A date word and/or a priority letter at the START or END of what's typed
+// (never the middle, so "Tom's leaving do" stays as written) sets the due
+// date / priority and comes out of the title: "put out trash tomorrow" →
+// "Put out trash", due tomorrow; "H call the venue" → "Call the venue", High.
+// Live chips under the box show what was understood before you add.
+const DATE_WORDS = [
+  [/^(today|tod)$/i, () => today.value, 'today'],
+  [/^(tonight|ton)$/i, () => today.value, 'tonight'],   // "Tonight": due today, evening (Issue #43)
+  [/^(tomorrow|tmrw|tmr|tom)$/i, tomorrowDay, 'tomorrow'],
+  [/^(next week|nxt week|nw)$/i, nextWeekDay, 'next week'],
+];
+const DATE_RE = 'today|tod|tonight|ton|tomorrow|tmrw|tmr|tom|next week|nxt week|nw';
+const PRIO_WORDS = { l: 'low', m: 'med', h: 'high' };
+export function parseEntry(raw) {
+  let text = raw.trim(), due = '', dueWord = '', p = '';
+  const takeEnd = (re, atStart) => {
+    const m = atStart ? text.match(new RegExp(`^(${re})(?=[\\s,.:;!-]|$)`, 'i')) : text.match(new RegExp(`(?:^|[\\s,.:;!-])(${re})[.!]?$`, 'i'));
+    if (!m) return null;
+    text = atStart ? text.slice(m[0].length) : text.slice(0, text.length - m[0].length);
+    text = text.replace(/^[\s,.:;-]+|[\s,.:;-]+$/g, '');
+    return m[1];
+  };
+  // Two passes so "tod pick up suit l" and "l pick up suit tod" both work.
+  for (let pass = 0; pass < 2; pass++) for (const atStart of [false, true]) {
+    if (!due) { const w = takeEnd(DATE_RE, atStart); if (w) { const [, fn, label] = DATE_WORDS.find(([re]) => re.test(w)); due = fn(); dueWord = label; continue; } }
+    if (!p) { const w = takeEnd('[lmh]', atStart); if (w) p = PRIO_WORDS[w.toLowerCase()]; }
+  }
+  if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; }   // only keywords typed: keep them as the title
+  if (text) text = text[0].toUpperCase() + text.slice(1);
+  return { text: text.slice(0, 500), due, dueWord, p, evening: dueWord === 'tonight' };
+}
+// Adds what was typed, with whatever was understood. The priority button's
+// own choice is the fallback. Returns the parsed entry, or null if nothing added.
+function addParsed(raw, pFallback) {
+  const r = parseEntry(raw);
+  if (!r.text || !add(r.text, r.p || pFallback, r.due || undefined, r.evening)) return null;
+  return r;
+}
+function Understood({ r }) {
+  if (!r || (!r.due && !r.p)) return null;
+  return html`<div class="understood" aria-live="polite">
+    ${r.due && html`<span class="u-chip due"><${Icon} name=${r.evening ? 'moon' : 'calendar-blank'} />${r.evening ? 'Tonight' : `Due ${r.dueWord}`}</span>`}
+    ${r.p && html`<span class=${`u-chip p-${r.p}`}><${Icon} name=${`prio-${r.p}`} cls=${`flag-${r.p}`} />${LABELS[r.p]}</span>`}
+    <span class="u-title">→ “${r.text}”</span></div>`;
+}
+
+// ---- Checklist on a to-do (Issue #44) ---------------------------------------
+// A simple list of things needed for the to-do: tick, rename in place, drag
+// the handle to reorder, "Add item…" at the end (Enter moves to the next).
+// Changes save at once. A row with items shows a "2/4" pill; tapping it
+// unfolds the checklist under the row. The edit sheet has the same list.
+const expanded = signal(new Set());   // rows showing their checklist
+const itemsOf = (t) => Array.isArray(t.items) ? t.items : [];
+const progress = (t) => { const it = itemsOf(t); return it.length ? `${it.filter((i) => i.done).length}/${it.length}` : ''; };
+function Checklist({ t, autoFocus, compact }) {
+  const items = itemsOf(t);
+  const save = (next) => { if (ready()) update(t, { items: next }); };
+  const box = useRef(), addRef = useRef();
+  useEffect(() => { if (autoFocus) addRef.current?.focus(); }, [autoFocus]);
+  const [drag, setDrag] = useState(null);
+  const onHandle = (i) => (e) => {
+    e.preventDefault(); const el = e.currentTarget; el.setPointerCapture(e.pointerId);
+    let from = i, list = items.slice();
+    setDrag(i);
+    const move = (ev) => {
+      const rows = [...box.current.querySelectorAll('.cl-item')];
+      // Where it would land: how many other rows have their middle above the pointer.
+      const idx = rows.filter((r, j) => j !== from && ev.clientY > r.getBoundingClientRect().top + r.getBoundingClientRect().height / 2).length;
+      if (idx !== from) { const [it] = list.splice(from, 1); list.splice(idx, 0, it); from = idx; setDrag(idx); save(list); }
+    };
+    const up = () => { setDrag(null); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  };
+  const addItem = (e) => {
+    e.preventDefault(); const v = addRef.current.value.trim().slice(0, 200); if (!v) return;
+    if (items.length >= 50) { window.AppToast?.show('A checklist can hold 50 items', { icon: 'list-checks' }); return; }
+    save([...items, { text: v, done: false }]); addRef.current.value = '';
+  };
+  // Keyboard reorder on the handle: Alt + arrow up / down.
+  const handleKeys = (i) => (e) => {
+    if (!e.altKey || !['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    e.preventDefault(); const j = i + (e.key === 'ArrowUp' ? -1 : 1); if (j < 0 || j >= items.length) return;
+    const list = items.slice(); [list[i], list[j]] = [list[j], list[i]]; save(list);
+    setTimeout(() => box.current?.querySelectorAll('.cl-handle')[j]?.focus());
+  };
+  return html`
+    <div class=${`checklist${compact ? ' compact' : ''}`} ref=${box}>
+      ${items.map((it, i) => html`
+        <div class=${`cl-item${it.done ? ' done' : ''}${drag === i ? ' dragging' : ''}`} key=${i}>
+          <button type="button" class="cl-tick" role="checkbox" aria-checked=${it.done} aria-label=${`Done: ${it.text}`}
+            onClick=${() => save(items.map((x, j) => j === i ? { ...x, done: !x.done } : x))}><${Icon} name=${it.done ? 'check-circle' : 'circle'} /></button>
+          <input class="cl-text" value=${it.text} aria-label="Checklist item" maxlength="200"
+            onBlur=${(e) => { const v = e.target.value.trim(); if (v === it.text) return; save(v ? items.map((x, j) => j === i ? { ...x, text: v } : x) : items.filter((_, j) => j !== i)); }}
+            onKeyDown=${(e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); addRef.current.focus(); } }} />
+          <button type="button" class="cl-handle" aria-label=${`Reorder “${it.text}” (drag, or Alt + arrow keys)`} onPointerDown=${onHandle(i)} onKeyDown=${handleKeys(i)}><${Icon} name="dots-six-vertical" /></button>
+        </div>`)}
+      <form class="cl-add" onSubmit=${addItem}>
+        <span class="cl-plus" aria-hidden="true"><${Icon} name="plus" /></span>
+        <input ref=${addRef} class="cl-text" placeholder=${items.length ? 'Add item…' : 'First item…'} aria-label="Add a checklist item" maxlength="200" autocomplete="off" />
+      </form>
+    </div>`;
+}
+
 function AddBar() {
   const [p, setP] = useState('none');
   const [hint, setHint] = useState(nextHint);
+  const [r, setR] = useState(null);   // what the typed words mean (Issue #42)
   const input = useRef(), flag = useRef(), tapped = useRef(false);
+  const onInput = () => setR(parseEntry(input.current.value));
+  const shownP = r?.p || p;   // a typed letter shows on the priority button too
   // Replay the little "pop" when the flag is tapped (not on the reset after adding).
   useEffect(() => {
     if (!tapped.current) return;
@@ -436,21 +554,22 @@ function AddBar() {
   }, [p]);
   const submit = (e) => {
     e.preventDefault();
-    if (add(input.current.value.trim(), p)) { input.current.value = ''; setP('none'); setHint(nextHint()); }
+    if (addParsed(input.current.value, p)) { input.current.value = ''; setP('none'); setR(null); setHint(nextHint()); }
     input.current.focus();
   };
   return html`
     <form id="todo-form" class="add-bar" onSubmit=${submit}>
       <div class="add-inner">
         <div class="entry">
-          <input id="todo-input" ref=${input} class=${`input${p === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
-          <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${p}`}
-            aria-label=${`Priority for new to-do: ${LABELS[p]}. Tap to change`} title=${`Priority: ${LABELS[p]} (tap to change)`}
+          <input id="todo-input" ref=${input} onInput=${onInput} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
+          <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${shownP}`}
+            aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Tap to change`} title=${`Priority: ${LABELS[shownP]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>
-            <span class="word">${p === 'none' ? '' : LABELS[p]}</span><${Icon} name=${`prio-${p}`} cls=${`flag-${p}`} />
+            <span class="word">${shownP === 'none' ? '' : LABELS[shownP]}</span><${Icon} name=${`prio-${shownP}`} cls=${`flag-${shownP}`} />
           </button>
         </div>
         <button type="submit" class="btn primary"><${Icon} name="plus" />Add</button>
+        <${Understood} r=${r} />
       </div>
     </form>`;
 }
@@ -470,16 +589,22 @@ function DueField({ value, onChange, open }) {
   const lead = (first.getDay() + 6) % 7;   // weeks start on Monday
   const thisMonth = y === t0.getFullYear() && m === t0.getMonth();
   const go = (n) => setMonth(([yy, mm]) => { const d = new Date(yy, mm + n, 1); return [d.getFullYear(), d.getMonth()]; });
-  const choice = !value ? 'none' : value === today.value ? 'today' : value === tomorrow ? 'tomorrow' : '';
-  const pick = (v) => { onChange(v); if (v) { const d = parseDay(v); setMonth([d.getFullYear(), d.getMonth()]); } };
+  const choice = !value ? 'none' : value === today.value ? 'today' : value === tomorrow ? 'tomorrow' : 'pick';
+  // The calendar only shows behind the "Pick" chip (Issue #45), or when the
+  // date is already one the chips can't say.
+  const [picking, setPicking] = useState(false);
+  useEffect(() => { if (open) setPicking(false); }, [open]);
+  const showCal = picking || choice === 'pick';
+  const pick = (v) => { onChange(v); setPicking(false); if (v) { const d = parseDay(v); setMonth([d.getFullYear(), d.getMonth()]); } };
   const monthName = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   return html`
     <p class="field-label" id="edit-due-label">Due${value ? html` · <span class="due-chosen">${(l => l[0].toUpperCase() + l.slice(1))(dueLabel(value).replace(/^Due /, ''))}</span>` : ''}</p>
     <div class="seg chips" role="group" aria-labelledby="edit-due-label">
       ${[['none', 'None', ''], ['today', 'Today', today.value], ['tomorrow', 'Tomorrow', tomorrow]].map(([k, l, v]) => html`
         <button type="button" class="chip" data-due=${k} aria-pressed=${choice === k} onClick=${() => pick(v)}>${l}</button>`)}
+      <button type="button" class="chip" data-due="pick" aria-pressed=${choice === 'pick'} aria-expanded=${showCal} onClick=${() => setPicking(!showCal)}><${Icon} name="calendar-blank" />Pick</button>
     </div>
-    <div class="mini-cal" role="group" aria-label=${`Pick a due date, ${monthName}`}>
+    ${showCal && html`<div class="mini-cal" role="group" aria-label=${`Pick a due date, ${monthName}`}>
       <div class="cal-head">
         <button type="button" class="cal-nav" aria-label="Previous month" disabled=${thisMonth} onClick=${() => go(-1)}><${Icon} name="caret-left" /></button>
         <span>${monthName}</span>
@@ -496,7 +621,7 @@ function DueField({ value, onChange, open }) {
             onClick=${() => pick(v)}>${i + 1}</button>`;
         })}
       </div>
-    </div>`;
+    </div>`}`;
 }
 
 // Edit sheet: change the wording or priority. Opening it doesn't redraw or
@@ -518,6 +643,9 @@ function QuickAdd() {
   const dlg = useRef(), input = useRef();
   const [p, setP] = useState('none');
   const [added, setAdded] = useState([]);   // texts added since it opened
+  const [r, setR] = useState(null);   // Issue #42
+  const onInput = () => setR(parseEntry(input.current.value));
+  const shownP = r?.p || p;
   useEffect(() => {
     if (quickOpen.value) { setP('none'); setAdded([]); input.current.value = ''; dlg.current.showModal(); input.current.focus(); }
     else if (dlg.current.open) dlg.current.close();
@@ -525,8 +653,9 @@ function QuickAdd() {
   const submit = (e) => {
     e.preventDefault();
     const v = input.current.value.trim().slice(0, 500);
-    if (!v) { quickOpen.value = false; return; }   // empty Enter = done
-    if (add(v, p)) { setAdded([...added, v]); input.current.value = ''; setP('none'); }
+    if (!parseEntry(v).text) { quickOpen.value = false; return; }   // empty Enter = done
+    const res = addParsed(v, p);
+    if (res) { setAdded([...added, res.text]); input.current.value = ''; setP('none'); setR(null); }
     input.current.focus();
   };
   const last = added[added.length - 1];
@@ -535,12 +664,13 @@ function QuickAdd() {
       onClose=${() => { quickOpen.value = false; }} onClick=${(ev) => { if (ev.target === dlg.current) quickOpen.value = false; }}>
       <form onSubmit=${submit}>
         <div class="entry">
-          <input ref=${input} id="quick-input" class=${`input${p === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
+          <input ref=${input} id="quick-input" onInput=${onInput} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
             aria-label="New to-do" maxlength="500" autocomplete="off" />
-          <button type="button" class=${`flag-btn p-${p}`} aria-label=${`Priority for new to-do: ${LABELS[p]}. Click to change`}
-            title=${`Priority: ${LABELS[p]} (click to change)`} onClick=${() => { setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); input.current.focus(); }}>
-            <span class="word">${p === 'none' ? '' : LABELS[p]}</span><${Icon} name=${`prio-${p}`} cls=${`flag-${p}`} /></button>
+          <button type="button" class=${`flag-btn p-${shownP}`} aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Click to change`}
+            title=${`Priority: ${LABELS[shownP]} (click to change)`} onClick=${() => { setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); input.current.focus(); }}>
+            <span class="word">${shownP === 'none' ? '' : LABELS[shownP]}</span><${Icon} name=${`prio-${shownP}`} cls=${`flag-${shownP}`} /></button>
         </div>
+        <${Understood} r=${r} />
         <p class="quick-keys" aria-live="polite">
           ${added.length ? html`<span class="quick-added" key=${added.length}><${Icon} name="check-circle" />${added.length} added · “${last}”</span>` : ''}
           <span class="quick-help"><kbd>Enter</kbd> add · <kbd>Esc</kbd> ${added.length ? 'done' : 'cancel'}</span></p>
@@ -557,6 +687,8 @@ function EditSheet() {
   // Delete (Issue #40): the first tap arms the button ("Tap again"), the
   // second deletes. It disarms itself after 3 seconds.
   const [armed, setArmed] = useState(false);
+  const [startList, setStartList] = useState(false);   // "Add a checklist" tapped (Issue #44)
+  useEffect(() => setStartList(false), [e]);
   const disarm = useRef();
   useEffect(() => { setArmed(false); clearTimeout(disarm.current); }, [e]);
   const del = () => {
@@ -588,7 +720,7 @@ function EditSheet() {
       if (v && v !== t.text) changes.text = v;
       if (p !== t.p) changes.p = p;
       if (star !== !!t.starred) changes.starred = star;   // Issue #22
-      if (due !== (validDue(t.due) ? t.due : '')) changes.due = due || null;   // Issue #23
+      if (due !== (validDue(t.due) ? t.due : '')) { changes.due = due || null; if (t.evening) changes.evening = false; }   // Issue #23 (#43: a new date clears "Tonight")
       if (Object.keys(changes).length) {
         update(t, changes);
         justEdited.value = e.key; setTimeout(() => { justEdited.value = null; }, 1300);
@@ -601,18 +733,20 @@ function EditSheet() {
       onClose=${() => { if (editing.value) close(); }} onClick=${(ev) => { if (ev.target === dlg.current) close(); }}>
       <form id="edit-form" class="edit-form" onSubmit=${saveEdit}>
         <header><h2 id="edit-todo-title">Edit to-do</h2>
+          <button type="button" class=${`icon-star${star ? ' on' : ''}`} id="edit-star" aria-pressed=${star} aria-label="Starred"
+            title=${star ? 'Unstar' : 'Star'} onClick=${() => setStarOn(!star)}><${Icon} name=${star ? 'star-fill' : 'star'} /></button>
           <button type="button" class="close-btn" id="edit-close" aria-label="Close" onClick=${close}><${Icon} name="x" /></button></header>
         <label for="edit-text" class="visually-hidden">To-do</label>
         <textarea id="edit-text" ref=${text} class="textarea" rows="2" maxlength="500" required></textarea>
+        ${(() => { const t = e && todos.value.find((x, i) => keyOf(x, i) === e.key); if (!t) return null;   // checklist (Issue #44; under the text, #46)
+          if (!itemsOf(t).length && !startList) return html`<button type="button" class="star-toggle cl-open" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Add a checklist</button>`;
+          return html`<p class="field-label"><${Icon} name="list-checks" cls="lbl-ic" /> Checklist${progress(t) ? html` · <span class="due-chosen">${progress(t)}</span>` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`; })()}
         <p class="field-label" id="edit-priority-label">Priority</p>
         <div class="seg chips" role="group" aria-labelledby="edit-priority-label">
           ${['high', 'med', 'low', 'none'].map((v) => html`
             <button type="button" class=${`chip ${v}`} data-p=${v} aria-pressed=${p === v} onClick=${() => setP(v)}>
               <${Icon} name=${`prio-${v}`} cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
         </div>
-        <button type="button" class="star-toggle" role="switch" aria-checked=${star} onClick=${() => setStarOn(!star)}>
-          <${Icon} name=${star ? 'star-fill' : 'star'} />Star this to-do<span class="switch" aria-hidden="true"></span>
-        </button>
         <${DueField} value=${due} onChange=${setDue} open=${!!e} />
         <div class="row edit-actions">
           <button type="button" id="edit-delete" class=${`btn ${armed ? 'danger' : 'danger-soft'}`} aria-live="polite" onClick=${del}>
