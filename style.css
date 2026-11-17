@@ -785,3 +785,9 @@ select.time-input option:disabled { color: var(--muted); }
    without shouting (Issue #57; the dark grey version drew too much attention). */
 .sub-pill.note-pill { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 28%, transparent); }
 .sub-pill.note-pill:hover, .sub-pill.note-pill.open { background: var(--hover); color: var(--text); }
+
+/* Thin outline on every pill, tinted from the pill's own text colour, so each
+   gets a darker edge in light mode and a lighter one in dark mode (Issue #58). */
+.due-label, .sub-pill, .u-chip { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 32%, transparent); }
+.due-overdue { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 70%, #000); }
+/* Overdue is a bright solid red in both modes, so it takes a darker red edge in both. */
