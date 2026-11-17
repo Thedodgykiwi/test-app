@@ -738,3 +738,11 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
   border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: .4rem; cursor: pointer; }
 .icon-star:hover { background: var(--hover); }
 .icon-star.on { color: var(--gold); border-color: var(--gold); background: var(--gold-bg); }
+
+/* Scheduled time in the edit sheet (Issue #50, option B). */
+.add-time { align-self: flex-start; display: inline-flex; align-items: center; gap: .4rem; min-height: 40px; padding: 0 .9rem;
+  border: 1px dashed var(--line); border-radius: 10px; background: var(--surface); color: var(--accent); font: inherit; font-weight: 500; cursor: pointer; }
+.add-time:hover { background: var(--hover); }
+.time-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.time-row label { font-weight: 600; }
+.time-input { width: auto; min-height: 40px; }
