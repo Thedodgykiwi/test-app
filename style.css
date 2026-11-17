@@ -768,3 +768,6 @@ select.time-input option:disabled { color: var(--muted); }
 .tonight-toggle:hover { background: color-mix(in srgb, var(--tn) 12%, transparent); }
 .tonight-toggle .chevron { width: .9em; height: .9em; }
 .u-chip.star { background: var(--gold-bg); color: var(--gold); }
+/* Line the Tonight label up with the panel heading's icon and text (Issue #54). */
+.tonight-divider { margin-left: 0; }
+.tonight-toggle { margin-left: 0; padding-left: 10px; }
