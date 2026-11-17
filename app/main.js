@@ -733,22 +733,21 @@ function EditSheet() {
       onClose=${() => { if (editing.value) close(); }} onClick=${(ev) => { if (ev.target === dlg.current) close(); }}>
       <form id="edit-form" class="edit-form" onSubmit=${saveEdit}>
         <header><h2 id="edit-todo-title">Edit to-do</h2>
+          <button type="button" class=${`icon-star${star ? ' on' : ''}`} id="edit-star" aria-pressed=${star} aria-label="Starred"
+            title=${star ? 'Unstar' : 'Star'} onClick=${() => setStarOn(!star)}><${Icon} name=${star ? 'star-fill' : 'star'} /></button>
           <button type="button" class="close-btn" id="edit-close" aria-label="Close" onClick=${close}><${Icon} name="x" /></button></header>
         <label for="edit-text" class="visually-hidden">To-do</label>
         <textarea id="edit-text" ref=${text} class="textarea" rows="2" maxlength="500" required></textarea>
+        ${(() => { const t = e && todos.value.find((x, i) => keyOf(x, i) === e.key); if (!t) return null;   // checklist (Issue #44; under the text, #46)
+          if (!itemsOf(t).length && !startList) return html`<button type="button" class="star-toggle cl-open" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Add a checklist</button>`;
+          return html`<p class="field-label"><${Icon} name="list-checks" cls="lbl-ic" /> Checklist${progress(t) ? html` · <span class="due-chosen">${progress(t)}</span>` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`; })()}
         <p class="field-label" id="edit-priority-label">Priority</p>
         <div class="seg chips" role="group" aria-labelledby="edit-priority-label">
           ${['high', 'med', 'low', 'none'].map((v) => html`
             <button type="button" class=${`chip ${v}`} data-p=${v} aria-pressed=${p === v} onClick=${() => setP(v)}>
               <${Icon} name=${`prio-${v}`} cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
         </div>
-        <button type="button" class="star-toggle" role="switch" aria-checked=${star} onClick=${() => setStarOn(!star)}>
-          <${Icon} name=${star ? 'star-fill' : 'star'} />Star this to-do<span class="switch" aria-hidden="true"></span>
-        </button>
         <${DueField} value=${due} onChange=${setDue} open=${!!e} />
-        ${(() => { const t = e && todos.value.find((x, i) => keyOf(x, i) === e.key); if (!t) return null;   // checklist (Issue #44)
-          if (!itemsOf(t).length && !startList) return html`<button type="button" class="star-toggle cl-open" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Add a checklist</button>`;
-          return html`<p class="field-label"><${Icon} name="list-checks" cls="lbl-ic" /> Checklist${progress(t) ? html` · <span class="due-chosen">${progress(t)}</span>` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`; })()}
         <div class="row edit-actions">
           <button type="button" id="edit-delete" class=${`btn ${armed ? 'danger' : 'danger-soft'}`} aria-live="polite" onClick=${del}>
             <${Icon} name="trash" />${armed ? 'Tap again' : 'Delete'}</button>

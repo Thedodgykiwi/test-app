@@ -732,3 +732,9 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
 .cl-handle:focus-visible { opacity: 1; outline: 2px solid var(--accent); border-radius: 6px; }
 .cl-item.dragging { background: var(--hover); border-radius: 8px; }
 .lbl-ic { width: 1em; height: 1em; vertical-align: -.15em; }
+
+/* Edit sheet star: a small toggle in the header (Issue #47). */
+.icon-star { background: none; border: 1px solid var(--line); color: var(--muted, var(--text)); width: 34px; height: 34px; padding: 0;
+  border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: .4rem; cursor: pointer; }
+.icon-star:hover { background: var(--hover); }
+.icon-star.on { color: var(--gold); border-color: var(--gold); background: var(--gold-bg); }
