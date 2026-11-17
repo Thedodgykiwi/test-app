@@ -252,6 +252,9 @@ If they say yes:
   (`expanded` signal); the edit sheet has "Add a checklist" / the same list.
   Cards use `overflow: clip` (not hidden) so a focused input can't scroll
   them sideways.
+- **Edit sheet layout (Issues #46, #47):** star is a round toggle in the header
+  (`#edit-star`, gold when on); "Add a checklist" sits right under the text box.
+  Starred panel sorts by due state, then High/Medium/Low/none (Issue #48).
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
