@@ -66,6 +66,13 @@ await t('set a due date', () => assertSucceeds(updateDoc(p(alice), { due: '2026-
 await t('clear a due date', () => assertSucceeds(updateDoc(p(alice), { due: null })));
 await t('create with due date', () => assertSucceeds(setDoc(p(alice, 'dev', 'due1'), { ...good(), due: '2026-12-01' })));
 await t('due date in wrong format rejected', () => assertFails(updateDoc(p(alice), { due: 'next tuesday' })));
+await t('mark as tonight (evening)', () => assertSucceeds(updateDoc(p(alice), { evening: true })));
+await t('evening must be a bool', () => assertFails(updateDoc(p(alice), { evening: 'yes' })));
+await t('checklist items', () => assertSucceeds(updateDoc(p(alice), { items: [{ text: 'Passport', done: true }, { text: 'Chargers', done: false }] })));
+await t('checklist must be a list', () => assertFails(updateDoc(p(alice), { items: 'Passport' })));
+await t('checklist capped at 50', () => assertFails(updateDoc(p(alice), { items: Array.from({ length: 51 }, (_, i) => ({ text: `Item ${i}`, done: false })) })));
+await t('other user cannot set checklist', () => assertFails(updateDoc(p(bob), { items: [] })));
+await t('other user cannot set evening', () => assertFails(updateDoc(p(bob), { evening: true })));
 await t('due date as number rejected', () => assertFails(updateDoc(p(alice), { due: 20261120 })));
 await t('other user cannot set due date', () => assertFails(updateDoc(p(bob), { due: '2026-11-20' })));
 await t('other user cannot set doneAt', () => assertFails(updateDoc(p(bob), { done: true, doneAt: Date.now() })));

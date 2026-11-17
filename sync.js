@@ -161,8 +161,8 @@ async function start() {
 
     unsubscribe = fs.onSnapshot(fs.query(todosRef, fs.orderBy('pos')), { includeMetadataChanges: true }, (snap) => {
       const list = snap.docs.map((d) => {
-        const { text, done, p, doneAt = null, starred = false, due = null } = d.data();
-        return { id: d.id, text, done, p, doneAt, starred, due };
+        const { text, done, p, doneAt = null, starred = false, due = null, evening = false, items = [] } = d.data();
+        return { id: d.id, text, done, p, doneAt, starred, due, evening, items };
       });
       app.setTodos(list, { fromServer: !snap.metadata.fromCache });
       pending = snap.metadata.hasPendingWrites;
@@ -173,12 +173,19 @@ async function start() {
     }, failed);
   });
 
+  // Checklist items as the rules expect: up to 50 of { text (1-200 chars), done }.
+  function cleanItems(items) {
+    return items.filter((i) => i && typeof i.text === 'string' && i.text.trim())
+      .slice(0, 50).map((i) => ({ text: i.text.trim().slice(0, 200), done: i.done === true }));
+  }
   function newDoc(t, pos) {
     const doc = { text: String(t.text).slice(0, 500), done: !!t.done, p: t.p, pos, createdAt: fs.serverTimestamp() };
     // When it was ticked (for the Done group's date ranges); only if known.
     if (t.done && Number.isFinite(t.doneAt)) doc.doneAt = t.doneAt;
     if (t.starred === true) doc.starred = true;   // starred on this device (Issue #22)
     if (typeof t.due === 'string' && /^20\d\d-[01]\d-[0-3]\d$/.test(t.due)) doc.due = t.due;   // Issue #23
+    if (t.evening === true) doc.evening = true;   // "Tonight" (Issue #43)
+    if (Array.isArray(t.items) && t.items.length) doc.items = cleanItems(t.items);   // checklist (Issue #44)
     return doc;
   }
 
