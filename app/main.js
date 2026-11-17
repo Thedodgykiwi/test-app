@@ -349,13 +349,17 @@ function Row({ t, k }) {
 function DoneSection({ done }) {
   const closed = !collapsed.value.has('done-open');
   const now = new Date();
+  const [tidy, setTidy] = useState(false);   // "Tidy up" menu (Issue #49, option B)
   return html`
     <div class="group group-done">
       <h2><button type="button" class="group-toggle" data-group="done" aria-expanded=${!closed} aria-controls="group-list-done"
         title=${closed ? 'Show this section' : 'Hide this section'}
         onClick=${() => { toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
         <${Icon} name=${closed ? 'caret-right' : 'caret-down'} cls="chevron" /><${Icon} name="check-circle" cls="done-icon" />Done · ${done.length}
-      </button></h2>
+      </button>
+      ${done.some(([t]) => doneRange(t, now) !== 'today') && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
+        onClick=${() => setTidy(!tidy)}><${Icon} name="archive" />Tidy up</button>`}</h2>
+      ${tidy && html`<${TidyMenu} done=${done} now=${now} close=${() => { setTidy(false); setTimeout(() => document.getElementById('tidy-up')?.focus()); }} />`}
       <div class="done-ranges" id="group-list-done" hidden=${closed}>
         ${DONE_RANGES.map(([key, label]) => {
           const items = done.filter(([t]) => doneRange(t, now) === key).sort(([a], [b]) => (b.doneAt || 0) - (a.doneAt || 0));
@@ -397,8 +401,43 @@ function Panel({ p, items, head }) {
     </section>`;
 }
 
+// ---- Archive done to-dos (Issue #49, option B) ------------------------------
+// "Tidy up" on the Done heading: archive done to-dos older than 30 days,
+// older than 7 days, or everything but today. Archived ones are kept (an
+// `archived` flag), just hidden everywhere; an Undo note brings them back.
+const TIDY = [['Older than 30 days', ['older']], ['Older than 7 days', ['month', 'older']], ['Everything except today', ['week', 'month', 'older']]];
+function archiveDone(list, label) {
+  if (!ready() || !list.length) return;
+  const ids = list.map(([t, i]) => keyOf(t, i));
+  const find = (k) => todos.value.find((x, i) => keyOf(x, i) === k);
+  ids.forEach((k) => { const t = find(k); if (t) update(t, { archived: true }); });
+  window.AppToast?.show(`Archived ${list.length} done to-do${list.length === 1 ? '' : 's'}`, {
+    icon: 'archive',
+    action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() { ids.forEach((k) => { const t = find(k); if (t) update(t, { archived: false }); }); } },
+  });
+}
+function TidyMenu({ done, now, close }) {
+  const box = useRef();
+  useEffect(() => {
+    box.current?.querySelector('button:not([disabled])')?.focus();
+    const off = (e) => { if (!box.current?.contains(e.target) && e.target.id !== 'tidy-up') close(); };
+    const esc = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
+  }, []);
+  return html`<div class="tidy-menu" ref=${box} role="menu" aria-label="Tidy up done to-dos">
+    <p class="tidy-help">Archive done to-dos. They're kept, just out of the way.</p>
+    ${TIDY.map(([label, ranges]) => {
+      const list = done.filter(([t]) => ranges.includes(doneRange(t, now)));
+      return html`<button type="button" role="menuitem" class="tidy-item" disabled=${!list.length}
+        onClick=${() => { archiveDone(list, label); close(); }}><span>${label}</span><span class="tidy-n">${list.length}</span></button>`;
+    })}
+  </div>`;
+}
+
 function TodoList() {
-  const all = todos.value.map((t, i) => [t, i]);   // keep each to-do's saved position for stable keys
+  // Archived to-dos (Issue #49) are kept but never shown.
+  const all = todos.value.map((t, i) => [t, i]).filter(([t]) => !t.archived);   // keep each to-do's saved position for stable keys
   const active = all.filter(([t]) => !t.done), done = all.filter(([t]) => t.done);
   // After a tick / toggle / edit: focus the first matching element that's visible.
   useEffect(() => {
@@ -822,7 +861,7 @@ function EditSheet() {
 // One-line summary under the title, e.g. "3 to do · 2 done today".
 function Summary() {
   if (loading.value && !todos.value.length) return 'Loading your to-dos…';
-  const all = todos.value;
+  const all = todos.value.filter((t) => !t.archived);   // archived ones don't count (Issue #49)
   if (!all.length) return 'Nothing on your list yet';
   const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
   const left = all.filter((t) => !t.done).length;

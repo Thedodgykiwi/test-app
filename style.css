@@ -749,3 +749,16 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
 .time-note { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--muted); }
 select.time-input option:disabled { color: var(--muted); }
 .u-chip.past { background: var(--hover); color: var(--muted); }
+
+/* "Tidy up" on the Done heading (Issue #49, option B). */
+.group-done > h2 { display: flex; align-items: center; gap: .5rem; }
+.tidy-btn { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: 0 .75rem;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); font: inherit; font-size: .85rem; font-weight: 600; letter-spacing: 0; text-transform: none; cursor: pointer; }
+.tidy-btn:hover, .tidy-btn[aria-expanded="true"] { color: var(--text); background: var(--hover); }
+.tidy-menu { margin: .25rem 0 .6rem; background: var(--surface); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: .5rem; display: flex; flex-direction: column; gap: 2px; }
+.tidy-help { margin: .35rem .65rem .4rem; font-size: .85rem; color: var(--muted); }
+.tidy-item { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: 0 .75rem; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.tidy-item > span:first-child { flex: 1; }
+.tidy-item:hover:not([disabled]), .tidy-item:focus-visible { background: var(--hover); }
+.tidy-item[disabled] { opacity: .45; cursor: default; }
+.tidy-n { font-size: .8rem; font-weight: 600; color: var(--muted); background: var(--hover); border-radius: 99px; padding: .1rem .5rem; }
