@@ -174,7 +174,11 @@ body.has-banner .account { top: 2.8rem; }
 .avatar-wrap { position: relative; display: block; }
 .avatar-label { font-size: .7rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .avatar-btn:hover .avatar-label { color: var(--text); }
-.sign-in { margin-top: .2rem; }
+/* Signed out: a small card at the top of the menu with a reason and the Google button */
+.signin-box { display: grid; gap: .55rem; padding: .2rem .2rem .75rem; margin-bottom: .35rem; border-bottom: 1px solid var(--line); }
+.signin-why { margin: 0; display: grid; gap: .1rem; font-size: .9rem; }
+.signin-why span { color: var(--muted); font-size: .82rem; }
+.signin-box .sign-in { width: 100%; justify-content: center; min-height: 42px; border-radius: 10px; font-size: .92rem; }
 .avatar {
   width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; object-fit: cover;
   background: var(--surface); color: var(--muted); border: 1px solid var(--line);
@@ -529,7 +533,7 @@ body.has-banner.is-offline { padding-top: 6rem; }
 /* Issue #19: more room. Option D: a soft panel per priority with roomy rows;
    option C's add panel at the bottom, clear of the phone's home bar. */
 .prio-groups { display: grid; gap: .9rem; }
-.prio-group { background: var(--secondary); border-radius: 16px; padding: .35rem .4rem .45rem; }
+.prio-group { background: var(--secondary); border-radius: 16px; padding: .2rem .4rem .4rem; }   /* slim heading bar (Issue #83) */
 .prio-head { display: flex; align-items: center; gap: .35rem; margin: 0; padding: .45rem .6rem .4rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .prio-head .ic { width: 1.05em; height: 1.05em; }
 .prio-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
@@ -584,16 +588,10 @@ body { padding-bottom: 8rem; }
 :root[data-theme="dark"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; } }
 .swipe-under.left { display: none; justify-content: flex-end; padding: 0 1.1rem 0 0; background: var(--tmr-swipe); color: var(--tmr-swipe-text); }
-/* Already due tomorrow: the left swipe brings it forward to today instead, in the Due today purple. */
+/* The Planned view's purple (was the "Today" swipe colour). */
 :root { --today-swipe: #6741d9; --today-swipe-text: #fff; }
 :root[data-theme="dark"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; } }
-.swipe-under.left.to-today { background: var(--today-swipe); color: var(--today-swipe-text); }
-/* No date yet: the left swipe asks "When?" (grey) and opens the due-date menu. */
-:root { --when-swipe: #5c636e; --when-swipe-text: #fff; }
-:root[data-theme="dark"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; }
-@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; } }
-.swipe-under.left.when { background: var(--when-swipe); color: var(--when-swipe-text); }
 .todo.swipe-left > .swipe-under.left { display: flex; }
 .todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
 .todo-row.swiping { transition: none; }
@@ -629,7 +627,9 @@ button.due-label::after { content: ''; position: absolute; inset: -.55rem -.6rem
 .due-label .ic { width: 1em; height: 1em; }
 .due-today { background: var(--due-chip); color: var(--due); }
 .due-overdue { background: var(--danger); color: #fff; }
-:root[data-theme="dark"] .due-overdue { color: #1d1f23; }
+/* Dark: a soft red tint with light red text, not a solid bright pill; the same for Dark and Auto-dark (Issue #84). */
+:root[data-theme="dark"] .due-overdue { background: #4a2024; color: #ffa8a8; box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffa8a8 40%, transparent); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .due-overdue { background: #4a2024; color: #ffa8a8; box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffa8a8 40%, transparent); } }
 .prio-today { background: var(--due-bg); }
 .prio-today .prio-head { color: var(--due); }
 .prio-overdue { background: var(--over-bg); }
@@ -654,15 +654,15 @@ button.due-label::after { content: ''; position: absolute; inset: -.55rem -.6rem
 
 /* ---- Fold a panel by tapping its heading (Issue #25, option B) ---- */
 .prio-head { padding: 0; }
-.prio-toggle { display: flex; align-items: center; gap: .35rem; width: 100%; padding: .45rem .3rem .4rem .6rem; border: 0; border-radius: 12px;
+.prio-toggle { display: flex; align-items: center; gap: .35rem; width: 100%; padding: .3rem .3rem .25rem .6rem; border: 0; border-radius: 12px;
   background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer; }
-.prio-toggle .chev { margin-left: auto; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; transition: transform .25s ease; }
+.prio-toggle .chev { margin-left: auto; display: grid; place-items: center; width: 1.3rem; height: 1.3rem; border-radius: 50%; transition: transform .25s ease; }
 .prio-toggle .chev .ic { width: 1.15em; height: 1.15em; }
 .prio-toggle:hover .chev { background: color-mix(in srgb, currentColor 12%, transparent); }
 .prio-group.closed .chev { transform: rotate(-90deg); }
 /* Issue #27: priority shown as signal bars (3 = High, 2 = Medium, 1 = Low), so the level reads by shape as well as colour; coloured headings, no coloured panels. */
 .prio-high .prio-toggle { color: var(--high); } .prio-med .prio-toggle { color: var(--med); } .prio-low .prio-toggle { color: var(--low); }
-.prio-toggle .lvl { width: 1.5em; height: 1.5em; margin: -.25em 0; }
+.prio-toggle .lvl { width: 1.5em; height: 1.5em; margin: -.45em 0; }
 .prio-high .prio-toggle, .prio-med .prio-toggle, .prio-low .prio-toggle, .prio-none .prio-toggle { font-size: .78rem; }
 .fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .28s ease, opacity .2s ease; }
 .fold > .prio-list { min-height: 0; overflow: hidden; padding: 0 3px 6px; margin: 0 -3px -6px; }   /* room for the cards' shadows */
@@ -711,7 +711,7 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
 :root { --tn-bg: #e7e9f7; --tn: #3b3f8c; --tn-chip: #d9dcf2; }
 :root[data-theme="dark"] { --tn: #b4b9ff; --tn-chip: #2b2f5e; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tn: #b4b9ff; --tn-chip: #2b2f5e; } }
-.tonight-divider { display: flex; align-items: center; gap: .35rem; margin: .5rem .2rem .15rem; list-style: none;
+.tonight-divider { display: flex; align-items: center; gap: .35rem; margin: .15rem .2rem 0; list-style: none;
   font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tn); }
 .tonight-divider::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--tn) 25%, transparent); }
 .tonight-divider .ic { width: 1em; height: 1em; }
@@ -784,7 +784,7 @@ select.time-input option:disabled { color: var(--muted); }
 .tidy-item[disabled] { opacity: .45; cursor: default; }
 .tidy-n { font-size: .8rem; font-weight: 600; color: var(--muted); background: var(--hover); border-radius: 99px; padding: .1rem .5rem; }
 /* Tonight divider folds (Issue #52). */
-.tonight-toggle { display: inline-flex; align-items: center; gap: .35rem; min-height: 32px; padding: 0 .3rem; margin-left: -.3rem; border: 0; border-radius: 8px;
+.tonight-toggle { display: inline-flex; align-items: center; gap: .35rem; min-height: 26px; padding: 0 .3rem; margin-left: -.3rem; border: 0; border-radius: 8px;
   background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .tonight-toggle:hover { background: color-mix(in srgb, var(--tn) 12%, transparent); }
 .tonight-toggle .chevron { width: .9em; height: .9em; }
@@ -808,8 +808,9 @@ select.time-input option:disabled { color: var(--muted); }
 /* Thin outline on every pill, tinted from the pill's own text colour, so each
    gets a darker edge in light mode and a lighter one in dark mode (Issue #58). */
 .due-label, .sub-pill, .u-chip { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 32%, transparent); }
-.due-overdue { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 70%, #000); }
-/* Overdue is a bright solid red in both modes, so it takes a darker red edge in both. */
+:root:not([data-theme="dark"]) .due-overdue { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 70%, #000); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .due-overdue { box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffa8a8 40%, transparent); } }
+/* Light: solid red pill with a darker red edge. Dark: the soft tint above (Issue #84). */
 /* Editing a note in place (Issue #57). */
 .row-note-read { cursor: text; }
 .row-note-edit { display: block; width: 100%; box-sizing: border-box; border: 1px solid var(--accent); font: inherit; font-size: .9rem; resize: none; overflow: hidden; outline: none; }
@@ -1016,3 +1017,46 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .list-pick select:focus, .list-pick select:focus-visible { outline: none; box-shadow: none; }
 .list-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .list-pick .lp-caret { width: .85rem; height: .85rem; color: var(--muted); pointer-events: none; }
+
+/* Privacy links and "Delete my account" (Issue #79; same as the playbook starter) */
+.signin-privacy { justify-self: center; font-size: .8rem; color: var(--muted); }
+.menu-privacy { display: block; text-align: center; font-size: .8rem; color: var(--muted); margin-top: .1rem; }
+.btn.danger-ghost { background: none; color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent); }
+.btn.danger-ghost:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.notice.danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
+.delete-actions { justify-content: flex-end; gap: .5rem; flex-wrap: wrap; margin-top: .4rem; }
+#delete-account > p { margin: .3rem 0 .7rem; }
+.account-actions { gap: .5rem; flex-wrap: wrap; }
+.account-actions #download-data { background: var(--secondary); border: 1px solid var(--line); }
+.setting-help a { color: var(--accent); }
+
+/* ---- Swipe actions (Issue #81): one colour per action; every pair is 4.5:1 or better.
+   The colour layer under a row is only as wide as the drag (140px max), so keep labels short. ---- */
+:root { --sw-done: #237a35; --sw-del: #d12a2a; --sw-prio: #c2410c; --sw-day: #f08c00; --sw-list: #0b7285; --sw-edit: #495057; --sw-none: #6c757d; }
+:root[data-theme="dark"] { --sw-done: #69db7c; --sw-del: #ff8787; --sw-prio: #ffa94d; --sw-day: #ffc078; --sw-list: #3bc9db; --sw-edit: #ced4da; --sw-none: #868e96; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --sw-done: #69db7c; --sw-del: #ff8787; --sw-prio: #ffa94d; --sw-day: #ffc078; --sw-list: #3bc9db; --sw-edit: #ced4da; --sw-none: #868e96; } }
+.swipe-under.act-star, .swipe-prev .act-star { background: var(--gold-swipe); color: #2b1f00; }
+.swipe-under.act-tomorrow, .swipe-prev .act-tomorrow { background: var(--tmr-swipe); color: var(--tmr-swipe-text); }
+.swipe-under.act-done, .swipe-prev .act-done { background: var(--sw-done); color: #fff; }
+.swipe-under.act-delete, .swipe-prev .act-delete { background: var(--sw-del); color: #fff; }
+.swipe-under.act-priority, .swipe-prev .act-priority { background: var(--sw-prio); color: #fff; }
+.swipe-under.act-myday, .swipe-prev .act-myday { background: var(--sw-day); color: #2b1f00; }
+.swipe-under.act-list, .swipe-prev .act-list { background: var(--sw-list); color: #fff; }
+.swipe-under.act-edit, .swipe-prev .act-edit { background: var(--sw-edit); color: #fff; }
+.swipe-under.act-none, .swipe-prev .act-none { background: var(--sw-none); color: #fff; }
+:root[data-theme="dark"] .swipe-under:is(.act-done,.act-delete,.act-priority,.act-list,.act-edit,.act-none), :root[data-theme="dark"] .swipe-prev :is(.act-done,.act-delete,.act-priority,.act-list,.act-edit,.act-none) { color: #111; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .swipe-under:is(.act-done,.act-delete,.act-priority,.act-list,.act-edit,.act-none), :root[data-theme="auto"] .swipe-prev :is(.act-done,.act-delete,.act-priority,.act-list,.act-edit,.act-none) { color: #111; } }
+/* Settings: choosing the actions */
+.swipe-prev { display: flex; justify-content: space-between; border-radius: 10px; overflow: hidden; font-weight: 700; font-size: .85rem; margin-top: .4rem; }
+.swipe-prev span { display: flex; align-items: center; gap: .4rem; padding: .55rem .8rem; flex: 1; }
+.swipe-prev .r { justify-content: flex-start; } .swipe-prev .l { justify-content: flex-end; }
+.swipe-prev .ic { width: 1.1em; height: 1.1em; }
+.swipe-rows { display: grid; gap: .6rem; margin-top: .5rem; }
+.swipe-field { display: grid; gap: .25rem; }
+.swipe-field .sf-label { font-size: .88rem; font-weight: 600; }
+.swipe-field small { color: var(--muted); }
+.swipe-pick { display: flex; align-items: center; gap: .55rem; width: 100%; min-height: 44px; padding: .55rem .75rem; border-radius: 10px; border: 1px solid var(--border, rgba(128,128,128,.4)); background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.swipe-pick .caret-end { margin-left: auto; opacity: .6; }
+.swipe-pick .ic { width: 1.1em; height: 1.1em; flex: none; }
+.due-menu button[aria-checked="true"] { font-weight: 700; }
+.due-menu .tick { margin-left: auto; padding-left: .8rem; }

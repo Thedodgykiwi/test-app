@@ -69,6 +69,14 @@ export function remove(t) {
   if (cloud) cloud.remove(t); else save();
   return true;
 }
+// Put a deleted to-do back (the Undo after a swipe-delete, Issue #81), whole: checklist,
+// note, list and all. It goes to the end of its group, as a new to-do would.
+export function restore(t) {
+  if (!ready()) return false;
+  const { id, ...item } = t;
+  if (cloud) cloud.add(item); else { todos.value = [...todos.value, item]; save(); }
+  return true;
+}
 // Add a to-do (optionally with a due date, Issue #42). Returns false while
 // we don't yet know which list to add to.
 export function add(text, p, due, evening, time, starred, myDay, list) {
