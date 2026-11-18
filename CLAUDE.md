@@ -338,6 +338,9 @@ If they say yes:
   Typing `#` + letters suggests matching lists as chips under the box (and in quick add);
   tap one or press Tab to finish the word (`listHits`, `ListSuggest`; `listKey` = name in
   lower case without spaces or punctuation, so "Mum's Car" is `#mumscar`).
+  New / Edit list has just **Done** (Esc or tapping outside too), like the edit panel: when
+  editing, colour and icon save on tap and the name on leaving the box; a new list is made
+  on Done only if it has a name.
   "⋯" beside a list's title: rename / colour / icon, or Delete list (keep its to-dos with
   no list, or delete them too). Data: `lists` in `app/store.js` (`lists-<stage>` on the
   device; signed in `users/{uid}/stages/{stage}/lists/{id}`, `cloud-lists-<stage>` copy),

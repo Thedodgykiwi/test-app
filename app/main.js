@@ -537,18 +537,28 @@ function ListDialog() {
     dlg.current.showModal(); setTimeout(() => { if (name.current) { name.current.value = l?.name || ''; name.current.focus(); } });
   }, [d]);
   const close = () => { listDialog.value = null; };
-  const save = (e) => { e?.preventDefault(); const n = name.current.value.trim().slice(0, 40); if (!n) { name.current.focus(); return; }
-    if (d.mode === 'new') { const made = addList({ name: n, color, icon: ic }); close(); if (!made) return;
-      if (d.forKey != null) {   // made from the edit panel's list picker: put that to-do in it
-        const t = todos.value.find((x, i) => keyOf(x, i) === d.forKey); if (t) update(t, { list: made.id });
-      } else setView(`list:${made.id}`); }
-    else { updateList(l, { name: n, color, icon: ic }); close(); } };
+  // Like the to-do edit panel: changes apply at once and there's just Done (also Esc or
+  // tapping outside). Editing: colour and icon save on tap, the name when you leave the box.
+  // New list: Done makes it if it has a name; with no name, nothing is made.
+  const saveName = () => { const n = name.current?.value.trim().slice(0, 40); if (l && n && n !== l.name) updateList(l, { name: n }); };
+  const done = (e) => {
+    e?.preventDefault(); const cur = listDialog.value; if (!cur || cur.mode === 'delete') { close(); return; }
+    const n = name.current?.value.trim().slice(0, 40);
+    if (cur.mode === 'edit') { saveName(); close(); return; }
+    close(); if (!n) return;
+    const made = addList({ name: n, color, icon: ic }); if (!made) return;
+    if (cur.forKey != null) {   // made from the edit panel's list picker: put that to-do in it
+      const t = todos.value.find((x, i) => keyOf(x, i) === cur.forKey); if (t) update(t, { list: made.id });
+    } else setView(`list:${made.id}`);
+  };
+  const pickColor = (c) => { setColor(c); if (l) updateList(l, { color: c }); };
+  const pickIcon = (i) => { setIc(i); if (l) updateList(l, { icon: i }); };
   const n = l ? todos.value.filter((t) => t.list === l.id && !t.archived).length : 0;
   const del = (keep) => { todos.value.filter((t) => t.list === l.id).forEach((t) => (keep ? update(t, { list: null }) : remove(t)));
     removeList(l); close(); setView('all');
     window.AppToast?.show(keep ? `“${l.name}” deleted. Its to-dos are kept, with no list` : `“${l.name}” and its to-dos deleted`, { icon: 'trash' }); };
   return html`<dialog ref=${dlg} class="sheet compact list-dialog" aria-label=${d?.mode === 'delete' ? 'Delete list' : d?.mode === 'edit' ? 'Edit list' : 'New list'}
-      onClose=${() => { listDialog.value = null; }} onClick=${(ev) => { if (ev.target === dlg.current) close(); }}>
+      onClose=${() => { if (listDialog.value) done(); }} onClick=${(ev) => { if (ev.target === dlg.current) done(); }}>
     ${d && d.mode === 'delete' && l ? html`<div class="edit-form">
         <h2 class="ld-title">Delete “${l.name}”?</h2>
         <p class="muted">${n ? `It has ${n} to-do${n === 1 ? '' : 's'}. What should happen to ${n === 1 ? 'it' : 'them'}?` : 'It has no to-dos.'}</p>
@@ -556,18 +566,17 @@ function ListDialog() {
         <button type="button" class="btn ld-btn danger-btn" onClick=${() => del(false)}>Delete the list and its ${n} to-do${n === 1 ? '' : 's'}</button>`}
         ${!n && html`<button type="button" class="btn primary ld-btn" onClick=${() => del(true)}>Delete list</button>`}
         <button type="button" class="btn ghost ld-btn" onClick=${close}>Cancel</button></div>`
-    : d && html`<form class="edit-form" onSubmit=${save}>
+    : d && html`<form class="edit-form" onSubmit=${done}>
         <h2 class="ld-title">${d.mode === 'new' ? 'New list' : 'Edit list'}</h2>
         <div class="ld-name"><span class=${`tile big c-${color}`}><${Icon} name=${ic} /></span>
-          <input ref=${name} class="input" maxlength="40" placeholder="e.g. Home, Work, Errands" aria-label="List name" /></div>
+          <input ref=${name} class="input" maxlength="40" placeholder="e.g. Home, Work, Errands" aria-label="List name" onBlur=${saveName} /></div>
         <p class="mini-label">Colour</p>
         <div class="ld-colors" role="radiogroup" aria-label="Colour">${LIST_COLORS.map((c) => html`<button type="button" role="radio" aria-checked=${c === color} aria-label=${c[0].toUpperCase() + c.slice(1)}
-          class=${`ld-color c-${c}`} onClick=${() => setColor(c)}>${c === color && html`<${Icon} name="check" />`}</button>`)}</div>
+          class=${`ld-color c-${c}`} onClick=${() => pickColor(c)}>${c === color && html`<${Icon} name="check" />`}</button>`)}</div>
         <p class="mini-label">Icon</p>
         <div class="ld-icons" role="radiogroup" aria-label="Icon">${LIST_ICONS.map((i) => html`<button type="button" role="radio" aria-checked=${i === ic} aria-label=${i.replace(/-/g, ' ')}
-          class=${`ld-icon${i === ic ? ` on c-${color}` : ''}`} onClick=${() => setIc(i)}><${Icon} name=${i} /></button>`)}</div>
-        <div class="row edit-actions"><button type="button" class="btn ghost" onClick=${close}>Cancel</button>
-          <button type="submit" class="btn primary">${d.mode === 'new' ? 'Create list' : 'Save'}</button></div></form>`}
+          class=${`ld-icon${i === ic ? ` on c-${color}` : ''}`} onClick=${() => pickIcon(i)}><${Icon} name=${i} /></button>`)}</div>
+        <div class="row edit-actions"><button type="submit" class="btn primary done-btn">Done</button></div></form>`}
   </dialog>`;
 }
 function ListMenu() {

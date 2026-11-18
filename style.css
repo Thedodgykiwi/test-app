@@ -1007,3 +1007,4 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .ls-btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: .85rem; font-weight: 600; min-height: 32px; padding: 0 .65rem; border-radius: 99px; cursor: pointer; }
 .ls-btn:hover, .ls-btn:focus-visible { background: var(--hover); }
 .ls-none { font-size: .82rem; color: var(--muted); }
+.sheet.compact.list-dialog .edit-actions { justify-content: flex-end; }   /* just Done, on the right like the to-do edit panel */
