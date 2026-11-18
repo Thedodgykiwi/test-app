@@ -255,6 +255,21 @@ If they say yes:
   (`expanded` signal); the edit sheet has "Add a checklist" / the same list.
   Cards use `overflow: clip` (not hidden) so a focused input can't scroll
   them sideways.
+- **Note (Issue #57, option A):** optional `note` (plain text, ≤2000 chars,
+  null clears it; `firestore.rules` checks it). Edit sheet: "Add a note" beside
+  "Add a checklist" (`.sheet-adds`, stacks on very small phones) opens a
+  textarea saved with Save. Rows with a note show a "Note" pill
+  (`noteOpen` signal; outlined, not filled, so it differs from the checklist pill
+  without drawing too much attention: a dark filled pill was tried and rejected) that unfolds `NoteText` under the row; http(s) and www. links are tappable.
+  Tapping the open note's text edits it in place (saves on leaving the box,
+  Esc cancels, emptied = note removed), like the checklist.
+- **Edit panel (Issue #60, option A, replaces Cancel / Save):** `EditSheet`
+  in `app/main.js`, class `sheet compact`. Title (one line, grows) with the star
+  beside it, small "Priority" and "When" labels over the chips, "At" time row,
+  dashed add-chips (Time / Checklist / Note), quiet Delete (tap twice) and
+  **Done** (Enter in the title also closes). Every change applies at once via
+  `apply()` with an Undo note **inside the panel** (the page toast sits behind
+  an open dialog); title and note save when you leave the box.
 - **Edit sheet layout (Issues #46, #47):** star is a round toggle in the header
   (`#edit-star`, gold when on); "Add a checklist" sits right under the text box.
   Starred panel sorts by due state, then High/Medium/Low/none (Issue #48).
@@ -273,13 +288,19 @@ If they say yes:
   after 6am keeps Today, drops the time and shows a "6am has passed" chip; a
   time alone that has passed ("6am") means tomorrow. Reminders: not built (Issue #51).
 - **Archive done to-dos (Issue #49, option B):** "Tidy up" on the Done heading
-  (shown when there are done to-dos older than today) opens `TidyMenu`: Older
+  (only while Done is open and there are done to-dos older than today; small and quiet, Issue #59) opens `TidyMenu`: Older
   than 30 days / Older than 7 days / Everything except today, each with a
   count. Sets `archived: true` (kept, hidden everywhere, not counted); Undo in
   the note sets it back. `firestore.rules` allows the optional bool. A way to
   see archived ones again isn't built yet.
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
+- **Add bar (Issue #66, option 1 + 2):** a floating pill (12px from the edges
+  plus the home-bar space, `viewport-fit=cover`, Issue #65; capped to the
+  list's width on desktop) holding a 53px rounded box with the priority button
+  and a round **+** (the Add button, text hidden but read out) inside its right
+  end. The typing chips sit under the box, lined up with its text. Rules are
+  at the end of `style.css`.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves
