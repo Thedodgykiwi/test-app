@@ -248,8 +248,8 @@ async function start() {
 
     unsubscribe = fs.onSnapshot(fs.query(todosRef, fs.orderBy('pos')), { includeMetadataChanges: true }, (snap) => {
       const list = snap.docs.map((d) => {
-        const { text, done, p, doneAt = null, starred = false, due = null, evening = false, time = null, items = [], archived = false, note = null, myDay = null, list = null } = d.data();
-        return { id: d.id, text, done, p, doneAt, starred, due, evening, time, items, archived, note, myDay, list };
+        const { text, done, p, doneAt = null, starred = false, due = null, evening = false, time = null, items = [], archived = false, note = null, myDay = null, list = null, remind = null } = d.data();
+        return { id: d.id, text, done, p, doneAt, starred, due, evening, time, items, archived, note, myDay, list, remind };
       });
       app.setTodos(list, { fromServer: !snap.metadata.fromCache });
       pending = snap.metadata.hasPendingWrites;
@@ -276,6 +276,7 @@ async function start() {
     if (t.archived === true) doc.archived = true;   // Issue #49
     if (typeof t.note === 'string' && t.note.trim()) doc.note = t.note.trim().slice(0, 2000);   // Issue #57
     if (typeof t.myDay === 'string' && /^20\d\d-[01]\d-[0-3]\d$/.test(t.myDay)) doc.myDay = t.myDay;   // My Day (Issue #71)
+    if (t.remind === 'off' || [0, 15, 60].includes(t.remind)) doc.remind = t.remind;   // reminder (Issue #51)
     if (typeof t.list === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(t.list)) doc.list = t.list;   // own list (Issue #72)
     if (Array.isArray(t.items) && t.items.length) doc.items = cleanItems(t.items);   // checklist (Issue #44)
     return doc;

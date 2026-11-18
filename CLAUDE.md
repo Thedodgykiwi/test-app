@@ -300,7 +300,7 @@ If they say yes:
   longer fit. **No past times today:** passed times are greyed out in the
   sheet ("Add a time" starts at the next free quarter-hour); typed "tod 6am"
   after 6am keeps Today, drops the time and shows a "6am has passed" chip; a
-  time alone that has passed ("6am") means tomorrow. Reminders: not built (Issue #51).
+  time alone that has passed ("6am") means tomorrow. Reminders: Issue #51 (below).
 - **Archive done to-dos (Issue #49, option B):** "Tidy up" on the Done heading
   (only while Done is open and there are done to-dos older than today; small and quiet, Issue #59) opens `TidyMenu`: Older
   than 30 days / Older than 7 days / Everything except today, each with a
@@ -384,6 +384,19 @@ If they say yes:
   Screen / Install app** now lives in the Account section (`#install-btn`, still driven by
   `pwa.js`); its section is hidden by CSS (`:has`) while the app can't be installed.
 - **Account buttons (Issue #88):** Download my data, Delete my account… and Add to Home Screen stack at full width (2.7rem high) with a clear `--input` outline; Delete keeps a red outline (`.account-actions`).
+- **Reminders (Issue #51, option C, part 1 of 2):** a to-do with a date and a time reminds you at
+  the default from **Settings → Reminders** (`remindLead` pref in `menu.js`: 0 / 15 / 60 minutes
+  before, default 15), unless its own **Remind me** chips in the edit panel say otherwise:
+  optional `remind` = `'off'` | 0 | 15 | 60 (null = follow the default; choosing the default stores
+  null). `remOf(t)` in `app/main.js`; rows with a reminder show a small bell on the due label.
+  `firestore.rules` checks the field (rules tests too). **One reminder channel per device:** while
+  this device has no phone notifications, the app shows its own card (`RemindCard`, a top-layer
+  `popover` so it sits above open panels) from the reminder time until an hour after the to-do's
+  time, once: Done ticks it off, Snooze 10 min, ✕ dismisses, tapping the title opens the to-do.
+  What was shown or snoozed is kept per stage on the device (`reminded-<stage>`, pruned after
+  3 days). Checked every 20 s and when the app comes back to the front. **Part 2 (not built):**
+  iPhone/desktop notifications via Firebase Cloud Messaging + a scheduled Cloud Function (Blaze
+  plan); a device with them on sets `window.REMIND_CHANNEL = 'push'` and stops showing the card.
 - **Sync status line (Issue #87):** the line in the account menu (`#sync-status`, `showStatus()` in `sync.js`) is hidden while everything is saved; it shows for saving, updating, offline and error. The dot on the photo and the button's label always carry the state.
 - **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
 - **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;

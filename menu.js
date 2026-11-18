@@ -9,7 +9,7 @@
 (() => {
   const PREFS_KEY = `prefs:${location.pathname.split('/')[1] || 'app'}`;
   // The app's default accent is the data-accent on <html> in index.html.
-  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills', swipeRight: 'star', swipeLeft: 'tomorrow' };
+  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills', swipeRight: 'star', swipeLeft: 'tomorrow', remindLead: '15' };
   const load = () => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch { return { ...DEFAULTS }; } };
   const prefs = load();
   const root = document.documentElement;
@@ -35,7 +35,7 @@
     const pick = (b) => {
       prefs[group.dataset.pref] = b.dataset.value;
       try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage blocked */ }
-      applyPrefs();
+      applyPrefs(); dispatchEvent(new Event('prefschange'));   // app/main.js follows (reminder default, Issue #51)
     };
     group.addEventListener('click', (e) => { const b = e.target.closest('[data-value]'); if (b) pick(b); });
     group.addEventListener('keydown', (e) => {  // arrow keys move between options

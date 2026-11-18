@@ -152,6 +152,21 @@
     </section>
       </div>
     </div>
+    <div class="st-group" id="st-reminders">
+      <h3 class="st-h"><button type="button" class="st-acc" id="st-btn-reminders" aria-expanded="false" aria-controls="st-body-reminders"><span data-icon="bell"></span>Reminders<span class="st-caret" data-icon="caret-down"></span></button></h3>
+      <div class="st-body" id="st-body-reminders" role="region" aria-labelledby="st-btn-reminders" hidden>
+    <!-- Reminders (Issue #51, option C): the default for to-dos with a time; each to-do can change it in its edit panel. -->
+    <section class="setting" id="remind-setting">
+      <p class="setting-name" id="remind-label">Remind me</p>
+      <p class="setting-help" id="remind-help">For to-dos with a time. You can change it on each to-do. While the app is open, the reminder appears at the top of the screen.</p>
+      <div class="seg" role="radiogroup" aria-labelledby="remind-label" aria-describedby="remind-help" data-pref="remindLead">
+        <button type="button" role="radio" data-value="0">At the time</button>
+        <button type="button" role="radio" data-value="15">15 min</button>
+        <button type="button" role="radio" data-value="60">1 hour</button>
+      </div>
+    </section>
+      </div>
+    </div>
     <div class="st-group" id="st-account">
       <h3 class="st-h"><button type="button" class="st-acc" id="st-btn-account" aria-expanded="false" aria-controls="st-body-account"><span data-icon="user"></span>Account and app<span class="st-caret" data-icon="caret-down"></span></button></h3>
       <div class="st-body" id="st-body-account" role="region" aria-labelledby="st-btn-account" hidden>

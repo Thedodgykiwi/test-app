@@ -12,6 +12,24 @@ const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => 
   if (el && el.dataset.n !== name + cls) { el.replaceChildren(icon(name, cls)); el.dataset.n = name + cls; }
 }} />`;
 
+// ---- Reminders (Issue #51, option C) ----------------------------------------
+// A to-do with a date and a time reminds you at the Settings default (Settings → Reminders:
+// at the time, 15 min or 1 hour before), unless its own choice in the edit panel says
+// otherwise: `remind` = 'off' | 0 | 15 | 60 (missing / null = follow the default).
+// One reminder channel per device: while this device has no phone notifications, the app
+// shows its own reminder card when it's open (RemindCard). Phone notifications: part 2.
+const PREFS_KEY = `prefs:${location.pathname.split('/')[1] || 'app'}`;
+const REM_LEADS = [0, 15, 60];
+const readLead = () => { try { const v = +JSON.parse(localStorage.getItem(PREFS_KEY) || '{}').remindLead; return REM_LEADS.includes(v) ? v : 15; } catch { return 15; } };
+const remLead = signal(readLead());
+addEventListener('prefschange', () => { remLead.value = readLead(); });
+function remOf(t) {   // minutes before its time, or null for no reminder
+  if (!t || t.done || t.archived || !validDue(t.due) || !validTime(t.time) || t.remind === 'off') return null;
+  return REM_LEADS.includes(t.remind) ? t.remind : remLead.value;
+}
+const leadWords = (n) => (n === 0 ? 'at the time' : n === 60 ? '1 hour before' : `${n} min before`);
+const remAt = (t) => { const [y, m, d] = t.due.split('-').map(Number), [h, mi] = t.time.split(':').map(Number); return new Date(y, m - 1, d, h, mi).getTime(); };
+
 // Short-lived UI state shared between components
 const editing = signal(null);     // { key, text, p } while the edit sheet is open
 const justEdited = signal(null);  // key of the row to highlight briefly after saving
@@ -388,13 +406,13 @@ function Row({ t, k }) {
             onClick=${() => { if (swallowClick || !ready()) return; openEditor(t, k); }}>
             <span class="t-main">${t.text}</span></button>
           ${ds && html`<button type="button" class=${`due-label due-${ds}${ds === 'today' && t.evening ? ' tn' : ''}`} data-due-btn=${k} aria-haspopup="menu" aria-expanded=${dueMenu.value?.key === k}
-            aria-label=${`${withTime(dueLabel(t.due), t)}. Change the due date`}
+            aria-label=${`${withTime(dueLabel(t.due), t)}${remOf(t) !== null ? ', reminder on' : ''}. Change the due date`}
             onClick=${(e) => {   // tap the label for a quick menu: Tomorrow, Pick a date, No date (Issue #38)
               if (swallowClick || !ready()) return;
               if (dueMenu.value?.key === k) { dueMenu.value = null; return; }
               const r = e.currentTarget.getBoundingClientRect();
               dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom };
-            }}><${Icon} name=${ds === 'today' && t.evening ? 'moon' : DUE_ICON[ds]} />${withTime(ds === 'today' && t.evening ? 'Tonight' : dueLabel(t.due), t)}<${Icon} name="caret-down" cls="caret" /></button>`}
+            }}><${Icon} name=${ds === 'today' && t.evening ? 'moon' : DUE_ICON[ds]} />${withTime(ds === 'today' && t.evening ? 'Tonight' : dueLabel(t.due), t)}${remOf(t) !== null && html`<${Icon} name="bell" cls="rem-bell" />`}<${Icon} name="caret-down" cls="caret" /></button>`}
           ${itemsOf(t).length > 0 && html`<button type="button" class=${`sub-pill${expanded.value.has(k) ? ' open' : ''}`}
             aria-expanded=${expanded.value.has(k)} aria-label=${`Checklist, ${progress(t)} done. ${expanded.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(expanded.value); s.has(k) ? s.delete(k) : s.add(k); expanded.value = s; }}>
@@ -1186,6 +1204,12 @@ function EditSheet() {
       ${!time && html`<option value="">Pick a time…</option>`}
       ${[...new Set([...TIME_OPTIONS, ...(time ? [time] : [])])].sort().map((v) => html`<option value=${v} disabled=${v !== time && ((tonight && !isEveningTime(v)) || isPast(due, v))}>${fmtTime(v)}</option>`)}
     </select>${time && html`<button type="button" class="btn ghost" onClick=${() => { setT(''); setTimeOn(false); }}>Remove</button>`}</div>`;
+  const curRem = remOf(t);   // Issue #51: per-to-do reminder; choosing the default stores nothing (follows Settings)
+  const setRem = (v) => apply({ remind: v === remLead.value ? null : v }, v === 'off' ? 'Reminder off' : `Reminder ${leadWords(v)}`, 'bell');
+  const remBlock = time && !t.done && html`<p class="mini-label"><${Icon} name="bell" />Remind me</p>
+    <div class="seg chips rem-chips" role="group" aria-label="Remind me">
+      ${[['off', 'Off'], [0, 'At the time'], [15, '15 min'], [60, '1 hour']].map(([v, l]) => html`<button type="button" class="chip"
+        aria-pressed=${v === 'off' ? curRem === null : curRem === v} onClick=${() => setRem(v)}>${l}</button>`)}</div>`;
   const listBlock = (itemsOf(t).length || startList) && html`<p class="mini-label"><${Icon} name="list-checks" />Checklist${progress(t) ? ` · ${progress(t)}` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`;
   const noteBlock = noteOn && html`<p class="mini-label"><${Icon} name="note" />Note</p>
     <textarea ref=${noteRef} class="textarea note-input" rows="2" maxlength="2000" aria-label="Note" placeholder="Details, links, who to ask…" value=${noteOf(t)}
@@ -1197,7 +1221,7 @@ function EditSheet() {
   const body = html`
       ${titleRow}
       <p class="mini-label"><${Icon} name="prio-high" />Priority</p>${prioChips}
-      <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}
+      <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}${remBlock}
       ${listBlock}${noteBlock}
       <div class="add-chips">
         <label class=${`list-pick${listOf(t.list) ? ' set' : ''}`} style=${listOf(t.list) ? `--lcol:${lc(listOf(t.list))}` : ''}><${Icon} name=${listOf(t.list)?.icon || 'list'} /><span class="visually-hidden">List</span>
@@ -1269,6 +1293,56 @@ setTimeout(() => {
 }, 2500);
 render(html`<${Summary} />`, document.getElementById('summary'));
 // The add bar and edit sheet sit outside the list (fixed bar, modal sheet).
+// ---- In-app reminder card (Issue #51) ---------------------------------------
+// Checks every 20 s (and when the app comes back to the front). A reminder shows from its
+// time until an hour after the to-do's time, once; Snooze brings it back in 10 minutes.
+// What's been shown or snoozed is kept on this device (`reminded-<stage>`), pruned after 3 days.
+const remSeenKey = `reminded-${window.STAGE || 'local'}`;
+const remSeen = (() => { try { return JSON.parse(localStorage.getItem(remSeenKey)) || {}; } catch { return {}; } })();
+const saveSeen = () => { try { localStorage.setItem(remSeenKey, JSON.stringify(remSeen)); } catch { /* full */ } };
+const remKey = (t) => `${t.id || t.text}|${t.due}|${t.time}`;
+const remCard = signal(null);   // { key, k }
+function remCheck() {
+  if (window.REMIND_CHANNEL === 'push' || remCard.value || loading.value) return;   // phone notifications on this device instead (part 2)
+  const now = Date.now();
+  for (const k of Object.keys(remSeen)) if (now - (remSeen[k].at || 0) > 3 * 864e5) delete remSeen[k];
+  const due = todos.value.map((t, i) => [t, i]).filter(([t]) => remOf(t) !== null).map(([t, i]) => {
+    const at = remAt(t), s = remSeen[remKey(t)];
+    return { t, k: keyOf(t, i), at, show: s ? (s.snooze || Infinity) : at - remOf(t) * 6e4 };
+  }).filter((x) => now >= x.show && now <= x.at + 36e5).sort((a, b) => a.at - b.at)[0];
+  if (due) { remCard.value = { key: remKey(due.t), k: due.k }; remSeen[remKey(due.t)] = { at: now }; saveSeen(); }
+}
+setInterval(remCheck, 20000);
+setTimeout(remCheck, 1500);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) remCheck(); });
+function RemindCard() {
+  const c = remCard.value, box = useRef();
+  const found = c && todos.value.map((t, i) => [t, i]).find(([t, i]) => remKey(t) === c.key || keyOf(t, i) === c.k);
+  const t = found?.[0], k = found && keyOf(found[0], found[1]);
+  useEffect(() => {   // a popover sits above open panels too (top layer); plain fixed card where popovers aren't supported
+    const el = box.current; if (!el || !el.showPopover) return;
+    try { if (t && !el.matches(':popover-open')) el.showPopover(); if (!t && el.matches(':popover-open')) el.hidePopover(); } catch { /* not supported */ }
+  });
+  useEffect(() => { if (c && !t) remCard.value = null; }, [c, t]);
+  if (!t) return html`<div ref=${box} popover="manual" class="inapp-rem" hidden></div>`;
+  const mins = Math.round((remAt(t) - Date.now()) / 6e4);
+  const sub = mins >= 60 ? `Due in 1 hour · ${fmtTime(t.time)}` : mins > 0 ? `Due in ${mins} min · ${fmtTime(t.time)}` : mins > -2 ? `Due now · ${fmtTime(t.time)}` : `Was due at ${fmtTime(t.time)}`;
+  const close = () => { remCard.value = null; };
+  return html`<div ref=${box} popover="manual" class="inapp-rem" role="alert">
+    <span class="ir-ic"><${Icon} name="bell" /></span>
+    <div class="ir-text">
+      <button type="button" class="ir-title" onClick=${() => { close(); openEditor(t, k); }}>${t.text}</button>
+      <p class="ir-sub">${sub}</p>
+      <div class="ir-btns">
+        <button type="button" class="btn sm ir-done" onClick=${() => { close(); if (ready()) markDone(t, k); }}><${Icon} name="check" />Done</button>
+        <button type="button" class="btn sm" onClick=${() => { remSeen[c.key] = { at: Date.now(), snooze: Date.now() + 6e5 }; saveSeen(); close();
+          window.AppToast?.show(`“${t.text}”: reminding you again in 10 minutes`, { icon: 'bell' }); }}>Snooze 10 min</button>
+      </div>
+    </div>
+    <button type="button" class="ir-x" aria-label="Dismiss reminder" onClick=${close}><${Icon} name="x" /></button>
+  </div>`;
+}
+
 const extras = document.createElement('div');
 document.body.append(extras);
-render(html`<${AddBar} /><${EditSheet} /><${QuickAdd} /><${DueMenu} /><${SwipeMenu} />`, extras);
+render(html`<${AddBar} /><${EditSheet} /><${QuickAdd} /><${DueMenu} /><${SwipeMenu} /><${RemindCard} />`, extras);
