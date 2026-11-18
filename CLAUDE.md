@@ -302,6 +302,11 @@ If they say yes:
   and a round **+** (the Add button, text hidden but read out) inside its right
   end. The typing chips sit under the box, lined up with its text. Rules are
   at the end of `style.css`.
+- **Compare stages (Issue #69):** shared, from the playbook's deploy
+  (`compare-stages.md`): Pipeline page → Compare tab, `?compare` mode (all
+  stages share one sample list in the browser; no sync) and the banner's stage
+  menu. This app's part: `compare-sample.json` (keep one of each feature in it
+  when adding features) and `window.COMPARE` skips the swipe tip.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves
