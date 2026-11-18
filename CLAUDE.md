@@ -310,6 +310,7 @@ If they say yes:
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
 - **Slim panel headings (Issue #83, option A):** the coloured panels' heading bar (`.prio-toggle`, about 30px instead of 39) and the Tonight divider inside Due today (`.tonight-toggle`, 26px) are kept slim so panels take less room; the fold chevron is a 1.3rem circle (still a tap target). Option B / C were slimmer still, with a smaller chevron.
+- **Overdue pill (Issue #84):** the "Overdue · 2 days" pill is solid red in light, and a soft dark-red tint with light red text (7.5:1) in dark, both Dark and Auto-dark.
 - **Add bar (Issue #66, option 1 + 2):** a floating pill (12px from the edges
   plus the home-bar space, `viewport-fit=cover`, Issue #65; capped to the
   list's width on desktop) holding a 53px rounded box with the priority button
