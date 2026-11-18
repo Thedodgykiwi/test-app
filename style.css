@@ -912,9 +912,9 @@ body.lists-pinned { padding-left: calc(300px + 1rem); }
 body.lists-pinned .add-bar { left: calc(50% - 150px); right: calc(50% - 450px); }
 /* My Day: a small sun tag on rows (outside the My Day view) and a toggle in the edit panel */
 .meta-tag { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .3rem; font-size: .8rem; color: var(--muted); }
-.meta-tag .ic { width: .9rem; height: .9rem; color: #e67700; }
-.sheet.compact .myday-chip .ic { color: #e67700; }
-.sheet.compact .myday-chip.on { border-style: solid; border-color: #e67700; background: color-mix(in srgb, #f08c00 12%, transparent); color: var(--text); font-weight: 600; }
+.meta-tag .ic { width: .9rem; height: .9rem; color: var(--sun); }
+.sheet.compact .myday-chip .ic { color: var(--sun); }
+.sheet.compact .myday-chip.on { border-style: solid; border-color: var(--sun); background: color-mix(in srgb, #f08c00 12%, transparent); color: var(--text); font-weight: 600; }
 body.lists-pinned .lists-panel { z-index: 9; }   /* under the stage banner (its Report issue button) */
 body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* always open in Completed */
 /* My Day / Important / Planned: slim headings (Settings → List style; Issue #71).
@@ -946,3 +946,12 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
   font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; }
 .see-all .ic { width: 1em; height: 1em; }
 .see-all:hover { text-decoration: underline; }
+/* Each view's icon in its own colour, the one it already has elsewhere (Issue #71):
+   My Day = the sun tag, Important = gold star, Planned = Due today purple, Completed = Done green. */
+:root { --sun: #d9640a; }
+:root[data-theme="dark"] { --sun: #ffa94d; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --sun: #ffa94d; } }
+[data-v="myday"] :is(.lv-ic, .vt-ic) { color: var(--sun); }
+[data-v="important"] :is(.lv-ic, .vt-ic) { color: var(--gold); }
+[data-v="planned"] :is(.lv-ic, .vt-ic) { color: var(--today-swipe); }
+[data-v="completed"] :is(.lv-ic, .vt-ic) { color: var(--ok); }

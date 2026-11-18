@@ -531,7 +531,7 @@ function ListsPanel() {
       role=${pinned ? null : 'dialog'} aria-modal=${pinned ? null : 'true'}>
       <div class="lists-top"><h2>Lists</h2>${!pinned && html`<button type="button" class="close-btn" aria-label="Close" onClick=${() => { listsOpen.value = false; document.getElementById('view-title-btn')?.focus(); }}><${Icon} name="x" /></button>`}</div>
       <nav class="lv" aria-label="Views">${VIEWS.map(([v, ic, name]) => { const n = countOf(v);
-        return html`<button type="button" class="lv-item" aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
+        return html`<button type="button" class="lv-item" data-v=${v} aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
           <${Icon} name=${ic} cls="lv-ic" /><span class="lv-name">${name}</span>${n > 0 && html`<span class="lv-n" aria-label=${`, ${n}`}>${n}</span>`}</button>`; })}</nav>
     </aside>`;
 }
@@ -541,7 +541,7 @@ function ViewHead() {
   const toggle = () => { if (!pinned) listsOpen.value = !listsOpen.value; };
   return html`
     ${!pinned && html`<button type="button" class="lists-btn" aria-expanded=${listsOpen.value} onClick=${toggle}><${Icon} name="caret-left" />Lists</button>`}
-    <h1 class="view-title">${pinned ? html`<span class="vt">${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}</span>`
+    <h1 class="view-title" data-v=${v}>${pinned ? html`<span class="vt">${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}</span>`
       : html`<button type="button" id="view-title-btn" class="vt" aria-haspopup="dialog" aria-expanded=${listsOpen.value} title="Lists" onClick=${toggle}>
         ${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}<${Icon} name="caret-down" cls="vt-caret" /></button>`}</h1>`;
 }

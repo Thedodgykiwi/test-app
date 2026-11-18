@@ -325,7 +325,9 @@ If they say yes:
   only one group (not Planned), no heading. Folded groups are remembered (`vg-…` keys).
   Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
   it (not on All to-dos or Important). All to-dos always keeps its panels.
-  Settings order: List style, Accent colour, Text size.
+  Settings order: List style, Accent colour, Text size. View icons are coloured by type
+  (`data-v`): My Day `--sun` orange, Important `--gold`, Planned `--today-swipe` purple,
+  Completed `--ok` green, All to-dos the accent.
 - **Done today (Issue #74):** under All to-dos, My Day and Important, `DoneSection`
   shows only to-dos ticked off today ("Done today · n", folded with the same
   `done-open` key) and a "See all completed (n) →" link to the Completed view. The
