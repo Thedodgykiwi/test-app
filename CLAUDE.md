@@ -272,7 +272,8 @@ If they say yes:
   an open dialog); title and note save when you leave the box.
 - **Edit sheet layout (Issues #46, #47):** star is a round toggle in the header
   (`#edit-star`, gold when on); "Add a checklist" sits right under the text box.
-  Starred panel sorts by due state, then High/Medium/Low/none (Issue #48).
+  Starred panel sorts by due state, then High/Medium/Low/none (Issue #48), and
+  has a thin gold edge (other panels don't; Issue #68).
 - **Scheduled time (Issue #50, option B):** optional `time: 'HH:MM'` (24-hour)
   on a to-do with a date. Edit sheet: "Add a time" under Due, then a time
   box + "Remove time"; clearing the date clears it. Typed: 4pm, 4:30pm, 13:00

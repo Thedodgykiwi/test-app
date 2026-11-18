@@ -560,7 +560,7 @@ body { padding-bottom: 8rem; }
 :root { --gold: #b77b00; --gold-bg: #fff6dc; --gold-swipe: #f2b400; }
 :root[data-theme="dark"] { --gold: #ffc94d; --gold-bg: #33290f; --gold-swipe: #c99400; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --gold: #ffc94d; --gold-bg: #33290f; --gold-swipe: #c99400; } }
-.prio-starred { background: var(--gold-bg); }
+.prio-starred { background: var(--gold-bg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 65%, transparent); }   /* thin gold edge, Starred only (Issue #68) */
 .prio-starred .prio-head { color: var(--gold); }
 .prio-starred .row-flag { display: grid; }   /* show which priority a starred to-do has */
 .swipe-under {
