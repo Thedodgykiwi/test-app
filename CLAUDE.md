@@ -383,6 +383,7 @@ If they say yes:
   To add a setting, put its `<section class="setting">` inside the right `.st-body`. **Add to Home
   Screen / Install app** now lives in the Account section (`#install-btn`, still driven by
   `pwa.js`); its section is hidden by CSS (`:has`) while the app can't be installed.
+- **Sync status line (Issue #87):** the line in the account menu (`#sync-status`, `showStatus()` in `sync.js`) is hidden while everything is saved; it shows for saving, updating, offline and error. The dot on the photo and the button's label always carry the state.
 - **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
 - **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;
   signed out, the menu opens with `#signin-box` (a short reason and a full-width
