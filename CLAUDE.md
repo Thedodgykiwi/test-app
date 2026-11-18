@@ -307,6 +307,32 @@ If they say yes:
   stages share one sample list in the browser; no sync) and the banner's stage
   menu. This app's part: `compare-sample.json` (keep one of each feature in it
   when adding features) and `window.COMPARE` skips the swipe tip.
+- **Lists panel and views (Issue #71, option A + tappable title from C):** "‹ Lists"
+  above the title, or tapping the title ("The Shortlist ▾" / "My Day ▾"), opens a side
+  panel (`ListsPanel`, `ViewHead` in `app/main.js`; the page's static `<h1>` is replaced):
+  All to-dos, My Day, Important (starred), Planned (has a date; one group per day) and
+  Completed (Done, always open), each with a count. From 1100px wide it stays open as a
+  sidebar. The chosen view is remembered per stage (`view-<stage>`). Adding while a view
+  is open puts the to-do in it (My Day / starred / due today). **My Day** = optional
+  `myDay: 'YYYY-MM-DD'` (`firestore.rules` checks the format; counts only on that day, so
+  it empties each morning); toggled by the edit panel's "My Day" chip; rows elsewhere
+  show a small sun "My Day" tag. Custom lists (Home, Work…) are Issue #72, not built.
+  **Settings → List style** (`listStyle` pref in `menu.js`, `data-list-style` on `<html>`;
+  Pills default / Lines / Boxes) sets how My Day, Important and Planned group to-dos:
+  Pills = small rounded headings over plain cards (`.vg-*`), Lines = Done-style
+  dividers, Boxes = the main view's coloured panels. Planned groups by day; My Day by
+  Overdue / Today / Tonight / Later / Any time; Important adds Tomorrow and No date. With
+  only one group (not Planned), no heading. Folded groups are remembered (`vg-…` keys).
+  Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
+  it (not on All to-dos or Important). All to-dos always keeps its panels.
+  Settings order: List style, Accent colour, Text size.
+- **Done today (Issue #74):** under All to-dos, My Day and Important, `DoneSection`
+  shows only to-dos ticked off today ("Done today · n", folded with the same
+  `done-open` key) and a "See all completed (n) →" link to the Completed view. The
+  full history, its date groups and Tidy up are only in Completed.
+- **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
+  Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
+  zooms the page into any box under 16px).
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves
