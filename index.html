@@ -36,6 +36,7 @@
       document.documentElement.dataset.theme = p.theme || 'auto';
       document.documentElement.dataset.textSize = p.textSize || 'standard';
       document.documentElement.dataset.accent = p.accent || document.documentElement.dataset.accent;
+      document.documentElement.dataset.listStyle = p.listStyle || 'pills';
     } catch { /* storage blocked: defaults */ }
   </script>
 </head>
@@ -90,6 +91,15 @@
   <dialog id="settings" class="sheet" aria-labelledby="settings-title">
     <header><h2 id="settings-title">Settings</h2><button type="button" class="close-btn" data-close aria-label="Close"><span data-icon="x"></span></button></header>
     <section class="setting">
+      <p class="setting-name" id="list-style-label">List style</p>
+      <p class="setting-help" id="list-style-help">How My Day, Important and Planned group your to-dos</p>
+      <div class="seg" role="radiogroup" aria-labelledby="list-style-label" aria-describedby="list-style-help" data-pref="listStyle">
+        <button type="button" role="radio" data-value="pills">Pills</button>
+        <button type="button" role="radio" data-value="lines">Lines</button>
+        <button type="button" role="radio" data-value="boxes">Boxes</button>
+      </div>
+    </section>
+    <section class="setting">
       <p class="setting-name" id="accent-label">Accent colour</p>
       <div class="swatches" role="radiogroup" aria-labelledby="accent-label" data-pref="accent">
         <button type="button" role="radio" data-value="blue" style="--sw:#3b5bdb" aria-label="Blue" title="Blue"></button>
@@ -103,7 +113,8 @@
     <section class="setting">
       <p class="setting-name" id="text-size-label">Text size</p>
       <div class="seg" role="radiogroup" aria-labelledby="text-size-label" data-pref="textSize">
-        <button type="button" role="radio" data-value="standard">Standard</button>
+        <button type="button" role="radio" data-value="small">Small</button>
+        <button type="button" role="radio" data-value="standard">Regular</button>
         <button type="button" role="radio" data-value="large">Large</button>
       </div>
     </section>

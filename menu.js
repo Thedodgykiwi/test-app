@@ -9,7 +9,7 @@
 (() => {
   const PREFS_KEY = `prefs:${location.pathname.split('/')[1] || 'app'}`;
   // The app's default accent is the data-accent on <html> in index.html.
-  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue' };
+  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills' };
   const load = () => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch { return { ...DEFAULTS }; } };
   const prefs = load();
   const root = document.documentElement;
@@ -22,6 +22,7 @@
     root.dataset.theme = prefs.theme;
     root.dataset.textSize = prefs.textSize;
     root.dataset.accent = prefs.accent;
+    root.dataset.listStyle = prefs.listStyle;   // My Day / Important / Planned headings (Issue #71)
     document.querySelectorAll('[data-pref]').forEach((group) => {
       group.querySelectorAll('[data-value]').forEach((b) => {
         const on = b.dataset.value === prefs[group.dataset.pref];

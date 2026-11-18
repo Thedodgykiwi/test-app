@@ -44,6 +44,9 @@
 :root[data-accent="pink"]   { --a-l: #c2255c; --a-l-h: #a61e4d; --a-d: #f06595; --a-d-h: #f783ac; --a-d-fg: #2b0716; }
 /* Text size (Settings): everything sized in rem/em grows with it */
 :root[data-text-size="large"] { font-size: 112.5%; }
+:root[data-text-size="small"] { font-size: 93.75%; }   /* Issue #73 */
+/* Small text: boxes you type in stay at 16px, or iPhone Safari zooms the page when you tap them */
+:root[data-text-size="small"] :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) { font-size: max(16px, 1rem) !important; }
 
 body {
   margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 1.5rem;
@@ -873,3 +876,73 @@ body { padding-bottom: calc(9rem + env(safe-area-inset-bottom)); }
 .todo > .swipe-under { visibility: hidden; }
 .todo:has(> .todo-row.swiping) > .swipe-under, .todo:has(> .todo-row.settle) > .swipe-under { visibility: visible; }
 .todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
+
+/* ===== Lists panel and views (Issue #71, option A + tappable title) ===== */
+.view-head { display: contents; }
+body:not([data-view="all"]) .tagline { display: none; }
+.lists-btn { justify-self: start; display: inline-flex; align-items: center; gap: .3rem; min-height: 40px; margin: -.3rem 0 -.7rem -.2rem; padding: 0 .2rem;
+  background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; font-size: 1rem; cursor: pointer; }
+.lists-btn .ic { width: 1.1rem; height: 1.1rem; }
+.view-title .vt { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; font: inherit; color: inherit; }
+.view-title button.vt { background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: left; border-radius: 8px; }
+.view-title .vt-ic { width: 1.4rem; height: 1.4rem; color: var(--accent); flex: none; }
+.view-title .vt-caret { width: 1rem; height: 1rem; color: var(--muted); flex: none; }
+.lists-scrim { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .2s; }
+.lists-scrim.open { opacity: 1; pointer-events: auto; }
+.lists-panel { position: fixed; z-index: 75; top: 0; bottom: 0; left: 0; width: min(300px, 84vw); overflow: auto;
+  padding: calc(1rem + env(safe-area-inset-top)) .6rem calc(1rem + env(safe-area-inset-bottom)) calc(.6rem + env(safe-area-inset-left));
+  background: var(--surface); color: var(--text); border-radius: 0 18px 18px 0; box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  transform: translateX(-105%); visibility: hidden; transition: transform .25s cubic-bezier(.2,.8,.3,1), visibility 0s .25s; }
+.lists-panel.open { transform: none; visibility: visible; transition: transform .25s cubic-bezier(.2,.8,.3,1); }
+@media (prefers-reduced-motion: reduce) { .lists-panel, .lists-panel.open, .lists-scrim { transition: none; } }
+.lists-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 .3rem .5rem .7rem; }
+.lists-top h2 { margin: 0; font-size: 1.15rem; }
+.lv { display: grid; gap: .1rem; }
+.lv-item { display: flex; align-items: center; gap: .75rem; min-height: 46px; padding: 0 .7rem; border: 0; border-radius: 12px;
+  background: none; color: inherit; font: inherit; font-size: 1rem; text-align: left; cursor: pointer; }
+.lv-item:hover { background: var(--hover); }
+.lv-item[aria-current] { background: color-mix(in srgb, var(--accent) 12%, transparent); font-weight: 600; }
+.lv-item .lv-ic { width: 1.25rem; height: 1.25rem; color: var(--accent); flex: none; }
+.lv-name { flex: 1; }
+.lv-n { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+/* Wide screens: the panel stays open as a sidebar and the page moves over to make room. */
+body.lists-pinned .lists-panel { transform: none; visibility: visible; box-shadow: none; border-radius: 0; background: var(--bg); border-right: 1px solid var(--line); }
+body.lists-pinned.has-banner .lists-panel { padding-top: calc(3rem + env(safe-area-inset-top)); }
+body.lists-pinned { padding-left: calc(300px + 1rem); }
+body.lists-pinned .add-bar { left: calc(50% - 150px); right: calc(50% - 450px); }
+/* My Day: a small sun tag on rows (outside the My Day view) and a toggle in the edit panel */
+.meta-tag { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .3rem; font-size: .8rem; color: var(--muted); }
+.meta-tag .ic { width: .9rem; height: .9rem; color: #e67700; }
+.sheet.compact .myday-chip .ic { color: #e67700; }
+.sheet.compact .myday-chip.on { border-style: solid; border-color: #e67700; background: color-mix(in srgb, #f08c00 12%, transparent); color: var(--text); font-weight: 600; }
+body.lists-pinned .lists-panel { z-index: 9; }   /* under the stage banner (its Report issue button) */
+body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* always open in Completed */
+/* My Day / Important / Planned: slim headings (Settings → List style; Issue #71).
+   Pills (default): small rounded headings; Lines: Done-style centred dividers. Rows are plain cards. */
+.vg-groups { display: grid; gap: .5rem; }
+.vg-h { margin: 0; }
+.vg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.vg-list > .todo { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: clip; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+.vg-list > .todo > .todo-row { padding: .8rem .9rem; gap: .85rem; background: var(--surface); touch-action: pan-y; }
+.vg-list > .todo.just-edited > .todo-row { animation-name: edited-card; }
+.vg-pills .vg + .vg { margin-top: .4rem; }
+.vg-pill { display: inline-flex; align-items: center; gap: .35rem; min-height: 34px; padding: 0 .75rem 0 .55rem; margin-bottom: .1rem; border: 0; border-radius: 10px;
+  background: var(--secondary); color: var(--text); font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; }
+.vg-pill .chevron { width: 1em; height: 1em; color: var(--muted); }
+.vg-pill:hover { background: var(--line); }
+.vg.overdue .vg-pill { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+.vg.overdue .done-divider { color: var(--danger); }
+.vg-lines .done-divider { font-size: .85rem; }
+.vg-groups > .group-done { margin-top: .5rem; }
+/* A small gold star beside the priority bars where no Starred panel says it */
+.row-star { display: grid; flex: none; color: var(--gold); margin-right: -.35rem; }
+.row-star .ic { width: 1.15em; height: 1.15em; }
+.setting-help { margin: -.3rem 0 .5rem; font-size: .85rem; color: var(--muted); }
+.prio-starred .row-star { display: none; }   /* the panel already says it */
+.vg.overdue .vg-pill, .vg.overdue .done-divider { color: color-mix(in srgb, var(--danger) 75%, var(--text)); }   /* readable red (4.5:1+) on the tint */
+/* Done today under the views, with a link to Completed (Issue #74) */
+.today-only .vg-list { margin-bottom: .3rem; }
+.see-all { display: inline-flex; align-items: center; gap: .35rem; min-height: 40px; padding: 0 .4rem; border: 0; background: none; color: var(--accent);
+  font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; }
+.see-all .ic { width: 1em; height: 1em; }
+.see-all:hover { text-decoration: underline; }
