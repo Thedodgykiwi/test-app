@@ -74,7 +74,9 @@ async function start() {
 
   ui.signIn.addEventListener('click', async () => {
     try {
-      await authLib.signInWithPopup(auth, new authLib.GoogleAuthProvider());
+      const provider = new authLib.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });   // always show Google's account chooser (Issue #85)
+      await authLib.signInWithPopup(auth, provider);
     } catch (err) {
       const msg = {
         'auth/popup-closed-by-user': null,
@@ -87,6 +89,75 @@ async function start() {
     }
   });
   ui.signOut.addEventListener('click', () => { setMenu(false); authLib.signOut(auth); });
+
+  // ---- Download my data (Settings → Your account, Issue #80) ------------------
+  // A JSON copy of the to-dos and lists in the account, every stage (the right to a
+  // copy of your data). Dates come out as ISO text.
+  $('download-data').addEventListener('click', async (e) => {
+    const user = auth.currentUser, btn = e.currentTarget; if (!user) return;
+    btn.disabled = true;
+    // Firestore dates → readable text (before JSON, which would turn them into {seconds, …}).
+    const plain = (v) => (v && typeof v.toDate === 'function' ? v.toDate().toISOString()
+      : Array.isArray(v) ? v.map(plain) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)])) : v);
+    try {
+      const out = { app: 'The Shortlist', exportedAt: new Date().toISOString(),
+        account: { name: user.displayName, email: user.email }, stages: {} };
+      for (const stage of ['local', 'dev', 'alpha', 'staging', 'main']) {
+        for (const name of ['todos', 'lists']) {
+          const snap = await fs.getDocs(fs.collection(db, 'users', user.uid, 'stages', stage, name));
+          if (!snap.size) continue;
+          (out.stages[stage] ||= {})[name] = snap.docs.map((d) => ({ id: d.id, ...plain(d.data()) }));
+        }
+      }
+      const json = JSON.stringify(out, null, 2);
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([json], { type: 'application/json' })),
+        download: `the-shortlist-my-data-${new Date().toISOString().slice(0, 10)}.json`,
+      });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      toast('Your data has been downloaded.');
+    } catch (err) {
+      toast(`Couldn't download your data (${err.code || err.message}).`, 6000);
+    } finally { btn.disabled = false; }
+  });
+
+  // ---- Delete my account (Settings → Your account, Issue #79) -----------------
+  // Removes the to-dos and lists saved in the account on every stage, then the
+  // sign-in itself (Google may ask to sign in again first). The device's own
+  // signed-out to-dos are left alone.
+  let deleting = false;
+  const delDlg = $('delete-account'), delGo = $('delete-account-go'), delErr = $('delete-account-error');
+  $('delete-account-open').addEventListener('click', () => { $('settings')?.close(); delErr.hidden = true; delDlg.showModal(); });
+  delGo.addEventListener('click', async () => {
+    const user = auth.currentUser; if (!user) return;
+    delGo.disabled = true; delGo.textContent = 'Deleting…'; delErr.hidden = true;
+    try {
+      for (const stage of ['local', 'dev', 'alpha', 'staging', 'main']) {
+        for (const name of ['todos', 'lists']) {
+          const snap = await fs.getDocs(fs.collection(db, 'users', user.uid, 'stages', stage, name));
+          for (let i = 0; i < snap.docs.length; i += 400) {
+            const batch = fs.writeBatch(db);
+            snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+          }
+        }
+      }
+      deleting = true;
+      try { await authLib.deleteUser(user); } catch (err) {
+        if (err.code !== 'auth/requires-recent-login') throw err;
+        await authLib.reauthenticateWithPopup(user, new authLib.GoogleAuthProvider());
+        await authLib.deleteUser(user);
+      }
+      delDlg.close();
+      toast('Your account has been deleted.', 6000);
+    } catch (err) {
+      deleting = false;
+      delErr.textContent = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(err.code)
+        ? "Not deleted: the sign-in check was closed. Try again when you're ready."
+        : `Couldn't finish deleting (${err.code || err.message}). Check your connection and try again.`;
+      delErr.hidden = false;
+    } finally { delGo.disabled = false; delGo.textContent = 'Delete my account'; }
+  });
 
   // ---- Sync status --------------------------------------------------------
   let pending = false;
@@ -120,16 +191,17 @@ async function start() {
     if (unsubscribeLists) { unsubscribeLists(); unsubscribeLists = null; }
     setMenu(false);
     ui.box.classList.toggle('signed-in', !!user);
-    ui.signIn.hidden = !!user;
+    document.getElementById('signin-box').hidden = !!user;   // sign-in lives at the top of the menu
     ui.signOut.hidden = !user;
     ui.who.hidden = !user;
+    $('account-setting').hidden = !user;
     if (!user) {
       ui.avatarImg.hidden = true; ui.avatar.hidden = false;
       ui.avatar.innerHTML = signedOutAvatar; ui.avatar.classList.remove('letter');
       ui.label.textContent = 'Menu';
       ui.status.hidden = ui.dot.hidden = true;
       ui.button.setAttribute('aria-label', 'Menu'); ui.button.title = 'Menu';
-      if (localStorage.getItem('signed-in')) toast('Signed out. Showing the to-dos saved on this device.');
+      if (localStorage.getItem('signed-in') && !deleting) toast('Signed out. Showing the to-dos saved on this device.');
       localStorage.removeItem('signed-in');
       app.useLocal({ forget: true });
       return;

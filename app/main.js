@@ -5,7 +5,7 @@
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, keyOf, LEVELS, LABELS, lists, addList, updateList, removeList } from './store.js';
+import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, restore, keyOf, LEVELS, LABELS, lists, addList, updateList, removeList } from './store.js';
 
 // Phosphor icon from icons.js
 const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => {
@@ -171,11 +171,78 @@ function setStar(t, k, starred) {
   });
 }
 
-// Swipe right on a row to star / un-star it; swipe left to send it to tomorrow,
-// or, when it's already due tomorrow, to bring it forward to today; a to-do
-// with no date asks "When?" and opens the due-date menu (Issue #39; the same
-// choices as the due label's menu). Vertical moves still scroll
+// Swipe a row right or left to do what Settings says (Issue #81; default: right
+// stars / un-stars, left sends it to tomorrow, or forward to today when it's
+// already due tomorrow, or asks "When?" for a to-do with no date, Issue #39). Vertical moves still scroll
 // the page; a tap still opens the editor. Done to-dos don't swipe.
+// ---- Choose what each swipe does (Issue #81) -------------------------------
+const SWIPE_ACTIONS = window.SWIPE_ACTIONS;   // the list of actions lives in menu.js (Settings)
+const swipePrefs = signal(readSwipePrefs());
+function readSwipePrefs() {
+  try { const p = JSON.parse(localStorage.getItem(`prefs:${location.pathname.split('/')[1] || 'app'}`) || '{}');
+    return { right: SWIPE_ACTIONS[p.swipeRight] ? p.swipeRight : 'star', left: SWIPE_ACTIONS[p.swipeLeft] ? p.swipeLeft : 'tomorrow' }; } catch { return { right: 'star', left: 'tomorrow' }; }
+}
+addEventListener('prefschange', () => { swipePrefs.value = readSwipePrefs(); });
+const swipeMenu = signal(null);   // { key, kind: 'priority' | 'list', right, top, bottom }
+// What the swipe layer says for this to-do (some actions flip: Star/Unstar, Tomorrow/Today/When?).
+function swipeFace(id, t) {
+  const a = SWIPE_ACTIONS[id];
+  if (id === 'star') return t.starred ? { label: 'Unstar', icon: 'star' } : { label: 'Star', icon: 'star-fill' };
+  if (id === 'tomorrow') return !validDue(t.due) ? { label: 'When?', icon: 'calendar-blank' } : t.due === tomorrowDay() ? { label: 'Today', icon: 'clock' } : { label: 'Tomorrow', icon: 'arrow-right' };
+  if (id === 'myday') return inMyDay(t) ? { label: 'Remove', icon: 'sun' } : { label: 'My Day', icon: 'sun' };
+  if (id === 'list') return { label: 'List', icon: 'folder-simple' };
+  if (id === 'priority') return { label: 'Priority', icon: 'flag' };
+  if (id === 'none') return { label: 'None', icon: 'x' };
+  return { label: a.label, icon: a.icon };
+}
+function runSwipe(id, t, k, el) { 
+  if (!ready() || id === 'none') return;
+  const r = el.getBoundingClientRect(), at = { key: k, right: r.right - 12, top: r.top + 6, bottom: r.bottom - 6 };
+  if (id === 'star') setStar(t, k, !t.starred);
+  else if (id === 'tomorrow') {
+    if (!validDue(t.due)) dueMenu.value = at;
+    else if (t.due === tomorrowDay()) setDue(k, today.value, 'moved to today');
+    else setDue(k, tomorrowDay(), 'moved to tomorrow');
+  } else if (id === 'done') markDone(t, k);
+  else if (id === 'delete') {
+    const copy = { ...t };
+    if (remove(t)) window.AppToast?.show(`“${t.text}” deleted`, { icon: 'trash',
+      action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() { restore(copy); } } });
+  } else if (id === 'myday') {
+    const on = inMyDay(t);
+    update(t, { myDay: on ? null : today.value });
+    window.AppToast?.show(`“${t.text}” ${on ? 'taken out of My Day' : 'added to My Day'}`, { icon: 'sun' });
+  } else if (id === 'priority' || id === 'list') swipeMenu.value = { ...at, kind: id };
+  else if (id === 'edit') openEditor(t, k);
+}
+function SwipeMenu() {
+  const m = swipeMenu.value, box = useRef();
+  const t = m && todos.value.find((x, i) => keyOf(x, i) === m.key);
+  useEffect(() => {
+    if (!m || !box.current) return;
+    const el = box.current, h = el.offsetHeight, w = el.offsetWidth;
+    const below = m.bottom + 6;
+    el.style.top = `${below + h <= innerHeight - 8 ? below : Math.max(8, m.top - h - 6)}px`;
+    el.style.left = `${Math.max(8, Math.min(m.right - w, innerWidth - w - 8))}px`;
+    el.style.visibility = 'visible';
+    el.querySelector('button')?.focus({ preventScroll: true });
+    const away = (e) => { if (!el.contains(e.target)) swipeMenu.value = null; };
+    const gone = () => { swipeMenu.value = null; };
+    document.addEventListener('pointerdown', away, true);
+    const esc = (e) => { if (e.key === 'Escape') swipeMenu.value = null; };
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', esc); };
+  }, [m]);
+  if (!m || !t) return null;
+  const items = m.kind === 'priority'
+    ? LEVELS.map((p) => [`prio-${p}`, LABELS[p], () => { update(t, { p }); window.AppToast?.show(`“${t.text}”: ${LABELS[p]}`, { icon: 'flag' }); }, t.p === p])
+    : [...lists.value.map((l) => ['folder-simple', l.name, () => { update(t, { list: l.id }); window.AppToast?.show(`“${t.text}” moved to ${l.name}`, { icon: 'folder-simple' }); }, t.list === l.id]),
+       ...(t.list ? [['x', 'No list', () => update(t, { list: null }), false]] : [])];
+  return html`<div class="due-menu" ref=${box} role="menu" style="visibility:hidden" aria-label=${m.kind === 'priority' ? 'Set priority' : 'Move to a list'}>
+    ${items.map(([ic, label, run, on]) => html`<button type="button" role="menuitem" aria-current=${on ? 'true' : undefined} onClick=${() => { swipeMenu.value = null; run(); }}><${Icon} name=${ic} />${label}${on ? ' ✓' : ''}</button>`)}
+    ${items.length === 0 && html`<button type="button" disabled>No lists yet</button>`}
+  </div>`;
+}
 const SWIPE_AT = 72;   // px to drag before letting go stars it
 function useSwipe(t, k) {
   const row = useRef(), s = useRef(null);
@@ -204,15 +271,8 @@ function useSwipe(t, k) {
     el.parentElement.classList.remove('swipe-ready');
     setTimeout(() => el.parentElement?.classList.remove('swipe-left'), 230);   // after it slides back
     swallowClick = true; setTimeout(() => { swallowClick = false; }, 60);   // not also a tap
-    if (st.dx >= SWIPE_AT) setTimeout(() => setStar(t, k, !t.starred), 180);
-    else if (st.dx <= -SWIPE_AT) setTimeout(() => {
-      if (!ready()) return;
-      if (!validDue(t.due)) {   // no date yet: ask when, in a menu by the row's right-hand end
-        const r = el.getBoundingClientRect();
-        dueMenu.value = { key: k, right: r.right - 12, top: r.top + 6, bottom: r.bottom - 6 };
-      } else if (t.due === tomorrowDay()) setDue(k, today.value, 'moved to today');
-      else setDue(k, tomorrowDay(), 'moved to tomorrow');
-    }, 180);
+    if (st.dx >= SWIPE_AT) setTimeout(() => runSwipe(swipePrefs.value.right, t, k, el), 180);
+    else if (st.dx <= -SWIPE_AT) setTimeout(() => runSwipe(swipePrefs.value.left, t, k, el), 180);
   };
   return { row, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up } };
 }
@@ -318,11 +378,9 @@ function Row({ t, k }) {
   const ds = dueState(t);
   return html`
     <li class=${`todo${t.done ? ' done' : ''}${t.starred && !t.done ? ' starred' : ''}${hl ? ' just-edited' : ''}`}>
-      ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>
-        ${!validDue(t.due) ? html`<div class="swipe-under left when" aria-hidden="true">When?<${Icon} name="calendar-blank" /></div>`
-          : t.due === tomorrowDay()
-          ? html`<div class="swipe-under left to-today" aria-hidden="true">Today<${Icon} name="clock" /></div>`
-          : html`<div class="swipe-under left" aria-hidden="true">Tomorrow<${Icon} name="arrow-right" /></div>`}`}
+      ${!t.done && (() => { const R = swipePrefs.value.right, L = swipePrefs.value.left, fr = swipeFace(R, t), fl = swipeFace(L, t);
+        return html`<div class=${`swipe-under act-${R}`} aria-hidden="true"><${Icon} name=${fr.icon} />${fr.label}</div>
+          <div class=${`swipe-under left act-${L}`} aria-hidden="true">${fl.label}<${Icon} name=${fl.icon} /></div>`; })()}
       <div class="todo-row" ref=${row} ...${handlers}>
         <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
         <div class="text-col">
@@ -345,10 +403,10 @@ function Row({ t, k }) {
             aria-expanded=${noteOpen.value.has(k)} aria-label=${`Note. ${noteOpen.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(noteOpen.value); s.has(k) ? s.delete(k) : s.add(k); noteOpen.value = s; }}>
             <${Icon} name="note" />Note<${Icon} name="caret-down" cls="caret" /></button>`}
-          ${!t.done && inMyDay(t) && view.value !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
-          ${listOf(t.list) && view.value !== `list:${t.list}` && html`<span class="meta-tag list-tag"><i style=${`background:${lc(listOf(t.list))}`}></i>${listOf(t.list).name}</span>`}
+          ${!t.done && inMyDay(t) && curView() !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
+          ${listOf(t.list) && curView() !== `list:${t.list}` && html`<span class="meta-tag list-tag"><i style=${`background:${lc(listOf(t.list))}`}></i>${listOf(t.list).name}</span>`}
         </div>
-        ${t.starred && !t.done && !['all', 'important'].includes(view.value) && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
+        ${t.starred && !t.done && !['all', 'important'].includes(curView()) && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name=${`prio-${t.p}`} cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
@@ -516,7 +574,7 @@ function setView(v) {
   document.body.dataset.view = v; scrollTo(0, 0);
   setTimeout(() => document.getElementById('view-title-btn')?.focus({ preventScroll: true }));
 }
-document.body.dataset.view = view.value;
+document.body.dataset.view = curView();
 
 // ---- Your own lists (Issue #72) -------------------------------------------------
 // "+ New list" in the Lists panel; each list has a name, one of 12 colours (shown as a
@@ -524,6 +582,9 @@ document.body.dataset.view = view.value;
 const LIST_COLORS = ['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'purple', 'grape', 'pink', 'graphite'];
 const LIST_ICONS = ['list', 'house', 'briefcase', 'shopping-cart', 'heart', 'airplane', 'book-open', 'barbell', 'gift', 'folder-simple', 'car', 'paw-print', 'fork-knife', 'wallet', 'wrench', 'graduation-cap'];
 function listOf(id) { return id ? lists.value.find((l) => l.id === id) : undefined; }
+// The view on screen: a list that no longer exists (deleted here or on another
+// device, or with the account) shows All to-dos instead. The saved choice is kept.
+function curView() { const v = view.value; return v.startsWith('list:') && !listOf(v.slice(5)) ? 'all' : v; }
 const lc = (l) => `var(--lc-${l.color})`;
 const listDialog = signal(null);   // { mode: 'new' | 'edit' | 'delete', id }
 const listMenu = signal(false);
@@ -586,7 +647,7 @@ function ListMenu() {
     const esc = (e) => { if (e.key === 'Escape') listMenu.value = false; };
     document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
     return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); }; }, [listMenu.value]);
-  const v = view.value; if (!v.startsWith('list:') || !listMenu.value) return null;
+  const v = curView(); if (!v.startsWith('list:') || !listMenu.value) return null;
   const id = v.slice(5);
   return html`<div class="tidy-menu list-menu" role="menu" ref=${box}>
     <button type="button" role="menuitem" class="tidy-item" onClick=${() => { listMenu.value = false; listDialog.value = { mode: 'edit', id }; }}><span>Rename, colour or icon</span></button>
@@ -608,18 +669,18 @@ function ListsPanel() {
       role=${pinned ? null : 'dialog'} aria-modal=${pinned ? null : 'true'}>
       <div class="lists-top"><h2>Lists</h2>${!pinned && html`<button type="button" class="close-btn" aria-label="Close" onClick=${() => { listsOpen.value = false; document.getElementById('view-title-btn')?.focus(); }}><${Icon} name="x" /></button>`}</div>
       <nav class="lv" aria-label="Views">${VIEWS.map(([v, ic, name]) => { const n = countOf(v);
-        return html`<button type="button" class="lv-item" data-v=${v} aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
+        return html`<button type="button" class="lv-item" data-v=${v} aria-current=${curView() === v ? 'page' : null} onClick=${() => setView(v)}>
           <${Icon} name=${ic} cls="lv-ic" /><span class="lv-name">${name}</span>${n > 0 && html`<span class="lv-n" aria-label=${`, ${n}`}>${n}</span>`}</button>`; })}
         <p class="lv-head">Your lists</p>
         ${lists.value.map((l) => { const v = `list:${l.id}`, n = countOf(v);
-          return html`<button type="button" class="lv-item" aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
+          return html`<button type="button" class="lv-item" aria-current=${curView() === v ? 'page' : null} onClick=${() => setView(v)}>
             <span class=${`tile c-${l.color}`}><${Icon} name=${l.icon} /></span><span class="lv-name">${l.name}</span>${n > 0 && html`<span class="lv-n">${n}</span>`}</button>`; })}
         <button type="button" class="lv-item lv-new" onClick=${() => { listDialog.value = { mode: 'new' }; }}><${Icon} name="plus" cls="lv-ic" /><span class="lv-name">New list</span></button></nav>
     </aside>`;
 }
 // Above the title: "‹ Lists". The title itself (app name, or the view's name) also opens the panel.
 function ViewHead() {
-  const v = view.value, [, ic, name, l] = viewInfo(v), pinned = wide.value;
+  const v = curView(), [, ic, name, l] = viewInfo(v), pinned = wide.value;
   const more = l && html`<button type="button" class="list-more" aria-label="List options" aria-expanded=${listMenu.value} onClick=${() => { listMenu.value = !listMenu.value; }}><${Icon} name="dots-three" /></button>`;
   const toggle = () => { if (!pinned) listsOpen.value = !listsOpen.value; };
   return html`
@@ -632,7 +693,8 @@ const dayName = (d) => parseDay(d).toLocaleDateString(undefined, { weekday: 'sho
 
 function TodoList() {
   // Archived to-dos (Issue #49) are kept but never shown.
-  const v = view.value;
+  const v = curView();
+  document.body.dataset.view = v;   // keep the page's view styles in step (e.g. a deleted list falls back to All)
   const all = todos.value.map((t, i) => [t, i]).filter(([t]) => !t.archived && inView(v, t));   // keep each to-do's saved position for stable keys
   const active = all.filter(([t]) => !t.done), done = all.filter(([t]) => t.done);
   // After a tick / toggle / edit: focus the first matching element that's visible.
@@ -677,8 +739,8 @@ function TodoList() {
     important: 'No starred to-dos. Star one to see it here.', planned: 'Nothing with a date.', completed: 'Nothing done yet.' };
   if (v !== 'all' && !all.length && !loading.value) return html`<p class="empty">${EMPTY[v] || 'Nothing in this list yet. Add one below.'}</p>`;
   const ls = listStyle.value;
-  if (['myday', 'important', 'planned'].includes(v) && ls !== 'boxes' && active.length) {
-    // Slim headings by when: Planned per day; My Day and Important by Overdue / Today / Tonight / …
+  if ((['myday', 'important', 'planned'].includes(v) || v.startsWith('list:')) && ls !== 'boxes' && active.length) {
+    // Slim headings by when: Planned per day; My Day, Important and your own lists by Overdue / Today / Tonight / … (Issue #82)
     let vg;
     if (v === 'planned') vg = shown.map(([p, items]) => [`${p.startsWith('day-') ? 'day' : p}-${items[0][0].due}`, HEAD[p][1], items, p === 'overdue']);
     else {
@@ -792,7 +854,7 @@ export function parseEntry(raw) {
 function addParsed(raw, pFallback) {
   const r = parseEntry(raw);
   // Added while a view is open: it goes into that view (Issue #71).
-  const v = view.value, due = r.due || (v === 'planned' ? today.value : undefined);
+  const v = curView(), due = r.due || (v === 'planned' ? today.value : undefined);
   const list = r.list || (v.startsWith('list:') ? v.slice(5) : undefined);
   if (!r.text || !add(r.text, r.p || pFallback, due, r.evening, r.time, r.starred || v === 'important', v === 'myday' ? today.value : undefined, list)) return null;
   return r;
@@ -1166,9 +1228,9 @@ function Summary() {
   if (loading.value && !todos.value.length) return 'Loading your to-dos…';
   const all = todos.value.filter((t) => !t.archived);   // archived ones don't count (Issue #49)
   if (!all.length) return 'Nothing on your list yet';
-  if (view.value !== 'all') {   // a view is open (Issue #71): its own count, and the total
-    const n = countOf(view.value), left = all.filter((t) => !t.done).length;
-    if (view.value === 'completed') return `${n} done`;
+  if (curView() !== 'all') {   // a view is open (Issue #71): its own count, and the total
+    const n = countOf(curView()), left = all.filter((t) => !t.done).length;
+    if (curView() === 'completed') return `${n} done`;
     return n ? `${n} to do here · ${left} in all` : `${left} to do in all`;
   }
   const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
@@ -1209,4 +1271,4 @@ render(html`<${Summary} />`, document.getElementById('summary'));
 // The add bar and edit sheet sit outside the list (fixed bar, modal sheet).
 const extras = document.createElement('div');
 document.body.append(extras);
-render(html`<${AddBar} /><${EditSheet} /><${QuickAdd} /><${DueMenu} />`, extras);
+render(html`<${AddBar} /><${EditSheet} /><${QuickAdd} /><${DueMenu} /><${SwipeMenu} />`, extras);
