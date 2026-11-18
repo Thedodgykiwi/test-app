@@ -25,6 +25,7 @@ rules_version = '2';
 //   - note:      string|null (optional)      - note, up to 2000 chars (Issue #57)
 //   - archived:  bool (optional)             - archived (hidden, kept) done to-do (Issue #49)
 //   - myDay:     string|null (optional)      - day it was added to My Day 'YYYY-MM-DD' (Issue #71)
+//   - list:      string|null (optional)      - id of one of the user's own lists (Issue #72)
 //   - evening:   bool (optional)             - "Tonight": due today, sorted after the day's others (Issue #43)
 //   - items:     list (optional, up to 50)   - checklist [{ text, done }] (Issue #44; rules can't
 //                                              check inside a list, so the app cleans each item)
@@ -101,7 +102,7 @@ service cloud.firestore {
     function isValidTodo() {
       let data = request.resource.data;
       return hasRequiredFields(['text', 'done', 'p', 'pos', 'createdAt']) &&
-        hasOnlyAllowedFields(['text', 'done', 'p', 'pos', 'createdAt', 'doneAt', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay']) &&
+        hasOnlyAllowedFields(['text', 'done', 'p', 'pos', 'createdAt', 'doneAt', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list']) &&
         validStringLength('text', 1, 500) &&
         data.done is bool &&
         data.p in ['high', 'med', 'low', 'none'] &&
@@ -112,6 +113,8 @@ service cloud.firestore {
         (!('starred' in data) || data.starred is bool) &&
         (!('evening' in data) || data.evening is bool) &&
         (!('archived' in data) || data.archived is bool) &&
+        (!('list' in data) || data.list == null ||
+          (data.list is string && data.list.matches('^[A-Za-z0-9_-]{1,40}$'))) &&   // own list (Issue #72)
         (!('myDay' in data) || data.myDay == null ||
           (data.myDay is string && data.myDay.matches('^20[0-9]{2}-[01][0-9]-[0-3][0-9]$'))) &&   // My Day (Issue #71)
         (!('note' in data) || data.note == null || (data.note is string && data.note.size() <= 2000)) &&   // note (Issue #57)   // archived done to-do (Issue #49)
@@ -140,9 +143,36 @@ service cloud.firestore {
       // time can't change, and the result must still be valid.
       allow update: if isOwner(userId) && isValidStage(stage) &&
         isValidTodo() &&
-        onlyChanges(['done', 'p', 'doneAt', 'text', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay']);
+        onlyChanges(['done', 'p', 'doneAt', 'text', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list']);
 
       // Owner only: delete one of their own to-dos (Issue #40).
+      allow delete: if isOwner(userId) && isValidStage(stage);
+    }
+
+    // The user's own lists (Issue #72): users/{uid}/stages/{stage}/lists/{listId}
+    //   - name:      string (required, 1-40 chars)
+    //   - color:     one of the app's 12 colours (required)
+    //   - icon:      one of the app's 16 list icons (required)
+    //   - pos:       number (required, 0..1e13)  - order in the Lists panel
+    //   - createdAt: timestamp (required, = server time on create, immutable)
+    function isValidList() {
+      let data = request.resource.data;
+      return hasRequiredFields(['name', 'color', 'icon', 'pos', 'createdAt']) &&
+        hasOnlyAllowedFields(['name', 'color', 'icon', 'pos', 'createdAt']) &&
+        validStringLength('name', 1, 40) &&
+        data.color in ['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'purple', 'grape', 'pink', 'graphite'] &&
+        data.icon in ['list', 'house', 'briefcase', 'shopping-cart', 'heart', 'airplane', 'book-open', 'barbell',
+          'gift', 'folder-simple', 'car', 'paw-print', 'fork-knife', 'wallet', 'wrench', 'graduation-cap'] &&
+        data.pos is number && data.pos >= 0 && data.pos <= 10000000000000 &&
+        data.createdAt is timestamp;
+    }
+
+    match /users/{userId}/stages/{stage}/lists/{listId} {
+      allow read: if isOwner(userId) && isValidStage(stage);
+      allow create: if isOwner(userId) && isValidStage(stage) && listId.matches('^[A-Za-z0-9_-]{1,40}$') &&
+        isValidList() && request.resource.data.createdAt == request.time;
+      // Rename, recolour, change icon or reorder; createdAt can't change.
+      allow update: if isOwner(userId) && isValidStage(stage) && isValidList() && onlyChanges(['name', 'color', 'icon', 'pos']);
       allow delete: if isOwner(userId) && isValidStage(stage);
     }
 

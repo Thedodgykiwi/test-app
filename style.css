@@ -37,11 +37,19 @@
 /* Accent colours (Settings). Light: white text on the colour; dark: dark text on a lighter tint.
    The app's default is set in index.html (data-accent) and menu.js (DEFAULTS). */
 :root, :root[data-accent="blue"] { --a-l: #3b5bdb; --a-l-h: #2f4ac0; --a-d: #748ffc; --a-d-h: #91a7ff; --a-d-fg: #0b1437; }
-:root[data-accent="purple"] { --a-l: #7048e8; --a-l-h: #5f3dc4; --a-d: #9775fa; --a-d-h: #b197fc; --a-d-fg: #140a33; }
-:root[data-accent="green"]  { --a-l: #237032; --a-l-h: #1b5a28; --a-d: #51cf66; --a-d-h: #69db7c; --a-d-fg: #052e16; }
-:root[data-accent="teal"]   { --a-l: #0b7285; --a-l-h: #095c6b; --a-d: #3bc9db; --a-d-h: #66d9e8; --a-d-fg: #032b30; }
-:root[data-accent="orange"] { --a-l: #c2410c; --a-l-h: #9a3412; --a-d: #ff922b; --a-d-h: #ffa94d; --a-d-fg: #2b1400; }
-:root[data-accent="pink"]   { --a-l: #c2255c; --a-l-h: #a61e4d; --a-d: #f06595; --a-d-h: #f783ac; --a-d-fg: #2b0716; }
+/* 12 evenly spread hues (Issue #75). The swatch shows the bright colour; light theme uses a deeper
+   shade (white text and link text pass 4.5:1), dark theme the bright one with dark text. */
+:root[data-accent="red"]      { --a-l: #c92a2a; --a-l-h: #a51d1d; --a-d: #ff8787; --a-d-h: #ffa8a8; --a-d-fg: #2b0606; }
+:root[data-accent="orange"]   { --a-l: #b8460b; --a-l-h: #943808; --a-d: #ffa94d; --a-d-h: #ffc078; --a-d-fg: #2b1400; }
+:root[data-accent="yellow"]   { --a-l: #8f6100; --a-l-h: #734e00; --a-d: #ffd43b; --a-d-h: #ffe066; --a-d-fg: #2b2100; }
+:root[data-accent="lime"]     { --a-l: #5c7a00; --a-l-h: #4a6200; --a-d: #a9e34b; --a-d-h: #c0eb75; --a-d-fg: #1a2600; }
+:root[data-accent="green"]    { --a-l: #237032; --a-l-h: #1b5a28; --a-d: #51cf66; --a-d-h: #69db7c; --a-d-fg: #052e16; }
+:root[data-accent="teal"]     { --a-l: #087f5b; --a-l-h: #066649; --a-d: #38d9a9; --a-d-h: #63e6be; --a-d-fg: #04261c; }
+:root[data-accent="cyan"]     { --a-l: #0b7285; --a-l-h: #095c6b; --a-d: #3bc9db; --a-d-h: #66d9e8; --a-d-fg: #032b30; }
+:root[data-accent="purple"]   { --a-l: #6741d9; --a-l-h: #5235b8; --a-d: #9775fa; --a-d-h: #b197fc; --a-d-fg: #140a33; }
+:root[data-accent="grape"]    { --a-l: #9c36b5; --a-l-h: #7e2a93; --a-d: #e599f7; --a-d-h: #eebefa; --a-d-fg: #2a0a33; }
+:root[data-accent="pink"]     { --a-l: #c2255c; --a-l-h: #a61e4d; --a-d: #f06595; --a-d-h: #f783ac; --a-d-fg: #2b0716; }
+:root[data-accent="graphite"] { --a-l: #495057; --a-l-h: #343a40; --a-d: #ced4da; --a-d-h: #dee2e6; --a-d-fg: #16181b; }
 /* Text size (Settings): everything sized in rem/em grows with it */
 :root[data-text-size="large"] { font-size: 112.5%; }
 :root[data-text-size="small"] { font-size: 93.75%; }   /* Issue #73 */
@@ -912,9 +920,9 @@ body.lists-pinned { padding-left: calc(300px + 1rem); }
 body.lists-pinned .add-bar { left: calc(50% - 150px); right: calc(50% - 450px); }
 /* My Day: a small sun tag on rows (outside the My Day view) and a toggle in the edit panel */
 .meta-tag { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .3rem; font-size: .8rem; color: var(--muted); }
-.meta-tag .ic { width: .9rem; height: .9rem; color: #e67700; }
-.sheet.compact .myday-chip .ic { color: #e67700; }
-.sheet.compact .myday-chip.on { border-style: solid; border-color: #e67700; background: color-mix(in srgb, #f08c00 12%, transparent); color: var(--text); font-weight: 600; }
+.meta-tag .ic { width: .9rem; height: .9rem; color: var(--sun); }
+.sheet.compact .myday-chip .ic { color: var(--sun); }
+.sheet.compact .myday-chip.on { border-style: solid; border-color: var(--sun); background: color-mix(in srgb, #f08c00 12%, transparent); color: var(--text); font-weight: 600; }
 body.lists-pinned .lists-panel { z-index: 9; }   /* under the stage banner (its Report issue button) */
 body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* always open in Completed */
 /* My Day / Important / Planned: slim headings (Settings → List style; Issue #71).
@@ -946,3 +954,65 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
   font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; }
 .see-all .ic { width: 1em; height: 1em; }
 .see-all:hover { text-decoration: underline; }
+/* Each view's icon in its own colour, the one it already has elsewhere (Issue #71):
+   My Day = the sun tag, Important = gold star, Planned = Due today purple, Completed = Done green. */
+:root { --sun: #d9640a; }
+:root[data-theme="dark"] { --sun: #ffa94d; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --sun: #ffa94d; } }
+[data-v="myday"] :is(.lv-ic, .vt-ic) { color: var(--sun); }
+[data-v="important"] :is(.lv-ic, .vt-ic) { color: var(--gold); }
+[data-v="planned"] :is(.lv-ic, .vt-ic) { color: var(--today-swipe); }
+[data-v="completed"] :is(.lv-ic, .vt-ic) { color: var(--ok); }
+
+/* ===== Your own lists (Issue #72) =====
+   Each list's colour is a filled tile behind its icon (bright colour, white or dark icon on top),
+   so the 12 colours can be vivid; elsewhere a to-do shows a small dot and the list's name. */
+.c-red { --lc: #fa5252; --lfg: #fff; } .c-orange { --lc: #fd7e14; --lfg: #fff; } .c-yellow { --lc: #fcc419; --lfg: #2b2100; }
+.c-lime { --lc: #94d82d; --lfg: #1a2600; } .c-green { --lc: #40c057; --lfg: #fff; } .c-teal { --lc: #20c997; --lfg: #04261c; }
+.c-cyan { --lc: #22b8cf; --lfg: #fff; } .c-blue { --lc: #4c6ef5; --lfg: #fff; } .c-purple { --lc: #845ef7; --lfg: #fff; }
+.c-grape { --lc: #cc5de8; --lfg: #fff; } .c-pink { --lc: #f06595; --lfg: #fff; } .c-graphite { --lc: #868e96; --lfg: #fff; }
+:root { --lc-red: #fa5252; --lc-orange: #fd7e14; --lc-yellow: #fcc419; --lc-lime: #94d82d; --lc-green: #40c057; --lc-teal: #20c997;
+  --lc-cyan: #22b8cf; --lc-blue: #4c6ef5; --lc-purple: #845ef7; --lc-grape: #cc5de8; --lc-pink: #f06595; --lc-graphite: #868e96; }
+.tile { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px; background: var(--lc); color: var(--lfg); flex: none; }
+.tile .ic { width: 1.05rem; height: 1.05rem; }
+.tile.big { width: 2.1rem; height: 2.1rem; border-radius: 10px; } .tile.big .ic { width: 1.3rem; height: 1.3rem; }
+.lv-head { margin: .7rem .7rem .2rem; padding-top: .7rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.lv-new, .lv-new .lv-ic { color: var(--muted); }
+.list-more { margin-left: .4rem; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--hover); color: var(--text); display: inline-grid; place-items: center; cursor: pointer; vertical-align: middle; }
+.list-more .ic { width: 1.2rem; height: 1.2rem; }
+.list-menu { margin: -.2rem 0 .2rem; }
+.tidy-item.danger { color: var(--danger); }
+.list-tag i, .list-chip i { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; }
+.u-chip.list-chip { display: inline-flex; align-items: center; gap: .3rem; }
+.list-pick { display: inline-flex; align-items: center; gap: .3rem; min-height: 36px; padding: 0 .2rem 0 .7rem; border: 1px dashed var(--line); border-radius: 99px; color: var(--lcol, var(--muted)); }
+.list-pick select { border: 0; background: none; color: var(--text); font: inherit; font-size: .9rem; padding: .3rem .2rem; }
+.list-dialog .edit-form { display: grid; gap: .6rem; }
+.ld-title { margin: 0; font-size: 1.15rem; }
+.ld-name { display: flex; align-items: center; gap: .6rem; }
+.ld-name .input { flex: 1; }
+/* Two full rows of 6 colours and 8 icons, in Settings and the list picker, on every phone */
+.ld-colors, .swatches { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .5rem; justify-items: center; max-width: 22rem; }
+.ld-color { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--lc); color: var(--lfg); display: grid; place-items: center; cursor: pointer; }
+.ld-color[aria-checked="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--lc); }
+.ld-icons { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .4rem; }
+.ld-icon { aspect-ratio: 1; max-width: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.ld-icon .ic { width: 1.3rem; height: 1.3rem; }
+.ld-icon.on { border: 2px solid var(--lc); background: var(--lc); color: var(--lfg); }
+.ld-btn { width: 100%; justify-content: center; }
+.danger-btn { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+/* "#" list suggestions under the add box and quick add (Issue #72) */
+.list-sugg { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; padding: .25rem .55rem .1rem; animation: quick-fade .2s ease-out; }
+.add-bar:has(.list-sugg) { padding-bottom: .9rem; }
+.quick-add .list-sugg { padding: .45rem .2rem 0; }
+.ls-btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: .85rem; font-weight: 600; min-height: 32px; padding: 0 .65rem; border-radius: 99px; cursor: pointer; }
+.ls-btn:hover, .ls-btn:focus-visible { background: var(--hover); }
+.ls-none { font-size: .82rem; color: var(--muted); }
+.sheet.compact.list-dialog .edit-actions { justify-content: flex-end; }   /* just Done, on the right like the to-do edit panel */
+/* List picker pill (Issue #72): one outline round the whole pill when focused, like the other
+   chips; solid once a list is picked; the app's own small arrow instead of the phone's. */
+.list-pick { position: relative; gap: .35rem; padding: 0 .65rem 0 .75rem; border: 1px dashed color-mix(in srgb, var(--text) 30%, transparent); background: var(--surface); }
+.list-pick.set { border-style: solid; border-color: var(--lcol); color: var(--lcol); }
+.list-pick select { appearance: none; -webkit-appearance: none; padding: .3rem 1.1rem .3rem 0; margin-right: -1.1rem; cursor: pointer; }
+.list-pick select:focus, .list-pick select:focus-visible { outline: none; box-shadow: none; }
+.list-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.list-pick .lp-caret { width: .85rem; height: .85rem; color: var(--muted); pointer-events: none; }
