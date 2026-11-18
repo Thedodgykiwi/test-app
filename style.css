@@ -11,6 +11,7 @@
   --line: #e3e6eb; --input: #cfd4dc; --hover: #f1f3f5; --secondary: #f1f3f5; --secondary-hover: #e6e9ed;
   --danger: #e03131; --ok: #2b8a3e; --ok-bg: #d3f9d8; --warn: #a35200; --warn-bg: #fff3bf;
   --shadow-sm: 0 1px 3px rgba(16,24,40,.08); --shadow: 0 10px 30px rgba(0,0,0,.15);
+  --groove: rgba(29,31,35,.16); --groove-hi: rgba(29,31,35,.04);
   --accent: var(--a-l); --accent-hover: var(--a-l-h); --accent-fg: #fff;
 }
 :root[data-theme="dark"] {
@@ -19,6 +20,7 @@
   --line: #30353d; --input: #454b55; --hover: #2c3037; --secondary: #2c3037; --secondary-hover: #373c45;
   --danger: #ff6b6b; --ok: #69db7c; --ok-bg: #163a20; --warn: #ffc078; --warn-bg: #3d2a12;
   --shadow-sm: none; --shadow: 0 10px 30px rgba(0,0,0,.5);
+  --groove: rgba(0,0,0,.45); --groove-hi: rgba(255,255,255,.07);
   --accent: var(--a-d); --accent-hover: var(--a-d-h); --accent-fg: var(--a-d-fg);
 }
 @media (prefers-color-scheme: dark) {
@@ -28,6 +30,7 @@
     --line: #30353d; --input: #454b55; --hover: #2c3037; --secondary: #2c3037; --secondary-hover: #373c45;
     --danger: #ff6b6b; --ok: #69db7c; --ok-bg: #163a20; --warn: #ffc078; --warn-bg: #3d2a12;
     --shadow-sm: none; --shadow: 0 10px 30px rgba(0,0,0,.5);
+    --groove: rgba(0,0,0,.45); --groove-hi: rgba(255,255,255,.07);
     --accent: var(--a-d); --accent-hover: var(--a-d-h); --accent-fg: var(--a-d-fg);
   }
 }
@@ -752,11 +755,18 @@ select.time-input option:disabled { color: var(--muted); }
 
 /* "Tidy up" on the Done heading (Issue #49, option B). */
 .group-done > h2 { display: flex; align-items: center; gap: .5rem; }
-.tidy-btn { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: 0 .75rem;
-  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); font: inherit; font-size: .85rem; font-weight: 600; letter-spacing: 0; text-transform: none; cursor: pointer; }
+.tidy-btn { position: relative; margin-left: auto; display: inline-flex; align-items: center; gap: .3rem; min-height: 30px; padding: 0 .55rem;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: .78rem; font-weight: 600; letter-spacing: 0; text-transform: none; cursor: pointer; }
+/* Only while Done is open, and small and quiet so it doesn't outshine the heading (Issue #59);
+   an invisible strip keeps the tap area 44px tall. */
+.tidy-btn::before { content: ""; position: absolute; inset: -7px 0; }
+.tidy-btn .ic { width: .95em; height: .95em; }
 .tidy-btn:hover, .tidy-btn[aria-expanded="true"] { color: var(--text); background: var(--hover); }
-.tidy-menu { margin: .25rem 0 .6rem; background: var(--surface); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: .5rem; display: flex; flex-direction: column; gap: 2px; }
-.tidy-help { margin: .35rem .65rem .4rem; font-size: .85rem; color: var(--muted); }
+.tidy-menu { width: max-content; min-width: 15rem; max-width: 100%; margin: .25rem 0 .6rem auto; background: var(--surface); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: .5rem; display: flex; flex-direction: column; gap: 2px; }
+.tidy-help { display: flex; align-items: center; gap: .4rem; margin: .2rem 0 .35rem; padding: .25rem .65rem .55rem; font-size: .85rem; color: var(--muted);
+  /* a soft "groove" divider like a native menu: a darker line with a faint second line under it (Issue #59) */
+  border-bottom: 1px solid var(--groove); box-shadow: 0 1px 0 var(--groove-hi); }
+.tidy-help .ic { width: 1.05em; height: 1.05em; flex: none; }
 .tidy-item { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: 0 .75rem; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .tidy-item > span:first-child { flex: 1; }
 .tidy-item:hover:not([disabled]), .tidy-item:focus-visible { background: var(--hover); }
@@ -794,16 +804,3 @@ select.time-input option:disabled { color: var(--muted); }
 /* Editing a note in place (Issue #57). */
 .row-note-read { cursor: text; }
 .row-note-edit { display: block; width: 100%; box-sizing: border-box; border: 1px solid var(--accent); font: inherit; font-size: .9rem; resize: none; overflow: hidden; outline: none; }
-/* Tidy up: only while Done is open, and quieter, so it doesn't outshine the heading (Issue #59). */
-.tidy-btn { min-height: 30px; padding: 0 .55rem; gap: .3rem; font-size: .78rem; font-weight: 600; border-radius: 8px; }
-.tidy-btn .ic { width: .95em; height: .95em; }
-/* Tidy up menu: a compact card under its button, not the full width (Issue #59). */
-.tidy-menu { width: max-content; min-width: 15rem; max-width: 100%; margin-left: auto; }
-/* Tidy up menu title: archive icon, then a soft "groove" divider like a native menu (Issue #59):
-   a darker line with a faint light line just under it. */
-.tidy-help { display: flex; align-items: center; gap: .4rem; margin: .2rem 0 .35rem; padding: .25rem .65rem .55rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent); }
-.tidy-help .ic { width: 1.05em; height: 1.05em; flex: none; }
-:root[data-theme="dark"] .tidy-help { border-bottom-color: rgba(0,0,0,.45); box-shadow: 0 1px 0 rgba(255,255,255,.07); }
-@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .tidy-help { border-bottom-color: rgba(0,0,0,.45); box-shadow: 0 1px 0 rgba(255,255,255,.07); } }

@@ -360,16 +360,23 @@ function DoneSection({ done }) {
   const closed = !collapsed.value.has('done-open');
   const now = new Date();
   const [tidy, setTidy] = useState(false);   // "Tidy up" menu (Issue #49, option B)
+  // Tidy up only while Done is open and there's something older than today (Issue #59);
+  // if that stops being true (folded, archived, synced away), the menu closes too.
+  const canTidy = !closed && done.some(([t]) => doneRange(t, now) !== 'today');
+  useEffect(() => { if (tidy && !canTidy) setTidy(false); }, [tidy, canTidy]);
   return html`
     <div class="group group-done">
       <h2><button type="button" class="group-toggle" data-group="done" aria-expanded=${!closed} aria-controls="group-list-done"
         title=${closed ? 'Show this section' : 'Hide this section'}
-        onClick=${() => { toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
+        onClick=${() => { setTidy(false); toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
         <${Icon} name=${closed ? 'caret-right' : 'caret-down'} cls="chevron" /><${Icon} name="check-circle" cls="done-icon" />Done · ${done.length}
       </button>
-      ${!closed && done.some(([t]) => doneRange(t, now) !== 'today') && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
+      ${canTidy && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
         onClick=${() => setTidy(!tidy)}><${Icon} name="archive" />Tidy up</button>`}</h2>
-      ${tidy && !closed && html`<${TidyMenu} done=${done} now=${now} close=${() => { setTidy(false); setTimeout(() => document.getElementById('tidy-up')?.focus()); }} />`}
+      ${tidy && canTidy && html`<${TidyMenu} done=${done} now=${now} close=${() => {
+        setTidy(false);   // back to the button, or the Done heading if the button has gone (nothing older left)
+        setTimeout(() => (document.getElementById('tidy-up') || document.querySelector('#todo-groups [data-group="done"]'))?.focus());
+      }} />`}
       <div class="done-ranges" id="group-list-done" hidden=${closed}>
         ${DONE_RANGES.map(([key, label]) => {
           const items = done.filter(([t]) => doneRange(t, now) === key).sort(([a], [b]) => (b.doneAt || 0) - (a.doneAt || 0));
@@ -442,8 +449,9 @@ function TidyMenu({ done, now, close }) {
     document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
     return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
   }, []);
-  return html`<div class="tidy-menu" ref=${box} role="menu" aria-label="Tidy up done to-dos">
-    <p class="tidy-help"><${Icon} name="archive" />Archive done to-dos</p>
+  // The title is for sighted users; screen readers get the full meaning from the menu's label.
+  return html`<div class="tidy-menu" ref=${box} role="menu" aria-label="Archive done to-dos. They're kept, just out of the way.">
+    <p class="tidy-help" aria-hidden="true"><${Icon} name="archive" />Archive done to-dos</p>
     ${TIDY.map(([label, ranges]) => {
       const list = done.filter(([t]) => ranges.includes(doneRange(t, now)));
       return html`<button type="button" role="menuitem" class="tidy-item" disabled=${!list.length}
