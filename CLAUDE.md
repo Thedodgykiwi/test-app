@@ -374,6 +374,7 @@ If they say yes:
   shows only to-dos ticked off today ("Done today · n", folded with the same
   `done-open` key) and a "See all completed (n) →" link to the Completed view. The
   full history, its date groups and Tidy up are only in Completed.
+- **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
 - **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;
   signed out, the menu opens with `#signin-box` (a short reason and a full-width
   "Sign in with Google", `#sign-in`), hidden by `sync.js` once signed in and while
