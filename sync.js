@@ -161,8 +161,8 @@ async function start() {
 
     unsubscribe = fs.onSnapshot(fs.query(todosRef, fs.orderBy('pos')), { includeMetadataChanges: true }, (snap) => {
       const list = snap.docs.map((d) => {
-        const { text, done, p, doneAt = null, starred = false, due = null, evening = false, time = null, items = [], archived = false, note = null } = d.data();
-        return { id: d.id, text, done, p, doneAt, starred, due, evening, time, items, archived, note };
+        const { text, done, p, doneAt = null, starred = false, due = null, evening = false, time = null, items = [], archived = false, note = null, myDay = null } = d.data();
+        return { id: d.id, text, done, p, doneAt, starred, due, evening, time, items, archived, note, myDay };
       });
       app.setTodos(list, { fromServer: !snap.metadata.fromCache });
       pending = snap.metadata.hasPendingWrites;
@@ -188,6 +188,7 @@ async function start() {
     if (typeof t.time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time)) doc.time = t.time;   // Issue #50
     if (t.archived === true) doc.archived = true;   // Issue #49
     if (typeof t.note === 'string' && t.note.trim()) doc.note = t.note.trim().slice(0, 2000);   // Issue #57
+    if (typeof t.myDay === 'string' && /^20\d\d-[01]\d-[0-3]\d$/.test(t.myDay)) doc.myDay = t.myDay;   // My Day (Issue #71)
     if (Array.isArray(t.items) && t.items.length) doc.items = cleanItems(t.items);   // checklist (Issue #44)
     return doc;
   }
