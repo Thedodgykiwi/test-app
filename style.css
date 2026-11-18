@@ -799,3 +799,11 @@ select.time-input option:disabled { color: var(--muted); }
 .tidy-btn .ic { width: .95em; height: .95em; }
 /* Tidy up menu: a compact card under its button, not the full width (Issue #59). */
 .tidy-menu { width: max-content; min-width: 15rem; max-width: 100%; margin-left: auto; }
+/* Tidy up menu title: archive icon, then a soft "groove" divider like a native menu (Issue #59):
+   a darker line with a faint light line just under it. */
+.tidy-help { display: flex; align-items: center; gap: .4rem; margin: .2rem 0 .35rem; padding: .25rem .65rem .55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent); }
+.tidy-help .ic { width: 1.05em; height: 1.05em; flex: none; }
+:root[data-theme="dark"] .tidy-help { border-bottom-color: rgba(0,0,0,.45); box-shadow: 0 1px 0 rgba(255,255,255,.07); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .tidy-help { border-bottom-color: rgba(0,0,0,.45); box-shadow: 0 1px 0 rgba(255,255,255,.07); } }

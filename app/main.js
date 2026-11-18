@@ -443,7 +443,7 @@ function TidyMenu({ done, now, close }) {
     return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
   }, []);
   return html`<div class="tidy-menu" ref=${box} role="menu" aria-label="Tidy up done to-dos">
-    <p class="tidy-help">Archive done to-dos</p>
+    <p class="tidy-help"><${Icon} name="archive" />Archive done to-dos</p>
     ${TIDY.map(([label, ranges]) => {
       const list = done.filter(([t]) => ranges.includes(doneRange(t, now)));
       return html`<button type="button" role="menuitem" class="tidy-item" disabled=${!list.length}
