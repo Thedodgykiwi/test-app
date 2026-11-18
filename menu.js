@@ -9,7 +9,7 @@
 (() => {
   const PREFS_KEY = `prefs:${location.pathname.split('/')[1] || 'app'}`;
   // The app's default accent is the data-accent on <html> in index.html.
-  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills' };
+  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills', swipeRight: 'star', swipeLeft: 'tomorrow' };
   const load = () => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch { return { ...DEFAULTS }; } };
   const prefs = load();
   const root = document.documentElement;
@@ -48,6 +48,78 @@
     });
   });
   applyPrefs();
+
+  // ---- Swipe actions (Issue #81): what swiping a to-do right / left does ----------
+  // The list of actions is shared with app/main.js (which does them) via window.SWIPE_ACTIONS.
+  const SWIPE_ACTIONS = window.SWIPE_ACTIONS = {
+    star:     { label: 'Star / unstar',    icon: 'star-fill',     help: 'Gold star on top of your list' },
+    tomorrow: { label: 'Tomorrow / today', icon: 'arrow-right',   help: 'Sends it to tomorrow, or forward to today' },
+    done:     { label: 'Done',             icon: 'check-circle',  help: 'Ticks it off' },
+    delete:   { label: 'Delete',           icon: 'trash',         help: 'Removes it (Undo for a few seconds)' },
+    priority: { label: 'Set priority',     icon: 'flag',          help: 'Opens High / Medium / Low / None' },
+    myday:    { label: 'My Day',           icon: 'sun',           help: 'Adds to or takes out of My Day' },
+    list:     { label: 'Move to a list',   icon: 'folder-simple', help: 'Opens a picker of your lists' },
+    edit:     { label: 'Edit',             icon: 'pencil-simple', help: 'Opens the edit panel' },
+    none:     { label: 'Nothing',          icon: 'x',             help: 'This direction does nothing' },
+  };
+  const swipeCur = () => ({ r: SWIPE_ACTIONS[prefs.swipeRight] ? prefs.swipeRight : 'star', l: SWIPE_ACTIONS[prefs.swipeLeft] ? prefs.swipeLeft : 'tomorrow' });
+  const setSwipe = (side, v) => {
+    prefs[side === 'r' ? 'swipeRight' : 'swipeLeft'] = v;
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage blocked */ }
+    dispatchEvent(new Event('prefschange'));   // app/main.js re-draws the swipe layers
+    drawSwipe();
+  };
+  let swipeMenu = null;
+  function closeSwipeMenu(refocus) {
+    if (!swipeMenu) return;
+    const { el, btn, away } = swipeMenu; swipeMenu = null;
+    el.remove(); btn.setAttribute('aria-expanded', 'false'); document.removeEventListener('pointerdown', away, true);
+    if (refocus) btn.focus();
+  }
+  function openSwipeMenu(side) {
+    const btn = $('pick-' + side);
+    if (swipeMenu?.btn === btn) return closeSwipeMenu(true);
+    closeSwipeMenu(false);
+    const el = document.createElement('div'); el.className = 'due-menu'; el.setAttribute('role', 'menu');
+    el.setAttribute('aria-label', side === 'r' ? 'Swipe right does' : 'Swipe left does'); el.style.zIndex = 5;
+    for (const [id, a] of Object.entries(SWIPE_ACTIONS)) {
+      const on = swipeCur()[side] === id, b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('role', 'menuitemradio'); b.setAttribute('aria-checked', on); b.append(icon(a.icon), a.label);
+      if (on) { const t = document.createElement('span'); t.className = 'tick'; t.append(icon('check')); b.append(t); }
+      b.addEventListener('click', () => { setSwipe(side, id); closeSwipeMenu(true); });
+      el.append(b);
+    }
+    $('settings').append(el); btn.setAttribute('aria-expanded', 'true');   // inside the dialog, so it sits above it
+    const r = btn.getBoundingClientRect(), h = el.offsetHeight;
+    el.style.width = r.width + 'px'; el.style.left = r.left + 'px';
+    el.style.top = (r.bottom + 6 + h <= innerHeight - 8 ? r.bottom + 6 : Math.max(8, r.top - h - 6)) + 'px'; el.style.visibility = 'visible';
+    el.querySelector('[aria-checked=true]')?.focus();
+    const away = (e) => { if (!el.contains(e.target) && !btn.contains(e.target)) closeSwipeMenu(false); };
+    document.addEventListener('pointerdown', away, true);
+    swipeMenu = { el, btn, away };
+    el.addEventListener('keydown', (e) => {
+      const bs = [...el.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSwipeMenu(true); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); bs[(i + 1) % bs.length].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); bs[(i - 1 + bs.length) % bs.length].focus(); }
+      else if (e.key === 'Tab') closeSwipeMenu(false);
+    });
+  }
+  function drawSwipe() {
+    const c = swipeCur();
+    for (const s of ['r', 'l']) {
+      const a = SWIPE_ACTIONS[c[s]], btn = $('pick-' + s), caret = document.createElement('span');
+      caret.className = 'caret-end'; caret.append(icon('caret-down'));
+      btn.replaceChildren(icon(a.icon), a.label, caret);
+      $('help-' + s).textContent = a.help;
+      const pv = $('prev-' + s); pv.className = s + ' act-' + c[s]; pv.replaceChildren();
+      pv.append(...(s === 'r' ? [icon(a.icon), a.label] : [a.label, icon(a.icon)]));
+    }
+  }
+  ['r', 'l'].forEach((s) => $('pick-' + s).addEventListener('click', () => openSwipeMenu(s)));
+  $('settings').addEventListener('close', () => closeSwipeMenu(false));
+  drawSwipe();
+
 
   // ---- Menu open / close ----------------------------------------------------
   const box = $('account'), btn = $('account-btn'), menu = $('account-menu');

@@ -132,6 +132,17 @@
         <button type="button" role="radio" data-value="boxes">Boxes</button>
       </div>
     </section>
+    <section class="setting" id="swipe-setting">
+      <p class="setting-name">Swipe actions</p>
+      <p class="setting-help" id="swipe-help">Choose what swiping a to-do does. Swipe the row, then let go.</p>
+      <div class="swipe-prev" aria-hidden="true"><span class="r" id="prev-r"></span><span class="l" id="prev-l"></span></div>
+      <div class="swipe-rows">
+        <div class="swipe-field"><span class="sf-label" id="sr-label">Swipe right</span>
+          <button type="button" class="swipe-pick" id="pick-r" aria-haspopup="menu" aria-expanded="false" aria-labelledby="sr-label pick-r"></button><small id="help-r"></small></div>
+        <div class="swipe-field"><span class="sf-label" id="sl-label">Swipe left</span>
+          <button type="button" class="swipe-pick" id="pick-l" aria-haspopup="menu" aria-expanded="false" aria-labelledby="sl-label pick-l"></button><small id="help-l"></small></div>
+      </div>
+    </section>
     <!-- Signed in only (sync.js, Issue #79): delete the account and everything saved in it -->
     <section class="setting" id="account-setting" hidden>
       <p class="setting-name">Your account</p>

@@ -228,7 +228,18 @@ If they say yes:
   "Overdue…") is its own button; tapping it opens `DueMenu` in `app/main.js`
   (Today / Tomorrow / Next week = the coming Monday, Pick a date…, No date) with an Undo note. Swipe left on a row
   also sends it to tomorrow, or brings a due-tomorrow one forward to today; a to-do with no date shows "When?" and opens the same menu (Issue #39, `useSwipe`; same code as swipe right
-  to star). Choosing each swipe's action in Settings is the rest of #39 (not built).
+  to star). Settings → Swipe actions chooses each direction's action (Issue #81, below).
+- **Swipe actions (Issue #81):** Settings → Swipe actions: a live preview strip plus a
+  "Swipe right" and a "Swipe left" picker (the usual `.due-menu` look, icon per action, tick on
+  the chosen one). Prefs `swipeRight` (default `star`) / `swipeLeft` (default `tomorrow`) in
+  `menu.js`, which also holds the action list (`window.SWIPE_ACTIONS`); `app/main.js` does them
+  (`runSwipe`, `swipeFace`, `SwipeMenu` for the Priority and List pickers) and redraws on the
+  `prefschange` event. Actions: Star, Tomorrow/today (When? opens the due menu), Done, Delete
+  (Undo only, no "tap again"; `restore()` in `app/store.js` puts it back whole), Set priority,
+  My Day, Move to a list, Edit, Nothing. Each has its own colour (`--sw-*`, `.act-<id>` in
+  `style.css`); every colour/text pair is checked at 4.5:1 or better, light and dark, so keep it that
+  way when adding one. The colour layer is only as wide as the drag (140px max), so swipe
+  labels must stay short (the My Day swipe says "Remove", not "Out of My Day").
 - **Delete (Issue #40):** red Delete on the left of Cancel / Save in the edit
   sheet; first tap arms it ("Tap again"), disarms after 3 s. `remove()` in
   `app/store.js`; `firestore.rules` allows owner-only deletes.

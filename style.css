@@ -588,16 +588,10 @@ body { padding-bottom: 8rem; }
 :root[data-theme="dark"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tmr-swipe: #4dabf7; --tmr-swipe-text: #0b1f33; } }
 .swipe-under.left { display: none; justify-content: flex-end; padding: 0 1.1rem 0 0; background: var(--tmr-swipe); color: var(--tmr-swipe-text); }
-/* Already due tomorrow: the left swipe brings it forward to today instead, in the Due today purple. */
+/* The Planned view's purple (was the "Today" swipe colour). */
 :root { --today-swipe: #6741d9; --today-swipe-text: #fff; }
 :root[data-theme="dark"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --today-swipe: #b197fc; --today-swipe-text: #1c1238; } }
-.swipe-under.left.to-today { background: var(--today-swipe); color: var(--today-swipe-text); }
-/* No date yet: the left swipe asks "When?" (grey) and opens the due-date menu. */
-:root { --when-swipe: #5c636e; --when-swipe-text: #fff; }
-:root[data-theme="dark"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; }
-@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --when-swipe: #adb5bd; --when-swipe-text: #16181c; } }
-.swipe-under.left.when { background: var(--when-swipe); color: var(--when-swipe-text); }
 .todo.swipe-left > .swipe-under.left { display: flex; }
 .todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
 .todo-row.swiping { transition: none; }
@@ -1032,3 +1026,34 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .account-actions { gap: .5rem; flex-wrap: wrap; }
 .account-actions #download-data { background: var(--secondary); border: 1px solid var(--line); }
 .setting-help a { color: var(--accent); }
+
+/* ---- Swipe actions (Issue #81): one colour per action; every pair is 4.5:1 or better.
+   The colour layer under a row is only as wide as the drag (140px max), so keep labels short. ---- */
+:root { --sw-done: #237a35; --sw-del: #d12a2a; --sw-prio: #c2410c; --sw-day: #f08c00; --sw-list: #0b7285; --sw-edit: #495057; --sw-none: #6c757d; }
+:root[data-theme="dark"] { --sw-done: #69db7c; --sw-del: #ff8787; --sw-prio: #ffa94d; --sw-day: #ffc078; --sw-list: #3bc9db; --sw-edit: #ced4da; --sw-none: #868e96; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --sw-done: #69db7c; --sw-del: #ff8787; --sw-prio: #ffa94d; --sw-day: #ffc078; --sw-list: #3bc9db; --sw-edit: #ced4da; --sw-none: #868e96; } }
+.swipe-under.act-star, .swipe-prev .act-star { background: var(--gold-swipe); color: #2b1f00; }
+.swipe-under.act-tomorrow, .swipe-prev .act-tomorrow { background: var(--tmr-swipe); color: var(--tmr-swipe-text); }
+.swipe-under.act-done, .swipe-prev .act-done { background: var(--sw-done); color: #fff; }
+.swipe-under.act-delete, .swipe-prev .act-delete { background: var(--sw-del); color: #fff; }
+.swipe-under.act-priority, .swipe-prev .act-priority { background: var(--sw-prio); color: #fff; }
+.swipe-under.act-myday, .swipe-prev .act-myday { background: var(--sw-day); color: #2b1f00; }
+.swipe-under.act-list, .swipe-prev .act-list { background: var(--sw-list); color: #fff; }
+.swipe-under.act-edit, .swipe-prev .act-edit { background: var(--sw-edit); color: #fff; }
+.swipe-under.act-none, .swipe-prev .act-none { background: var(--sw-none); color: #fff; }
+:root[data-theme="dark"] .swipe-under:is(.act-done,.act-delete,.act-priority,.act-list,.act-edit,.act-none), :root[data-theme="dark"] .swipe-prev :is(.act-done,.act-delete,.act-priority,.act-list,.act-edit,.act-none) { color: #111; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .swipe-under:is(.act-done,.act-delete,.act-priority,.act-list,.act-edit,.act-none), :root[data-theme="auto"] .swipe-prev :is(.act-done,.act-delete,.act-priority,.act-list,.act-edit,.act-none) { color: #111; } }
+/* Settings: choosing the actions */
+.swipe-prev { display: flex; justify-content: space-between; border-radius: 10px; overflow: hidden; font-weight: 700; font-size: .85rem; margin-top: .4rem; }
+.swipe-prev span { display: flex; align-items: center; gap: .4rem; padding: .55rem .8rem; flex: 1; }
+.swipe-prev .r { justify-content: flex-start; } .swipe-prev .l { justify-content: flex-end; }
+.swipe-prev .ic { width: 1.1em; height: 1.1em; }
+.swipe-rows { display: grid; gap: .6rem; margin-top: .5rem; }
+.swipe-field { display: grid; gap: .25rem; }
+.swipe-field .sf-label { font-size: .88rem; font-weight: 600; }
+.swipe-field small { color: var(--muted); }
+.swipe-pick { display: flex; align-items: center; gap: .55rem; width: 100%; min-height: 44px; padding: .55rem .75rem; border-radius: 10px; border: 1px solid var(--border, rgba(128,128,128,.4)); background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.swipe-pick .caret-end { margin-left: auto; opacity: .6; }
+.swipe-pick .ic { width: 1.1em; height: 1.1em; flex: none; }
+.due-menu button[aria-checked="true"] { font-weight: 700; }
+.due-menu .tick { margin-left: auto; padding-left: .8rem; }
