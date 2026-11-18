@@ -218,7 +218,7 @@ function useSwipe(t, k) {
 }
 let swallowClick = false;
 
-const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '', time: validTime(t.time) ? t.time : '', evening: !!t.evening }; };
+const openEditor = (t, k) => { editing.value = { key: k, text: t.text, p: t.p, starred: !!t.starred, due: validDue(t.due) ? t.due : '', time: validTime(t.time) ? t.time : '', evening: !!t.evening, note: noteOf(t) }; };
 
 // ---- Due-date quick menu (Issue #38) ---------------------------------------
 // Tap a row's due label ("Due today", "Overdue…") for a small menu: Today /
@@ -341,6 +341,10 @@ function Row({ t, k }) {
             aria-expanded=${expanded.value.has(k)} aria-label=${`Checklist, ${progress(t)} done. ${expanded.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(expanded.value); s.has(k) ? s.delete(k) : s.add(k); expanded.value = s; }}>
             <${Icon} name="list-checks" />${progress(t)}<${Icon} name="caret-down" cls="caret" /></button>`}
+          ${noteOf(t) && html`<button type="button" class=${`sub-pill note-pill${noteOpen.value.has(k) ? ' open' : ''}`}
+            aria-expanded=${noteOpen.value.has(k)} aria-label=${`Note. ${noteOpen.value.has(k) ? 'Hide' : 'Show'} it`}
+            onClick=${() => { if (swallowClick) return; const s = new Set(noteOpen.value); s.has(k) ? s.delete(k) : s.add(k); noteOpen.value = s; }}>
+            <${Icon} name="note" />Note<${Icon} name="caret-down" cls="caret" /></button>`}
         </div>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
@@ -348,6 +352,7 @@ function Row({ t, k }) {
           </span>`}
       </div>
       ${!t.done && expanded.value.has(k) && itemsOf(t).length > 0 && html`<div class="row-sub"><${Checklist} t=${t} compact=${true} /></div>`}
+      ${noteOpen.value.has(k) && noteOf(t) && html`<div class="row-sub"><${NoteText} t=${t} k=${k} /></div>`}
     </li>`;
 }
 
@@ -355,16 +360,23 @@ function DoneSection({ done }) {
   const closed = !collapsed.value.has('done-open');
   const now = new Date();
   const [tidy, setTidy] = useState(false);   // "Tidy up" menu (Issue #49, option B)
+  // Tidy up only while Done is open and there's something older than today (Issue #59);
+  // if that stops being true (folded, archived, synced away), the menu closes too.
+  const canTidy = !closed && done.some(([t]) => doneRange(t, now) !== 'today');
+  useEffect(() => { if (tidy && !canTidy) setTidy(false); }, [tidy, canTidy]);
   return html`
     <div class="group group-done">
       <h2><button type="button" class="group-toggle" data-group="done" aria-expanded=${!closed} aria-controls="group-list-done"
         title=${closed ? 'Show this section' : 'Hide this section'}
-        onClick=${() => { toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
+        onClick=${() => { setTidy(false); toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
         <${Icon} name=${closed ? 'caret-right' : 'caret-down'} cls="chevron" /><${Icon} name="check-circle" cls="done-icon" />Done · ${done.length}
       </button>
-      ${done.some(([t]) => doneRange(t, now) !== 'today') && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
+      ${canTidy && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
         onClick=${() => setTidy(!tidy)}><${Icon} name="archive" />Tidy up</button>`}</h2>
-      ${tidy && html`<${TidyMenu} done=${done} now=${now} close=${() => { setTidy(false); setTimeout(() => document.getElementById('tidy-up')?.focus()); }} />`}
+      ${tidy && canTidy && html`<${TidyMenu} done=${done} now=${now} close=${() => {
+        setTidy(false);   // back to the button, or the Done heading if the button has gone (nothing older left)
+        setTimeout(() => (document.getElementById('tidy-up') || document.querySelector('#todo-groups [data-group="done"]'))?.focus());
+      }} />`}
       <div class="done-ranges" id="group-list-done" hidden=${closed}>
         ${DONE_RANGES.map(([key, label]) => {
           const items = done.filter(([t]) => doneRange(t, now) === key).sort(([a], [b]) => (b.doneAt || 0) - (a.doneAt || 0));
@@ -437,8 +449,9 @@ function TidyMenu({ done, now, close }) {
     document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
     return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
   }, []);
-  return html`<div class="tidy-menu" ref=${box} role="menu" aria-label="Tidy up done to-dos">
-    <p class="tidy-help">Archive done to-dos. They're kept, just out of the way.</p>
+  // The title is for sighted users; screen readers get the full meaning from the menu's label.
+  return html`<div class="tidy-menu" ref=${box} role="menu" aria-label="Archive done to-dos. They're kept, just out of the way.">
+    <p class="tidy-help" aria-hidden="true"><${Icon} name="archive" />Archive done to-dos</p>
     ${TIDY.map(([label, ranges]) => {
       const list = done.filter(([t]) => ranges.includes(doneRange(t, now)));
       return html`<button type="button" role="menuitem" class="tidy-item" disabled=${!list.length}
@@ -583,6 +596,37 @@ function Understood({ r }) {
 // Changes save at once. A row with items shows a "2/4" pill; tapping it
 // unfolds the checklist under the row. The edit sheet has the same list.
 const expanded = signal(new Set());   // rows showing their checklist
+// ---- Note on a to-do (Issue #57, option A) ----------------------------------
+// Optional plain-text note (up to 2000 characters). Rows with one show a
+// "Note" pill beside Due / the checklist pill; tapping it unfolds the note
+// under the row, with web links made tappable.
+const noteOpen = signal(new Set());
+const noteOf = (t) => typeof t.note === 'string' ? t.note.trim() : '';
+// The open note can be edited in place, like the checklist: tap the text (not
+// a link) to edit; it saves when you leave the box, and an emptied note is
+// removed. Links (http…, www.…) stay tappable while reading.
+function NoteText({ t, k }) {
+  const text = noteOf(t);
+  const [editing, setEditing] = useState(false);
+  const box = useRef();
+  useEffect(() => { if (editing && box.current) { const b = box.current; b.focus(); b.setSelectionRange(b.value.length, b.value.length); grow(b); } }, [editing]);
+  const grow = (b) => { b.style.height = 'auto'; b.style.height = `${b.scrollHeight}px`; };
+  const save = (v) => {
+    setEditing(false);
+    const nt = v.trim().slice(0, 2000);
+    if (nt === text || !ready()) return;
+    update(t, { note: nt || null });
+    if (!nt) { const s = new Set(noteOpen.value); s.delete(k); noteOpen.value = s; }
+  };
+  if (editing) return html`<textarea ref=${box} class="row-note row-note-edit" aria-label="Note" maxlength="2000" value=${text}
+    onInput=${(e) => grow(e.target)} onBlur=${(e) => save(e.target.value)}
+    onKeyDown=${(e) => { if (e.key === 'Escape') { e.preventDefault(); setEditing(false); } }}></textarea>`;
+  const parts = text.split(/((?:https?:\/\/|www\.)[^\s]+)/g);
+  return html`<div class="row-note row-note-read" role="button" tabindex="0" aria-label="Note: tap to edit"
+    onClick=${(e) => { if (e.target.closest('a')) return; setEditing(true); }}
+    onKeyDown=${(e) => { if (e.key === 'Enter' && !e.target.closest('a')) { e.preventDefault(); setEditing(true); } }}>
+    ${parts.map((s, i) => i % 2 ? html`<a href=${s.startsWith('www.') ? `https://${s}` : s} target="_blank" rel="noopener noreferrer">${s}</a>` : s)}</div>`;
+}
 const itemsOf = (t) => Array.isArray(t.items) ? t.items : [];
 const progress = (t) => { const it = itemsOf(t); return it.length ? `${it.filter((i) => i.done).length}/${it.length}` : ''; };
 function Checklist({ t, autoFocus, compact }) {
@@ -664,7 +708,7 @@ function AddBar() {
             <span class="word">${shownP === 'none' ? '' : LABELS[shownP]}</span><${Icon} name=${`prio-${shownP}`} cls=${`flag-${shownP}`} />
           </button>
         </div>
-        <button type="submit" class="btn primary"><${Icon} name="plus" />Add</button>
+        <button type="submit" class="btn primary" aria-label="Add to-do" title="Add"><${Icon} name="plus" />Add</button>
         <${Understood} r=${r} />
       </div>
     </form>`;
@@ -774,102 +818,88 @@ function QuickAdd() {
     </dialog>`;
 }
 
+// ---- Edit panel (Issue #60, option A) -------------------------------------
+// Compact, and every change applies straight away: an Undo note shows inside
+// the panel (a page toast would sit behind the open dialog). One Done button
+// (Enter in the title also closes); the title saves when you leave it.
 function EditSheet() {
-  const dlg = useRef(), text = useRef();
+  const dlg = useRef(), text = useRef(), noteRef = useRef();
   const e = editing.value;
-  const [p, setP] = useState('none');
-  const [star, setStarOn] = useState(false);
-  const [due, setDue] = useState('');
-  const [time, setTime] = useState('');   // Issue #50
-  const [evening, setEvening] = useState(false);   // Tonight (5pm on) in the sheet
-  // Delete (Issue #40): the first tap arms the button ("Tap again"), the
-  // second deletes. It disarms itself after 3 seconds.
+  const t = e && todos.value.find((x, i) => keyOf(x, i) === e.key);
+  const [startList, setStartList] = useState(false);
+  const [noteOn, setNoteOn] = useState(false);
+  const [timeOn, setTimeOn] = useState(false);
   const [armed, setArmed] = useState(false);
-  const [startList, setStartList] = useState(false);   // "Add a checklist" tapped (Issue #44)
-  useEffect(() => setStartList(false), [e]);
-  const disarm = useRef();
-  useEffect(() => { setArmed(false); clearTimeout(disarm.current); }, [e]);
-  const del = () => {
-    if (!armed) { setArmed(true); disarm.current = setTimeout(() => setArmed(false), 3000); return; }
-    clearTimeout(disarm.current);
-    const t = todos.value.find((x, i) => keyOf(x, i) === e.key);
-    if (t && remove(t)) window.AppToast?.show(`“${t.text}” deleted`, { icon: 'trash' });
-    editing.value = null;
-  };
+  const [undo, setUndo] = useState(null), undoT = useRef();
   useEffect(() => {
     if (!e) { if (dlg.current.open) dlg.current.close(); return; }
-    setP(e.p); setStarOn(!!e.starred); setDue(e.due || ''); setTime(e.time || ''); setEvening(!!e.evening); text.current.value = e.text;
+    setUndo(null); setStartList(false); setNoteOn(!!e.note); setTimeOn(false); setArmed(false);
+    text.current.value = e.text; grow(text.current);
     dlg.current.showModal();
-    text.current.focus({ preventScroll: true });
-    text.current.setSelectionRange(e.text.length, e.text.length);
   }, [e]);
-  // Close, then put the keyboard back on the row that was being edited.
-  const close = () => {
-    const k = editing.value?.key;
+  const grow = (b) => { if (!b) return; b.style.height = 'auto'; b.style.height = `${b.scrollHeight}px`; };
+  const cur = () => todos.value.find((x, i) => keyOf(x, i) === e?.key);
+  // Apply a change now, with an Undo note.
+  const apply = (changes, said, icon = 'check') => {
+    const x = cur(); if (!x || !ready()) return;
+    const before = {}; Object.keys(changes).forEach((k) => { before[k] = x[k] ?? null; });
+    update(x, changes);
+    // The app's toast sits behind an open dialog, so the Undo note lives inside the panel.
+    clearTimeout(undoT.current);
+    setUndo({ said, icon, run() { const y = cur(); if (y) update(y, before); setUndo(null); } });
+    undoT.current = setTimeout(() => setUndo(null), 4000);
+  };
+  const saveText = () => { const x = cur(); if (!x || !text.current) return; const v = text.current.value.trim().slice(0, 500); if (v && v !== x.text) update(x, { text: v }); };
+  const close = () => { saveText(); const k = editing.value?.key; editing.value = null;
+    setTimeout(() => document.querySelector(`#todo-groups [data-edit="${k}"]`)?.focus({ preventScroll: true })); };
+  const del = () => {
+    if (!armed) { setArmed(true); setTimeout(() => setArmed(false), 3000); return; }
+    const x = cur(); if (x && remove(x)) window.AppToast?.show(`“${x.text}” deleted`, { icon: 'trash' });
     editing.value = null;
-    setTimeout(() => document.querySelector(`#todo-groups [data-edit="${k}"]`)?.focus({ preventScroll: true }));
   };
-  const saveEdit = (ev) => {
-    ev.preventDefault();
-    // Use the to-do as it is now: the list may have been re-read while the sheet was open.
-    const t = todos.value.find((x, i) => keyOf(x, i) === e.key);
-    if (t) {
-      const changes = {}, v = text.current.value.trim().slice(0, 500);
-      if (v && v !== t.text) changes.text = v;
-      if (p !== t.p) changes.p = p;
-      if (star !== !!t.starred) changes.starred = star;   // Issue #22
-      const tm = due ? time : '';
-      if (tm !== (validTime(t.time) ? t.time : '')) changes.time = tm || null;   // Issue #50
-      if (due !== (validDue(t.due) ? t.due : '')) changes.due = due || null;
-      const ev = evening && due === today.value;
-      if (ev !== !!t.evening) changes.evening = ev;   // #43; 5pm on = Tonight (#50)   // Issue #23 (#43: a new date clears "Tonight")
-      if (Object.keys(changes).length) {
-        update(t, changes);
-        justEdited.value = e.key; setTimeout(() => { justEdited.value = null; }, 1300);
-      }
-    }
-    close();
-  };
-  return html`
-    <dialog id="edit-todo" ref=${dlg} class="sheet" aria-labelledby="edit-todo-title"
+  if (!t) return html`<dialog id="edit-todo" ref=${dlg} class="sheet compact"></dialog>`;
+  const due = validDue(t.due) ? t.due : '', time = validTime(t.time) ? t.time : '', tonight = !!t.evening && due === today.value;
+  const setPrio = (v) => apply({ p: v }, `Priority: ${v === 'none' ? 'none' : LABELS[v]}`, `prio-${v}`);
+  const setDate = (v) => { const ch = { due: v || null }; if (t.evening) ch.evening = false; if (!v || (v === today.value && (isEveningTime(time) || isPast(v, time)))) ch.time = null;
+    apply(ch, v ? withTime(dueLabel(v), { time: ch.time === null ? null : time }) : 'Date removed', v ? 'calendar-blank' : 'x'); };
+  const setT = (v) => { const ch = { time: v || null }; if (due === today.value) ch.evening = isEveningTime(v); apply(ch, v ? `At ${fmtTime(v)}` : 'Time removed', 'clock'); };
+  const star = () => apply({ starred: !t.starred }, t.starred ? 'Unstarred' : 'Starred', t.starred ? 'star' : 'star-fill');
+  const prioChips = html`<div class="seg chips" role="group" aria-label="Priority">
+    ${['high', 'med', 'low', 'none'].map((v) => html`<button type="button" class=${`chip ${v}`} aria-pressed=${t.p === v} onClick=${() => setPrio(v)}>
+      <${Icon} name=${`prio-${v}`} cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}</div>`;
+  const dueField = html`<${DueField} value=${due} tonight=${tonight} open=${!!e} onChange=${setDate} />`;
+  const timeSel = due && (time || timeOn) && html`<div class="time-row"><label for="edit-time">At</label>
+    <select id="edit-time" class="input time-input" value=${time} onChange=${(ev) => setT(ev.target.value)}>
+      ${!time && html`<option value="">Pick a time…</option>`}
+      ${[...new Set([...TIME_OPTIONS, ...(time ? [time] : [])])].sort().map((v) => html`<option value=${v} disabled=${v !== time && ((tonight && !isEveningTime(v)) || isPast(due, v))}>${fmtTime(v)}</option>`)}
+    </select>${time && html`<button type="button" class="btn ghost" onClick=${() => { setT(''); setTimeOn(false); }}>Remove</button>`}</div>`;
+  const listBlock = (itemsOf(t).length || startList) && html`<p class="mini-label"><${Icon} name="list-checks" />Checklist${progress(t) ? ` · ${progress(t)}` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`;
+  const noteBlock = noteOn && html`<p class="mini-label"><${Icon} name="note" />Note</p>
+    <textarea ref=${noteRef} class="textarea note-input" rows="2" maxlength="2000" aria-label="Note" placeholder="Details, links, who to ask…" value=${noteOf(t)}
+      onBlur=${(ev) => { const v = ev.target.value.trim().slice(0, 2000); if (v !== noteOf(t)) update(t, { note: v || null }); }}></textarea>`;
+  const titleRow = html`<div class="title-row"><label for="edit-text" class="visually-hidden">To-do</label>
+    <textarea id="edit-text" ref=${text} class="textarea" rows="1" maxlength="500" onInput=${(ev) => grow(ev.target)} onBlur=${saveText}
+      onKeyDown=${(ev) => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); close(); } }}></textarea>
+    <button type="button" class=${`icon-star${t.starred ? ' on' : ''}`} id="edit-star" aria-pressed=${!!t.starred} aria-label="Starred" onClick=${star}><${Icon} name=${t.starred ? 'star-fill' : 'star'} /></button></div>`;
+  const body = html`
+      ${titleRow}
+      <p class="mini-label"><${Icon} name="prio-high" />Priority</p>${prioChips}
+      <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}
+      ${listBlock}${noteBlock}
+      <div class="add-chips">
+        ${due && !time && !timeOn && html`<button type="button" class="add-chip" id="edit-time-add" onClick=${() => setTimeOn(true)}><${Icon} name="clock" />Time</button>`}
+        ${!itemsOf(t).length && !startList && html`<button type="button" class="add-chip" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Checklist</button>`}
+        ${!noteOn && html`<button type="button" class="add-chip" id="edit-note-add" onClick=${() => { setNoteOn(true); setTimeout(() => noteRef.current?.focus()); }}><${Icon} name="note" />Note</button>`}
+      </div>
+      <div class="row edit-actions">
+        <button type="button" class="quiet-delete" id="edit-delete" aria-live="polite" onClick=${del}>${armed ? 'Tap again to delete' : 'Delete'}</button>
+        <button type="button" class="btn primary done-btn" id="edit-done" onClick=${close}>Done</button></div>`;
+  return html`<dialog id="edit-todo" ref=${dlg} class="sheet compact" aria-label="Edit to-do"
       onClose=${() => { if (editing.value) close(); }} onClick=${(ev) => { if (ev.target === dlg.current) close(); }}>
-      <form id="edit-form" class="edit-form" onSubmit=${saveEdit}>
-        <header><h2 id="edit-todo-title">Edit to-do</h2>
-          <button type="button" class=${`icon-star${star ? ' on' : ''}`} id="edit-star" aria-pressed=${star} aria-label="Starred"
-            title=${star ? 'Unstar' : 'Star'} onClick=${() => setStarOn(!star)}><${Icon} name=${star ? 'star-fill' : 'star'} /></button>
-          <button type="button" class="close-btn" id="edit-close" aria-label="Close" onClick=${close}><${Icon} name="x" /></button></header>
-        <label for="edit-text" class="visually-hidden">To-do</label>
-        <textarea id="edit-text" ref=${text} class="textarea" rows="2" maxlength="500" required></textarea>
-        ${(() => { const t = e && todos.value.find((x, i) => keyOf(x, i) === e.key); if (!t) return null;   // checklist (Issue #44; under the text, #46)
-          if (!itemsOf(t).length && !startList) return html`<button type="button" class="star-toggle cl-open" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Add a checklist</button>`;
-          return html`<p class="field-label"><${Icon} name="list-checks" cls="lbl-ic" /> Checklist${progress(t) ? html` · <span class="due-chosen">${progress(t)}</span>` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`; })()}
-        <p class="field-label" id="edit-priority-label">Priority</p>
-        <div class="seg chips" role="group" aria-labelledby="edit-priority-label">
-          ${['high', 'med', 'low', 'none'].map((v) => html`
-            <button type="button" class=${`chip ${v}`} data-p=${v} aria-pressed=${p === v} onClick=${() => setP(v)}>
-              <${Icon} name=${`prio-${v}`} cls=${`flag-${v}`} />${v === 'none' ? 'None' : LABELS[v]}</button>`)}
-        </div>
-        <${DueField} value=${due} tonight=${evening && due === today.value} open=${!!e}
-          onChange=${(v) => { setDue(v); setEvening(false); if (!v || (v === today.value && (isEveningTime(time) || isPast(v, time)))) setTime(''); }} />
-        ${due && (time
-          ? html`<div class="time-row"><label for="edit-time">At</label>
-              <select id="edit-time" class="input time-input" value=${time}
-                onChange=${(ev) => { const v = ev.target.value; setTime(v); if (due === today.value) setEvening(isEveningTime(v)); }}>
-                ${[...new Set([...TIME_OPTIONS, time])].sort().map((v) => html`<option value=${v} disabled=${v !== time && ((evening && due === today.value && !isEveningTime(v)) || isPast(due, v))}>${fmtTime(v)}</option>`)}
-              </select>
-              ${evening && due === today.value && html`<span class="time-note"><${Icon} name="moon" />Tonight: 5pm on</span>`}
-              <button type="button" class="btn ghost" id="edit-time-remove" onClick=${() => setTime('')}>Remove time</button></div>`
-          : html`<button type="button" class="add-time" id="edit-time-add" onClick=${() => { const want = evening && due === today.value ? '19:00' : '09:00';
-            // Start at the next free quarter-hour today if that time has passed.
-            setTime(isPast(due, want) ? (TIME_OPTIONS.find((v) => !isPast(due, v)) || '23:45') : want); setTimeout(() => document.getElementById('edit-time')?.focus()); }}><${Icon} name="plus" />Add a time</button>`)}
-        <div class="row edit-actions">
-          <button type="button" id="edit-delete" class=${`btn ${armed ? 'danger' : 'danger-soft'}`} aria-live="polite" onClick=${del}>
-            <${Icon} name="trash" />${armed ? 'Tap again' : 'Delete'}</button>
-          <button type="button" id="edit-cancel" class="btn ghost" onClick=${close}>Cancel</button>
-          <button type="submit" id="edit-save" class="btn primary">Save</button>
-        </div>
-      </form>
-    </dialog>`;
+    <div class="edit-form"><span class="sheet-grab" aria-hidden="true"></span>
+      <div class="sheet-undo" role="status" aria-live="polite">${undo && html`<${Icon} name=${undo.icon} /><span>${undo.said}</span>
+        <button type="button" class="sheet-undo-btn" onClick=${undo.run}><${Icon} name="arrow-counter-clockwise" />Undo</button>`}</div>
+      ${body}</div></dialog>`;
 }
 
 // One-line summary under the title, e.g. "3 to do · 2 done today".
@@ -900,6 +930,7 @@ render(html`<${App} />`, document.getElementById('todo-groups'));
 setTimeout(() => {
   const key = `swipe-tip:${window.STAGE || 'local'}`;
   try {
+    if (window.COMPARE) return;   // not while comparing stages (Issue #69)
     if (localStorage.getItem(key) || !todos.value.some((t) => !t.done)) return;
     localStorage.setItem(key, '1');
   } catch { return; }
