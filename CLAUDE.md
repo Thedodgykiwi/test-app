@@ -337,7 +337,8 @@ If they say yes:
   Overdue / Today / Tonight / Later / Any time; Important adds Tomorrow and No date. With
   only one group (not Planned), no heading. Folded groups are remembered (`vg-…` keys).
   Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
-  it (not on All to-dos or Important). All to-dos always keeps its panels.
+  it (not on All to-dos or Important). All to-dos always keeps its panels; your own
+  lists group like Important (Issue #82; Boxes keeps the main view's panels).
   Settings order: Theme, Accent colour, Text size, List style (Issue #77: the theme moved
   out of the menu). View icons are coloured by type
   (`data-v`): My Day `--sun` orange, Important `--gold`, Planned `--today-swipe` purple,

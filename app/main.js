@@ -739,8 +739,8 @@ function TodoList() {
     important: 'No starred to-dos. Star one to see it here.', planned: 'Nothing with a date.', completed: 'Nothing done yet.' };
   if (v !== 'all' && !all.length && !loading.value) return html`<p class="empty">${EMPTY[v] || 'Nothing in this list yet. Add one below.'}</p>`;
   const ls = listStyle.value;
-  if (['myday', 'important', 'planned'].includes(v) && ls !== 'boxes' && active.length) {
-    // Slim headings by when: Planned per day; My Day and Important by Overdue / Today / Tonight / …
+  if ((['myday', 'important', 'planned'].includes(v) || v.startsWith('list:')) && ls !== 'boxes' && active.length) {
+    // Slim headings by when: Planned per day; My Day, Important and your own lists by Overdue / Today / Tonight / … (Issue #82)
     let vg;
     if (v === 'planned') vg = shown.map(([p, items]) => [`${p.startsWith('day-') ? 'day' : p}-${items[0][0].due}`, HEAD[p][1], items, p === 'overdue']);
     else {
