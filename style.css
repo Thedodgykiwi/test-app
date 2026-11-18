@@ -533,7 +533,7 @@ body.has-banner.is-offline { padding-top: 6rem; }
 /* Issue #19: more room. Option D: a soft panel per priority with roomy rows;
    option C's add panel at the bottom, clear of the phone's home bar. */
 .prio-groups { display: grid; gap: .9rem; }
-.prio-group { background: var(--secondary); border-radius: 16px; padding: .35rem .4rem .45rem; }
+.prio-group { background: var(--secondary); border-radius: 16px; padding: .2rem .4rem .4rem; }   /* slim heading bar (Issue #83) */
 .prio-head { display: flex; align-items: center; gap: .35rem; margin: 0; padding: .45rem .6rem .4rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .prio-head .ic { width: 1.05em; height: 1.05em; }
 .prio-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
@@ -652,15 +652,15 @@ button.due-label::after { content: ''; position: absolute; inset: -.55rem -.6rem
 
 /* ---- Fold a panel by tapping its heading (Issue #25, option B) ---- */
 .prio-head { padding: 0; }
-.prio-toggle { display: flex; align-items: center; gap: .35rem; width: 100%; padding: .45rem .3rem .4rem .6rem; border: 0; border-radius: 12px;
+.prio-toggle { display: flex; align-items: center; gap: .35rem; width: 100%; padding: .3rem .3rem .25rem .6rem; border: 0; border-radius: 12px;
   background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer; }
-.prio-toggle .chev { margin-left: auto; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; transition: transform .25s ease; }
+.prio-toggle .chev { margin-left: auto; display: grid; place-items: center; width: 1.3rem; height: 1.3rem; border-radius: 50%; transition: transform .25s ease; }
 .prio-toggle .chev .ic { width: 1.15em; height: 1.15em; }
 .prio-toggle:hover .chev { background: color-mix(in srgb, currentColor 12%, transparent); }
 .prio-group.closed .chev { transform: rotate(-90deg); }
 /* Issue #27: priority shown as signal bars (3 = High, 2 = Medium, 1 = Low), so the level reads by shape as well as colour; coloured headings, no coloured panels. */
 .prio-high .prio-toggle { color: var(--high); } .prio-med .prio-toggle { color: var(--med); } .prio-low .prio-toggle { color: var(--low); }
-.prio-toggle .lvl { width: 1.5em; height: 1.5em; margin: -.25em 0; }
+.prio-toggle .lvl { width: 1.5em; height: 1.5em; margin: -.45em 0; }
 .prio-high .prio-toggle, .prio-med .prio-toggle, .prio-low .prio-toggle, .prio-none .prio-toggle { font-size: .78rem; }
 .fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .28s ease, opacity .2s ease; }
 .fold > .prio-list { min-height: 0; overflow: hidden; padding: 0 3px 6px; margin: 0 -3px -6px; }   /* room for the cards' shadows */
@@ -709,7 +709,7 @@ dialog.quick-add .input { width: 100%; font-size: 1.05rem; }
 :root { --tn-bg: #e7e9f7; --tn: #3b3f8c; --tn-chip: #d9dcf2; }
 :root[data-theme="dark"] { --tn: #b4b9ff; --tn-chip: #2b2f5e; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --tn: #b4b9ff; --tn-chip: #2b2f5e; } }
-.tonight-divider { display: flex; align-items: center; gap: .35rem; margin: .5rem .2rem .15rem; list-style: none;
+.tonight-divider { display: flex; align-items: center; gap: .35rem; margin: .15rem .2rem 0; list-style: none;
   font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tn); }
 .tonight-divider::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--tn) 25%, transparent); }
 .tonight-divider .ic { width: 1em; height: 1em; }
@@ -782,7 +782,7 @@ select.time-input option:disabled { color: var(--muted); }
 .tidy-item[disabled] { opacity: .45; cursor: default; }
 .tidy-n { font-size: .8rem; font-weight: 600; color: var(--muted); background: var(--hover); border-radius: 99px; padding: .1rem .5rem; }
 /* Tonight divider folds (Issue #52). */
-.tonight-toggle { display: inline-flex; align-items: center; gap: .35rem; min-height: 32px; padding: 0 .3rem; margin-left: -.3rem; border: 0; border-radius: 8px;
+.tonight-toggle { display: inline-flex; align-items: center; gap: .35rem; min-height: 26px; padding: 0 .3rem; margin-left: -.3rem; border: 0; border-radius: 8px;
   background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .tonight-toggle:hover { background: color-mix(in srgb, var(--tn) 12%, transparent); }
 .tonight-toggle .chevron { width: .9em; height: .9em; }
