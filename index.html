@@ -78,7 +78,6 @@
       </div>
       <p id="sync-status" class="sync-status" hidden></p>
       <button type="button" id="open-settings" class="plain-btn"><span data-icon="gear-six"></span>Settings</button>
-      <button type="button" id="install-btn" class="plain-btn install-btn" hidden><span data-icon="device-mobile"></span><span id="install-label">Install app</span></button>
       <button type="button" id="sign-out" class="plain-btn" hidden><span data-icon="sign-out"></span>Sign out</button>
       <hr class="menu-sep">
       <p id="offline-ready" class="offline-ready" hidden><span data-icon="check-circle"></span>Ready to use offline</p>
@@ -90,6 +89,9 @@
   <!-- Settings panel (menu.js). Add the app's own settings here. -->
   <dialog id="settings" class="sheet" aria-labelledby="settings-title">
     <header><h2 id="settings-title">Settings</h2><button type="button" class="close-btn" data-close aria-label="Close"><span data-icon="x"></span></button></header>
+    <div class="st-group" id="st-look">
+      <h3 class="st-h"><button type="button" class="st-acc" id="st-btn-look" aria-expanded="true" aria-controls="st-body-look"><span data-icon="palette"></span>Look<span class="st-caret" data-icon="caret-down"></span></button></h3>
+      <div class="st-body" id="st-body-look" role="region" aria-labelledby="st-btn-look">
     <section class="setting">
       <p class="setting-name" id="theme-label">Theme</p>
       <div class="seg" role="radiogroup" aria-labelledby="theme-label" data-pref="theme">
@@ -123,6 +125,11 @@
         <button type="button" role="radio" data-value="large">Large</button>
       </div>
     </section>
+      </div>
+    </div>
+    <div class="st-group" id="st-lists">
+      <h3 class="st-h"><button type="button" class="st-acc" id="st-btn-lists" aria-expanded="false" aria-controls="st-body-lists"><span data-icon="list-checks"></span>Lists and swiping<span class="st-caret" data-icon="caret-down"></span></button></h3>
+      <div class="st-body" id="st-body-lists" role="region" aria-labelledby="st-btn-lists" hidden>
     <section class="setting">
       <p class="setting-name" id="list-style-label">List style</p>
       <p class="setting-help" id="list-style-help">How My Day, Important and Planned group your to-dos</p>
@@ -143,6 +150,11 @@
           <button type="button" class="swipe-pick" id="pick-l" aria-haspopup="menu" aria-expanded="false" aria-labelledby="sl-label pick-l"></button><small id="help-l"></small></div>
       </div>
     </section>
+      </div>
+    </div>
+    <div class="st-group" id="st-account">
+      <h3 class="st-h"><button type="button" class="st-acc" id="st-btn-account" aria-expanded="false" aria-controls="st-body-account"><span data-icon="user"></span>Account and app<span class="st-caret" data-icon="caret-down"></span></button></h3>
+      <div class="st-body" id="st-body-account" role="region" aria-labelledby="st-btn-account" hidden>
     <!-- Signed in only (sync.js, Issue #79): delete the account and everything saved in it -->
     <section class="setting" id="account-setting" hidden>
       <p class="setting-name">Your account</p>
@@ -152,7 +164,14 @@
         <button type="button" id="delete-account-open" class="btn danger-ghost"><span data-icon="trash"></span>Delete my account…</button>
       </div>
     </section>
+    <section class="setting" id="home-setting">
+      <p class="setting-name">Home Screen</p>
+      <p class="setting-help">Open the app from your phone's home screen, even offline.</p>
+      <div class="row account-actions"><button type="button" id="install-btn" class="btn" hidden><span data-icon="device-mobile"></span><span id="install-label">Install app</span></button></div>
+    </section>
       <p id="styleguide-link" class="setting-foot" hidden><a href="styleguide.html">Style guide</a> (building blocks for this app; not shown on Production)</p>
+      </div>
+    </div>
   </dialog>
 
   <!-- Delete account (sync.js, Issue #79): what goes, and a clear choice. Opened from Settings. -->
