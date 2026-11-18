@@ -358,10 +358,25 @@ function Row({ t, k }) {
     </li>`;
 }
 
-function DoneSection({ done, always }) {
+function DoneSection({ done: allDone, always }) {
   const closed = !always && !collapsed.value.has('done-open');   // Completed view: always open (Issue #71)
   const now = new Date();
   const [tidy, setTidy] = useState(false);   // "Tidy up" menu (Issue #49, option B)
+  // Under the other views: only what was ticked off today, plus a link to Completed,
+  // which keeps the history, its date groups and Tidy up (Issue #74).
+  if (!always) {
+    const done = allDone.filter(([t]) => doneRange(t, now) === 'today');
+    const total = todos.value.filter((t) => t.done && !t.archived).length;
+    const seeAll = html`<button type="button" class="see-all" onClick=${() => setView('completed')}>See all completed${total > done.length ? ` (${total})` : ''}<${Icon} name="arrow-right" /></button>`;
+    return html`<div class="group group-done today-only">
+      ${done.length > 0 && html`<h2><button type="button" class="group-toggle" data-group="done" aria-expanded=${!closed} aria-controls="group-list-done"
+        title=${closed ? 'Show this section' : 'Hide this section'}
+        onClick=${() => { toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
+        <${Icon} name=${closed ? 'caret-right' : 'caret-down'} cls="chevron" /><${Icon} name="check-circle" cls="done-icon" />Done today · ${done.length}</button></h2>
+      <ul class="todos vg-list" id="group-list-done" hidden=${closed}>${done.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>`}
+      ${seeAll}</div>`;
+  }
+  const done = allDone;
   // Tidy up only while Done is open and there's something older than today (Issue #59);
   // if that stops being true (folded, archived, synced away), the menu closes too.
   const canTidy = !closed && done.some(([t]) => doneRange(t, now) !== 'today');
@@ -612,7 +627,7 @@ function TodoList() {
       ${shown.map(([p, items]) => html`
         <${Panel} key=${p} p=${p} items=${items} head=${HEAD[p]} />`)}
     </div>`}
-    ${done.length > 0 && html`<${DoneSection} done=${done} always=${v === 'completed'} />`}
+    ${done.length > 0 && html`<${DoneSection} key=${v === 'completed' ? 'all' : 'today'} done=${done} always=${v === 'completed'} />`}
     ${movedHint.value && html`<p class="moved-hint">Moved to Done ↓</p>`}`;
 }
 

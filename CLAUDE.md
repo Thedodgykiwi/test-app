@@ -326,6 +326,10 @@ If they say yes:
   Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
   it (not on All to-dos or Important). All to-dos always keeps its panels.
   Settings order: List style, Accent colour, Text size.
+- **Done today (Issue #74):** under All to-dos, My Day and Important, `DoneSection`
+  shows only to-dos ticked off today ("Done today · n", folded with the same
+  `done-open` key) and a "See all completed (n) →" link to the Completed view. The
+  full history, its date groups and Tidy up are only in Completed.
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
   zooms the page into any box under 16px).
