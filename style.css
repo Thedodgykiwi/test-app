@@ -797,3 +797,5 @@ select.time-input option:disabled { color: var(--muted); }
 /* Tidy up: only while Done is open, and quieter, so it doesn't outshine the heading (Issue #59). */
 .tidy-btn { min-height: 30px; padding: 0 .55rem; gap: .3rem; font-size: .78rem; font-weight: 600; border-radius: 8px; }
 .tidy-btn .ic { width: .95em; height: .95em; }
+/* Tidy up menu: a compact card under its button, not the full width (Issue #59). */
+.tidy-menu { width: max-content; min-width: 15rem; max-width: 100%; margin-left: auto; }
