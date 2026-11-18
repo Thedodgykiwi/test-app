@@ -121,6 +121,18 @@
   drawSwipe();
 
 
+
+  // ---- Settings sections (Issue #86): fold-away, one open at a time, opening from the top ----
+  const stBtns = [...document.querySelectorAll('.st-acc')];
+  const stOpen = (btn) => {
+    stBtns.forEach((b) => {
+      const on = b === btn && b.getAttribute('aria-expanded') !== 'true';   // tapping the open one folds it
+      b.setAttribute('aria-expanded', on);
+      $(b.getAttribute('aria-controls')).hidden = !on;
+    });
+  };
+  stBtns.forEach((b) => b.addEventListener('click', () => stOpen(b)));
+
   // ---- Menu open / close ----------------------------------------------------
   const box = $('account'), btn = $('account-btn'), menu = $('account-menu');
   const setMenu = (open) => { menu.hidden = !open; btn.setAttribute('aria-expanded', open); };

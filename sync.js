@@ -172,7 +172,8 @@ async function start() {
   function showStatus() {
     const state = error ? 'error' : !navigator.onLine ? 'offline' : pending ? 'saving' : app.updating ? 'updating' : 'synced';
     const text = typeof STATUS[state] === 'function' ? STATUS[state]() : STATUS[state];
-    ui.status.hidden = ui.dot.hidden = false;
+    ui.dot.hidden = false;
+    ui.status.hidden = state === 'synced';   // all saved: the dot says it; the line shows only when something needs attention (Issue #87)
     const look = state === 'updating' ? 'saving' : state;   // same blue as Saving…
     ui.status.className = `sync-status ${look}`;
     ui.status.replaceChildren(icon({ synced: 'cloud-check', saving: 'cloud-arrow-up', updating: 'cloud-arrow-down', offline: 'cloud-slash', error: 'warning-circle' }[state]), text);

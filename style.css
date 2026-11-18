@@ -282,7 +282,6 @@ body.has-banner.is-offline { padding-top: 6rem; }
 body.has-banner.is-offline .account { top: 5rem; }
 :root[data-theme="dark"] .offline-strip { background: #3d2a12; color: #ffd8a8; border-color: #5c3d14; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] .offline-strip { background: #3d2a12; color: #ffd8a8; border-color: #5c3d14; } }
-.install-btn { color: var(--accent); font-weight: 600; }
 .offline-ready { display: flex; align-items: center; justify-content: center; gap: .3rem; font-size: .76rem; color: #2b8a3e; }
 :root[data-theme="dark"] .offline-ready { color: #69db7c; }
 .steps { margin: .4rem 0 .8rem; padding-left: 1.3rem; line-height: 1.7; }
@@ -1060,3 +1059,22 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .swipe-pick .ic { width: 1.1em; height: 1.1em; flex: none; }
 .due-menu button[aria-checked="true"] { font-weight: 700; }
 .due-menu .tick { margin-left: auto; padding-left: .8rem; }
+
+/* ---- Settings in fold-away sections, opening from the top (Issue #86) ----
+   Anchored to the top edge so the heading and the section titles stay put: opening a
+   section only pushes the ones below it down. One section open at a time. */
+dialog#settings { margin: 0 auto auto; width: min(460px, 100%); max-width: 100%; border-radius: 0 0 16px 16px;
+  padding-top: calc(1rem + env(safe-area-inset-top)); max-height: 85vh; }
+dialog#settings[open] { animation: st-drop .22s cubic-bezier(.2,.8,.3,1); }
+@keyframes st-drop { from { transform: translateY(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { dialog#settings[open] { animation: none; } }
+.st-h { margin: 0; }
+.st-acc { display: flex; align-items: center; gap: .6rem; width: 100%; border: 0; border-top: 1px solid var(--line); background: transparent; color: inherit;
+  font: inherit; font-weight: 600; text-align: left; padding: .85rem .1rem; min-height: 48px; cursor: pointer; }
+.st-acc > [data-icon], .st-acc > .icon-wrap { color: var(--accent); }
+.st-acc .st-caret { margin-left: auto; color: var(--muted); display: inline-flex; transition: transform .2s ease; }
+.st-acc[aria-expanded="true"] .st-caret { transform: rotate(180deg); }
+.st-body > .setting:first-child { border-top: 0; padding-top: .2rem; }
+#home-setting:has(#install-btn[hidden]) { display: none; }
+#install-btn { color: var(--accent); }
+.account-actions #install-btn { background: var(--secondary); border: 1px solid var(--line); }
