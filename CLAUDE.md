@@ -325,6 +325,10 @@ If they say yes:
   only one group (not Planned), no heading. Folded groups are remembered (`vg-…` keys).
   Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
   it (not on All to-dos or Important). All to-dos always keeps its panels.
+  Settings order: List style, Accent colour, Text size.
+- **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
+  Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
+  zooms the page into any box under 16px).
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves

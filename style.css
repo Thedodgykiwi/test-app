@@ -44,6 +44,9 @@
 :root[data-accent="pink"]   { --a-l: #c2255c; --a-l-h: #a61e4d; --a-d: #f06595; --a-d-h: #f783ac; --a-d-fg: #2b0716; }
 /* Text size (Settings): everything sized in rem/em grows with it */
 :root[data-text-size="large"] { font-size: 112.5%; }
+:root[data-text-size="small"] { font-size: 93.75%; }   /* Issue #73 */
+/* Small text: boxes you type in stay at 16px, or iPhone Safari zooms the page when you tap them */
+:root[data-text-size="small"] :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) { font-size: max(16px, 1rem) !important; }
 
 body {
   margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 1.5rem;
