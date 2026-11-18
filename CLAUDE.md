@@ -374,6 +374,15 @@ If they say yes:
   shows only to-dos ticked off today ("Done today · n", folded with the same
   `done-open` key) and a "See all completed (n) →" link to the Completed view. The
   full history, its date groups and Tidy up are only in Completed.
+- **Settings in fold-away sections (Issue #86, option C from the top):** the Settings panel
+  (`#settings`) is anchored to the top edge and split into three sections, **Look** (theme,
+  accent colour, text size; open first), **Lists and swiping** (List style, Swipe actions) and
+  **Account and app** (Your account, Home Screen, privacy, style guide). Each is a `.st-group`
+  with a `.st-acc` heading button and a `.st-body`; one open at a time (`menu.js`), tapping the open
+  one folds it. Because the panel grows downward, only the sections below the open one move.
+  To add a setting, put its `<section class="setting">` inside the right `.st-body`. **Add to Home
+  Screen / Install app** now lives in the Account section (`#install-btn`, still driven by
+  `pwa.js`); its section is hidden by CSS (`:has`) while the app can't be installed.
 - **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
 - **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;
   signed out, the menu opens with `#signin-box` (a short reason and a full-width
