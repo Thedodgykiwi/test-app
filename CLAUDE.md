@@ -94,6 +94,8 @@ If they say yes:
 
 - Explain in plain English and briefly define technical terms; don't
   assume development experience.
+- The app is run by APPsolute Studio Ltd, a **UK** company: for anything legal or
+  regional (privacy, data authorities, regions), think UK/EU. Don't bring up New Zealand.
 - For visual changes, show a screenshot of the result before pushing.
 - When something is ambiguous, make a sensible choice and say what you
   chose, rather than asking lots of questions. Ask first for anything
@@ -370,7 +372,7 @@ If they say yes:
   A list view whose list no longer exists shows All to-dos (`curView()` in `app/main.js`).
   **Download my data** (Issue #80) beside it: a JSON file of `todos` and `lists` on every stage
   (dates as ISO text). The privacy page names APPsolute Studio and its business address
-  (published on purpose) and covers the GDPR / NZ Privacy Act points.
+  (published on purpose) and covers the UK / EU GDPR points.
   Test stages get a noindex tag from the shared deploy.
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
