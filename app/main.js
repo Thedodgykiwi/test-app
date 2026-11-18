@@ -345,10 +345,10 @@ function Row({ t, k }) {
             aria-expanded=${noteOpen.value.has(k)} aria-label=${`Note. ${noteOpen.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(noteOpen.value); s.has(k) ? s.delete(k) : s.add(k); noteOpen.value = s; }}>
             <${Icon} name="note" />Note<${Icon} name="caret-down" cls="caret" /></button>`}
-          ${!t.done && inMyDay(t) && view.value !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
-          ${listOf(t.list) && view.value !== `list:${t.list}` && html`<span class="meta-tag list-tag"><i style=${`background:${lc(listOf(t.list))}`}></i>${listOf(t.list).name}</span>`}
+          ${!t.done && inMyDay(t) && curView() !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
+          ${listOf(t.list) && curView() !== `list:${t.list}` && html`<span class="meta-tag list-tag"><i style=${`background:${lc(listOf(t.list))}`}></i>${listOf(t.list).name}</span>`}
         </div>
-        ${t.starred && !t.done && !['all', 'important'].includes(view.value) && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
+        ${t.starred && !t.done && !['all', 'important'].includes(curView()) && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name=${`prio-${t.p}`} cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
@@ -516,7 +516,7 @@ function setView(v) {
   document.body.dataset.view = v; scrollTo(0, 0);
   setTimeout(() => document.getElementById('view-title-btn')?.focus({ preventScroll: true }));
 }
-document.body.dataset.view = view.value;
+document.body.dataset.view = curView();
 
 // ---- Your own lists (Issue #72) -------------------------------------------------
 // "+ New list" in the Lists panel; each list has a name, one of 12 colours (shown as a
@@ -524,6 +524,9 @@ document.body.dataset.view = view.value;
 const LIST_COLORS = ['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'purple', 'grape', 'pink', 'graphite'];
 const LIST_ICONS = ['list', 'house', 'briefcase', 'shopping-cart', 'heart', 'airplane', 'book-open', 'barbell', 'gift', 'folder-simple', 'car', 'paw-print', 'fork-knife', 'wallet', 'wrench', 'graduation-cap'];
 function listOf(id) { return id ? lists.value.find((l) => l.id === id) : undefined; }
+// The view on screen: a list that no longer exists (deleted here or on another
+// device, or with the account) shows All to-dos instead. The saved choice is kept.
+function curView() { const v = view.value; return v.startsWith('list:') && !listOf(v.slice(5)) ? 'all' : v; }
 const lc = (l) => `var(--lc-${l.color})`;
 const listDialog = signal(null);   // { mode: 'new' | 'edit' | 'delete', id }
 const listMenu = signal(false);
@@ -586,7 +589,7 @@ function ListMenu() {
     const esc = (e) => { if (e.key === 'Escape') listMenu.value = false; };
     document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
     return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); }; }, [listMenu.value]);
-  const v = view.value; if (!v.startsWith('list:') || !listMenu.value) return null;
+  const v = curView(); if (!v.startsWith('list:') || !listMenu.value) return null;
   const id = v.slice(5);
   return html`<div class="tidy-menu list-menu" role="menu" ref=${box}>
     <button type="button" role="menuitem" class="tidy-item" onClick=${() => { listMenu.value = false; listDialog.value = { mode: 'edit', id }; }}><span>Rename, colour or icon</span></button>
@@ -608,18 +611,18 @@ function ListsPanel() {
       role=${pinned ? null : 'dialog'} aria-modal=${pinned ? null : 'true'}>
       <div class="lists-top"><h2>Lists</h2>${!pinned && html`<button type="button" class="close-btn" aria-label="Close" onClick=${() => { listsOpen.value = false; document.getElementById('view-title-btn')?.focus(); }}><${Icon} name="x" /></button>`}</div>
       <nav class="lv" aria-label="Views">${VIEWS.map(([v, ic, name]) => { const n = countOf(v);
-        return html`<button type="button" class="lv-item" data-v=${v} aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
+        return html`<button type="button" class="lv-item" data-v=${v} aria-current=${curView() === v ? 'page' : null} onClick=${() => setView(v)}>
           <${Icon} name=${ic} cls="lv-ic" /><span class="lv-name">${name}</span>${n > 0 && html`<span class="lv-n" aria-label=${`, ${n}`}>${n}</span>`}</button>`; })}
         <p class="lv-head">Your lists</p>
         ${lists.value.map((l) => { const v = `list:${l.id}`, n = countOf(v);
-          return html`<button type="button" class="lv-item" aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
+          return html`<button type="button" class="lv-item" aria-current=${curView() === v ? 'page' : null} onClick=${() => setView(v)}>
             <span class=${`tile c-${l.color}`}><${Icon} name=${l.icon} /></span><span class="lv-name">${l.name}</span>${n > 0 && html`<span class="lv-n">${n}</span>`}</button>`; })}
         <button type="button" class="lv-item lv-new" onClick=${() => { listDialog.value = { mode: 'new' }; }}><${Icon} name="plus" cls="lv-ic" /><span class="lv-name">New list</span></button></nav>
     </aside>`;
 }
 // Above the title: "‹ Lists". The title itself (app name, or the view's name) also opens the panel.
 function ViewHead() {
-  const v = view.value, [, ic, name, l] = viewInfo(v), pinned = wide.value;
+  const v = curView(), [, ic, name, l] = viewInfo(v), pinned = wide.value;
   const more = l && html`<button type="button" class="list-more" aria-label="List options" aria-expanded=${listMenu.value} onClick=${() => { listMenu.value = !listMenu.value; }}><${Icon} name="dots-three" /></button>`;
   const toggle = () => { if (!pinned) listsOpen.value = !listsOpen.value; };
   return html`
@@ -632,7 +635,8 @@ const dayName = (d) => parseDay(d).toLocaleDateString(undefined, { weekday: 'sho
 
 function TodoList() {
   // Archived to-dos (Issue #49) are kept but never shown.
-  const v = view.value;
+  const v = curView();
+  document.body.dataset.view = v;   // keep the page's view styles in step (e.g. a deleted list falls back to All)
   const all = todos.value.map((t, i) => [t, i]).filter(([t]) => !t.archived && inView(v, t));   // keep each to-do's saved position for stable keys
   const active = all.filter(([t]) => !t.done), done = all.filter(([t]) => t.done);
   // After a tick / toggle / edit: focus the first matching element that's visible.
@@ -792,7 +796,7 @@ export function parseEntry(raw) {
 function addParsed(raw, pFallback) {
   const r = parseEntry(raw);
   // Added while a view is open: it goes into that view (Issue #71).
-  const v = view.value, due = r.due || (v === 'planned' ? today.value : undefined);
+  const v = curView(), due = r.due || (v === 'planned' ? today.value : undefined);
   const list = r.list || (v.startsWith('list:') ? v.slice(5) : undefined);
   if (!r.text || !add(r.text, r.p || pFallback, due, r.evening, r.time, r.starred || v === 'important', v === 'myday' ? today.value : undefined, list)) return null;
   return r;
@@ -1166,9 +1170,9 @@ function Summary() {
   if (loading.value && !todos.value.length) return 'Loading your to-dos…';
   const all = todos.value.filter((t) => !t.archived);   // archived ones don't count (Issue #49)
   if (!all.length) return 'Nothing on your list yet';
-  if (view.value !== 'all') {   // a view is open (Issue #71): its own count, and the total
-    const n = countOf(view.value), left = all.filter((t) => !t.done).length;
-    if (view.value === 'completed') return `${n} done`;
+  if (curView() !== 'all') {   // a view is open (Issue #71): its own count, and the total
+    const n = countOf(curView()), left = all.filter((t) => !t.done).length;
+    if (curView() === 'completed') return `${n} done`;
     return n ? `${n} to do here · ${left} in all` : `${left} to do in all`;
   }
   const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();

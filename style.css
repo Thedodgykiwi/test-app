@@ -1020,3 +1020,12 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .list-pick select:focus, .list-pick select:focus-visible { outline: none; box-shadow: none; }
 .list-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .list-pick .lp-caret { width: .85rem; height: .85rem; color: var(--muted); pointer-events: none; }
+
+/* Privacy links and "Delete my account" (Issue #79; same as the playbook starter) */
+.signin-privacy { justify-self: center; font-size: .8rem; color: var(--muted); }
+.menu-privacy { display: block; text-align: center; font-size: .8rem; color: var(--muted); margin-top: .1rem; }
+.btn.danger-ghost { background: none; color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent); }
+.btn.danger-ghost:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.notice.danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
+.delete-actions { justify-content: flex-end; gap: .5rem; flex-wrap: wrap; margin-top: .4rem; }
+#delete-account > p { margin: .3rem 0 .7rem; }

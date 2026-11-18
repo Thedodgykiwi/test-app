@@ -362,6 +362,13 @@ If they say yes:
   signed out, the menu opens with `#signin-box` (a short reason and a full-width
   "Sign in with Google", `#sign-in`), hidden by `sync.js` once signed in and while
   Firebase isn't set up. Same in the playbook's starter.
+- **Privacy and Delete my account (Issue #79):** `privacy.html` (from the playbook starter,
+  filled in for this app; update it whenever the app stores something new), linked from
+  the sign-in card, the menu footer and Settings. Signed in, Settings → Your account →
+  "Delete my account…" (`#delete-account` dialog, `sync.js`) deletes `todos` and `lists` on
+  every stage, then the Firebase user (re-asks Google if needed); device-only to-dos stay.
+  A list view whose list no longer exists shows All to-dos (`curView()` in `app/main.js`).
+  Test stages get a noindex tag from the shared deploy.
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
   zooms the page into any box under 16px).

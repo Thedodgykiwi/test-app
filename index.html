@@ -69,6 +69,7 @@
       <div id="signin-box" class="signin-box" hidden>
         <p class="signin-why"><b>Your to-dos, on every device</b><span>Sign in to keep them safe and in sync.</span></p>
         <button type="button" id="sign-in" class="sign-in"><span data-icon="google-logo"></span>Sign in with Google</button>
+        <a class="signin-privacy" href="privacy.html">How your data is handled</a>
       </div>
       <div id="who" class="who" hidden>
         <img id="who-img" class="avatar" alt="" referrerpolicy="no-referrer" hidden>
@@ -82,6 +83,7 @@
       <hr class="menu-sep">
       <p id="offline-ready" class="offline-ready" hidden><span data-icon="check-circle"></span>Ready to use offline</p>
       <button type="button" id="version-btn" class="version-btn">What's new</button>
+      <a class="menu-privacy" href="privacy.html">Privacy</a>
     </div>
   </div>
 
@@ -130,7 +132,25 @@
         <button type="button" role="radio" data-value="boxes">Boxes</button>
       </div>
     </section>
+    <!-- Signed in only (sync.js, Issue #79): delete the account and everything saved in it -->
+    <section class="setting" id="account-setting" hidden>
+      <p class="setting-name">Your account</p>
+      <p class="setting-help">Your to-dos and lists are saved to your account so they're on all your devices. <a href="privacy.html">How they're handled</a>.</p>
+      <button type="button" id="delete-account-open" class="btn danger-ghost"><span data-icon="trash"></span>Delete my account…</button>
+    </section>
       <p id="styleguide-link" class="setting-foot" hidden><a href="styleguide.html">Style guide</a> (building blocks for this app; not shown on Production)</p>
+  </dialog>
+
+  <!-- Delete account (sync.js, Issue #79): what goes, and a clear choice. Opened from Settings. -->
+  <dialog id="delete-account" class="sheet" aria-labelledby="delete-account-title">
+    <header><h2 id="delete-account-title">Delete your account?</h2><button type="button" class="close-btn" data-close aria-label="Close"><span data-icon="x"></span></button></header>
+    <p>This permanently deletes your account and <b>all the to-dos and lists saved in it</b>, on every version of the app (test versions included). It can't be undone.</p>
+    <p class="muted">To-dos saved only on this device while signed out stay on this device. Google may ask you to sign in once more to confirm it's you.</p>
+    <p id="delete-account-error" class="notice danger" role="alert" hidden></p>
+    <div class="row delete-actions">
+      <button type="button" class="btn" data-close autofocus>Keep my account</button>
+      <button type="button" id="delete-account-go" class="btn danger">Delete my account</button>
+    </div>
   </dialog>
 
   <!-- What's new panel (menu.js): this stage's release notes from releases.json, made by the deploy. -->

@@ -88,6 +88,44 @@ async function start() {
   });
   ui.signOut.addEventListener('click', () => { setMenu(false); authLib.signOut(auth); });
 
+  // ---- Delete my account (Settings → Your account, Issue #79) -----------------
+  // Removes the to-dos and lists saved in the account on every stage, then the
+  // sign-in itself (Google may ask to sign in again first). The device's own
+  // signed-out to-dos are left alone.
+  let deleting = false;
+  const delDlg = $('delete-account'), delGo = $('delete-account-go'), delErr = $('delete-account-error');
+  $('delete-account-open').addEventListener('click', () => { $('settings')?.close(); delErr.hidden = true; delDlg.showModal(); });
+  delGo.addEventListener('click', async () => {
+    const user = auth.currentUser; if (!user) return;
+    delGo.disabled = true; delGo.textContent = 'Deleting…'; delErr.hidden = true;
+    try {
+      for (const stage of ['local', 'dev', 'alpha', 'staging', 'main']) {
+        for (const name of ['todos', 'lists']) {
+          const snap = await fs.getDocs(fs.collection(db, 'users', user.uid, 'stages', stage, name));
+          for (let i = 0; i < snap.docs.length; i += 400) {
+            const batch = fs.writeBatch(db);
+            snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+          }
+        }
+      }
+      deleting = true;
+      try { await authLib.deleteUser(user); } catch (err) {
+        if (err.code !== 'auth/requires-recent-login') throw err;
+        await authLib.reauthenticateWithPopup(user, new authLib.GoogleAuthProvider());
+        await authLib.deleteUser(user);
+      }
+      delDlg.close();
+      toast('Your account has been deleted.', 6000);
+    } catch (err) {
+      deleting = false;
+      delErr.textContent = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(err.code)
+        ? "Not deleted: the sign-in check was closed. Try again when you're ready."
+        : `Couldn't finish deleting (${err.code || err.message}). Check your connection and try again.`;
+      delErr.hidden = false;
+    } finally { delGo.disabled = false; delGo.textContent = 'Delete my account'; }
+  });
+
   // ---- Sync status --------------------------------------------------------
   let pending = false;
   let error = '';
@@ -123,13 +161,14 @@ async function start() {
     document.getElementById('signin-box').hidden = !!user;   // sign-in lives at the top of the menu
     ui.signOut.hidden = !user;
     ui.who.hidden = !user;
+    $('account-setting').hidden = !user;
     if (!user) {
       ui.avatarImg.hidden = true; ui.avatar.hidden = false;
       ui.avatar.innerHTML = signedOutAvatar; ui.avatar.classList.remove('letter');
       ui.label.textContent = 'Menu';
       ui.status.hidden = ui.dot.hidden = true;
       ui.button.setAttribute('aria-label', 'Menu'); ui.button.title = 'Menu';
-      if (localStorage.getItem('signed-in')) toast('Signed out. Showing the to-dos saved on this device.');
+      if (localStorage.getItem('signed-in') && !deleting) toast('Signed out. Showing the to-dos saved on this device.');
       localStorage.removeItem('signed-in');
       app.useLocal({ forget: true });
       return;

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-accent="blue">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Privacy · The Shortlist</title>
+  <meta name="description" content="How The Shortlist handles your data." />
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    // Same saved theme / accent / text size as the app (see menu.js).
+    try {
+      const p = JSON.parse(localStorage.getItem(`prefs:${location.pathname.split('/')[1] || 'app'}`) || '{}');
+      const d = document.documentElement.dataset;
+      d.theme = p.theme || 'auto'; d.textSize = p.textSize || 'standard'; d.accent = p.accent || d.accent;
+    } catch { /* defaults */ }
+  </script>
+  <style>
+    body { display: block; padding: 1.5rem 1rem 4rem; }
+    .privacy { width: min(640px, 100%); margin: 0 auto; line-height: 1.6; }
+    .privacy h1 { font-size: 1.6rem; margin: .6rem 0 .2rem; }
+    .privacy h2 { font-size: 1.1rem; margin: 1.6rem 0 .3rem; }
+    .privacy ul { padding-left: 1.2rem; }
+    .privacy a { color: var(--accent); }
+    .back { display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <!-- Privacy page (Issue #79, from the playbook starter). Check each section still
+       matches what the app does whenever it starts storing something new.
+       Never put a personal email address here: the repo is public. -->
+  <main class="privacy">
+    <a class="back" href="./">‹ Back to The Shortlist</a>
+    <h1>Privacy</h1>
+    <p class="muted">Last updated: 18 November 2026</p>
+
+    <p>The Shortlist keeps only what it needs to work. No ads, no tracking, and your data is never sold or shared.</p>
+
+    <h2>Using it without signing in</h2>
+    <p>Everything you add is saved <b>only on this device</b>, in your browser's storage. Nobody else can see it, and it stays there until you delete it or clear your browser's data.</p>
+
+    <h2>When you sign in with Google</h2>
+    <ul>
+      <li><b>From Google</b> we receive your name, email address and profile photo, to show who's signed in.</li>
+      <li><b>Your data</b> (your to-dos with their dates, notes and checklists, and your lists) is saved to your account in Google's Firebase service (stored in Europe), so it's on all your devices.</li>
+      <li><b>Only you</b> can read or change it: the app's security rules block everyone else.</li>
+      <li>Your settings (theme, colours, text size) stay on each device.</li>
+    </ul>
+
+    <h2>Deleting your data</h2>
+    <ul>
+      <li><b>Your account:</b> Menu → Settings → <b>Delete my account</b> removes your account and everything saved in it, straight away, on every version of the app.</li>
+      <li><b>This device:</b> delete items in the app, or clear this site's data in your browser's settings.</li>
+    </ul>
+
+    <h2>Testers' reports</h2>
+    <p>On the test versions, testers can send a report with the <b>Report issue</b> button. We keep the reporter's email address only until the report has been dealt with (to say thanks and let them know when it's live), then delete it. Reports themselves are public on the app's GitHub page, without names or email addresses.</p>
+
+    <h2>Cookies and tracking</h2>
+    <p>No analytics, advertising or tracking cookies. The app uses your browser's storage only to work (your data, your settings, and a copy of the app so it opens offline).</p>
+
+    <h2>Questions</h2>
+    <p>Ask on the app's <a href="https://github.com/Thedodgykiwi/test-app/issues">GitHub page</a> (anything you write there is public).</p>
+  </main>
+</body>
+</html>
