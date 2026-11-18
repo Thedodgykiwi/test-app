@@ -708,7 +708,7 @@ function AddBar() {
             <span class="word">${shownP === 'none' ? '' : LABELS[shownP]}</span><${Icon} name=${`prio-${shownP}`} cls=${`flag-${shownP}`} />
           </button>
         </div>
-        <button type="submit" class="btn primary"><${Icon} name="plus" />Add</button>
+        <button type="submit" class="btn primary" aria-label="Add to-do" title="Add"><${Icon} name="plus" />Add</button>
         <${Understood} r=${r} />
       </div>
     </form>`;

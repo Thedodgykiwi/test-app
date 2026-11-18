@@ -295,6 +295,12 @@ If they say yes:
   see archived ones again isn't built yet.
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
+- **Add bar (Issue #66, option 1 + 2):** a floating pill (12px from the edges
+  plus the home-bar space, `viewport-fit=cover`, Issue #65; capped to the
+  list's width on desktop) holding a 53px rounded box with the priority button
+  and a round **+** (the Add button, text hidden but read out) inside its right
+  end. The typing chips sit under the box, lined up with its text. Rules are
+  at the end of `style.css`.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves
