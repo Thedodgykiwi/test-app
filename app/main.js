@@ -809,7 +809,7 @@ function ListSuggest({ input, after }) {
   return html`<div class="list-sugg" aria-live="polite">
     ${h.hits.length ? h.hits.map((l, i) => html`<button type="button" class="u-chip list-chip ls-btn" title=${i === 0 ? 'Tab to pick' : ''}
         aria-label=${`Put it in ${l.name}`} onPointerDown=${(e) => e.preventDefault()} onClick=${() => pickList(input.current, l, after)}>
-        <i style=${`background:${lc(l)}`}></i>#${listKey(l)}</button>`)
+        <i style=${`background:${lc(l)}`}></i>${l.name}</button>`)
       : html`<span class="ls-none">No list starting with “${h.q}”</span>`}</div>`;
 }
 // Tab finishes the "#…" word with the first suggested list.

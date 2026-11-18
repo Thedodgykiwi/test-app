@@ -316,7 +316,7 @@ If they say yes:
   is open puts the to-do in it (My Day / starred / due today). **My Day** = optional
   `myDay: 'YYYY-MM-DD'` (`firestore.rules` checks the format; counts only on that day, so
   it empties each morning); toggled by the edit panel's "My Day" chip; rows elsewhere
-  show a small sun "My Day" tag. Custom lists (Home, Work…) are Issue #72, not built.
+  show a small sun "My Day" tag. Custom lists: Issue #72 (below).
   **Settings → List style** (`listStyle` pref in `menu.js`, `data-list-style` on `<html>`;
   Pills default / Lines / Boxes) sets how My Day, Important and Planned group to-dos:
   Pills = small rounded headings over plain cards (`.vg-*`), Lines = Done-style
