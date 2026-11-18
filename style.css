@@ -1025,8 +1025,10 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .notice.danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
 .delete-actions { justify-content: flex-end; gap: .5rem; flex-wrap: wrap; margin-top: .4rem; }
 #delete-account > p { margin: .3rem 0 .7rem; }
-.account-actions { gap: .5rem; flex-wrap: wrap; }
-.account-actions #download-data { background: var(--secondary); border: 1px solid var(--line); }
+.account-actions { flex-direction: column; align-items: stretch; gap: .5rem; }
+/* Settings → Account and app (Issue #88): the buttons stack, same width and height, each with a clear outline */
+.account-actions .btn { width: 100%; height: 2.7rem; justify-content: center; background: var(--secondary); border: 1px solid var(--input); }
+.account-actions .btn.danger-ghost { background: none; border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
 .setting-help a { color: var(--accent); }
 
 /* ---- Swipe actions (Issue #81): one colour per action; every pair is 4.5:1 or better.
@@ -1077,4 +1079,3 @@ dialog#settings[open] { animation: st-drop .22s cubic-bezier(.2,.8,.3,1); }
 .st-body > .setting:first-child { border-top: 0; padding-top: .2rem; }
 #home-setting:has(#install-btn[hidden]) { display: none; }
 #install-btn { color: var(--accent); }
-.account-actions #install-btn { background: var(--secondary); border: 1px solid var(--line); }
