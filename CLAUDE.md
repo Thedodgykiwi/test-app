@@ -215,7 +215,7 @@ If they say yes:
 - `stage.js` is overwritten per stage at deploy time; locally it says `local`.
 - **Look and layout (Nov 2026, from the playbook starter):** the starter's style
   kit in `style.css` (top part; test-app's own rules are in the section at the
-  end), `menu.js` (menu: photo, theme, Settings with accent colour and text
+  end), `menu.js` (menu: photo, Settings with theme, accent colour and text
   size, version → What's new), `pwa.js` + `sw.js` (offline, install, "new
   version" bar), `styleguide.html`; the to-do screen is Preact components (`app/`, libraries in `vendor/`).
   Layout: a soft panel per priority (option D, Issue #19) with roomy rows, Done
@@ -325,7 +325,8 @@ If they say yes:
   only one group (not Planned), no heading. Folded groups are remembered (`vg-…` keys).
   Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
   it (not on All to-dos or Important). All to-dos always keeps its panels.
-  Settings order: List style, Accent colour, Text size. View icons are coloured by type
+  Settings order: Theme, Accent colour, Text size, List style (Issue #77: the theme moved
+  out of the menu). View icons are coloured by type
   (`data-v`): My Day `--sun` orange, Important `--gold`, Planned `--today-swipe` purple,
   Completed `--ok` green, All to-dos the accent.
 - **Your own lists (Issue #72):** "+ New list" in the Lists panel (`ListDialog` in

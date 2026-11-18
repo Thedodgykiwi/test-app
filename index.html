@@ -72,12 +72,6 @@
         <p><strong id="account-name"></strong><span id="account-email"></span></p>
       </div>
       <p id="sync-status" class="sync-status" hidden></p>
-      <p class="menu-label" id="theme-label">Theme</p>
-      <div class="seg" role="radiogroup" aria-labelledby="theme-label" data-pref="theme">
-        <button type="button" role="radio" data-value="light"><span data-icon="sun"></span>Light</button>
-        <button type="button" role="radio" data-value="auto"><span data-icon="circle-half"></span>Auto</button>
-        <button type="button" role="radio" data-value="dark"><span data-icon="moon"></span>Dark</button>
-      </div>
       <button type="button" id="open-settings" class="plain-btn"><span data-icon="gear-six"></span>Settings</button>
       <button type="button" id="install-btn" class="plain-btn install-btn" hidden><span data-icon="device-mobile"></span><span id="install-label">Install app</span></button>
       <button type="button" id="sign-out" class="plain-btn" hidden><span data-icon="sign-out"></span>Sign out</button>
@@ -91,12 +85,11 @@
   <dialog id="settings" class="sheet" aria-labelledby="settings-title">
     <header><h2 id="settings-title">Settings</h2><button type="button" class="close-btn" data-close aria-label="Close"><span data-icon="x"></span></button></header>
     <section class="setting">
-      <p class="setting-name" id="list-style-label">List style</p>
-      <p class="setting-help" id="list-style-help">How My Day, Important and Planned group your to-dos</p>
-      <div class="seg" role="radiogroup" aria-labelledby="list-style-label" aria-describedby="list-style-help" data-pref="listStyle">
-        <button type="button" role="radio" data-value="pills">Pills</button>
-        <button type="button" role="radio" data-value="lines">Lines</button>
-        <button type="button" role="radio" data-value="boxes">Boxes</button>
+      <p class="setting-name" id="theme-label">Theme</p>
+      <div class="seg" role="radiogroup" aria-labelledby="theme-label" data-pref="theme">
+        <button type="button" role="radio" data-value="light"><span data-icon="sun"></span>Light</button>
+        <button type="button" role="radio" data-value="auto"><span data-icon="circle-half"></span>Auto</button>
+        <button type="button" role="radio" data-value="dark"><span data-icon="moon"></span>Dark</button>
       </div>
     </section>
     <section class="setting">
@@ -122,6 +115,15 @@
         <button type="button" role="radio" data-value="small">Small</button>
         <button type="button" role="radio" data-value="standard">Regular</button>
         <button type="button" role="radio" data-value="large">Large</button>
+      </div>
+    </section>
+    <section class="setting">
+      <p class="setting-name" id="list-style-label">List style</p>
+      <p class="setting-help" id="list-style-help">How My Day, Important and Planned group your to-dos</p>
+      <div class="seg" role="radiogroup" aria-labelledby="list-style-label" aria-describedby="list-style-help" data-pref="listStyle">
+        <button type="button" role="radio" data-value="pills">Pills</button>
+        <button type="button" role="radio" data-value="lines">Lines</button>
+        <button type="button" role="radio" data-value="boxes">Boxes</button>
       </div>
     </section>
       <p id="styleguide-link" class="setting-foot" hidden><a href="styleguide.html">Style guide</a> (building blocks for this app; not shown on Production)</p>
