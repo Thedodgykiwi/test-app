@@ -11,6 +11,7 @@
   --line: #e3e6eb; --input: #cfd4dc; --hover: #f1f3f5; --secondary: #f1f3f5; --secondary-hover: #e6e9ed;
   --danger: #e03131; --ok: #2b8a3e; --ok-bg: #d3f9d8; --warn: #a35200; --warn-bg: #fff3bf;
   --shadow-sm: 0 1px 3px rgba(16,24,40,.08); --shadow: 0 10px 30px rgba(0,0,0,.15);
+  --groove: rgba(29,31,35,.16); --groove-hi: rgba(29,31,35,.04);
   --accent: var(--a-l); --accent-hover: var(--a-l-h); --accent-fg: #fff;
 }
 :root[data-theme="dark"] {
@@ -19,6 +20,7 @@
   --line: #30353d; --input: #454b55; --hover: #2c3037; --secondary: #2c3037; --secondary-hover: #373c45;
   --danger: #ff6b6b; --ok: #69db7c; --ok-bg: #163a20; --warn: #ffc078; --warn-bg: #3d2a12;
   --shadow-sm: none; --shadow: 0 10px 30px rgba(0,0,0,.5);
+  --groove: rgba(0,0,0,.45); --groove-hi: rgba(255,255,255,.07);
   --accent: var(--a-d); --accent-hover: var(--a-d-h); --accent-fg: var(--a-d-fg);
 }
 @media (prefers-color-scheme: dark) {
@@ -28,6 +30,7 @@
     --line: #30353d; --input: #454b55; --hover: #2c3037; --secondary: #2c3037; --secondary-hover: #373c45;
     --danger: #ff6b6b; --ok: #69db7c; --ok-bg: #163a20; --warn: #ffc078; --warn-bg: #3d2a12;
     --shadow-sm: none; --shadow: 0 10px 30px rgba(0,0,0,.5);
+    --groove: rgba(0,0,0,.45); --groove-hi: rgba(255,255,255,.07);
     --accent: var(--a-d); --accent-hover: var(--a-d-h); --accent-fg: var(--a-d-fg);
   }
 }
@@ -557,7 +560,7 @@ body { padding-bottom: 8rem; }
 :root { --gold: #b77b00; --gold-bg: #fff6dc; --gold-swipe: #f2b400; }
 :root[data-theme="dark"] { --gold: #ffc94d; --gold-bg: #33290f; --gold-swipe: #c99400; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --gold: #ffc94d; --gold-bg: #33290f; --gold-swipe: #c99400; } }
-.prio-starred { background: var(--gold-bg); }
+.prio-starred { background: var(--gold-bg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 65%, transparent); }   /* thin gold edge, Starred only (Issue #68) */
 .prio-starred .prio-head { color: var(--gold); }
 .prio-starred .row-flag { display: grid; }   /* show which priority a starred to-do has */
 .swipe-under {
@@ -752,11 +755,18 @@ select.time-input option:disabled { color: var(--muted); }
 
 /* "Tidy up" on the Done heading (Issue #49, option B). */
 .group-done > h2 { display: flex; align-items: center; gap: .5rem; }
-.tidy-btn { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: 0 .75rem;
-  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); font: inherit; font-size: .85rem; font-weight: 600; letter-spacing: 0; text-transform: none; cursor: pointer; }
+.tidy-btn { position: relative; margin-left: auto; display: inline-flex; align-items: center; gap: .3rem; min-height: 30px; padding: 0 .55rem;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: .78rem; font-weight: 600; letter-spacing: 0; text-transform: none; cursor: pointer; }
+/* Only while Done is open, and small and quiet so it doesn't outshine the heading (Issue #59);
+   an invisible strip keeps the tap area 44px tall. */
+.tidy-btn::before { content: ""; position: absolute; inset: -7px 0; }
+.tidy-btn .ic { width: .95em; height: .95em; }
 .tidy-btn:hover, .tidy-btn[aria-expanded="true"] { color: var(--text); background: var(--hover); }
-.tidy-menu { margin: .25rem 0 .6rem; background: var(--surface); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: .5rem; display: flex; flex-direction: column; gap: 2px; }
-.tidy-help { margin: .35rem .65rem .4rem; font-size: .85rem; color: var(--muted); }
+.tidy-menu { width: max-content; min-width: 15rem; max-width: 100%; margin: .25rem 0 .6rem auto; background: var(--surface); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: .5rem; display: flex; flex-direction: column; gap: 2px; }
+.tidy-help { display: flex; align-items: center; gap: .4rem; margin: .2rem 0 .35rem; padding: .25rem .65rem .55rem; font-size: .85rem; color: var(--muted);
+  /* a soft "groove" divider like a native menu: a darker line with a faint second line under it (Issue #59) */
+  border-bottom: 1px solid var(--groove); box-shadow: 0 1px 0 var(--groove-hi); }
+.tidy-help .ic { width: 1.05em; height: 1.05em; flex: none; }
 .tidy-item { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: 0 .75rem; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .tidy-item > span:first-child { flex: 1; }
 .tidy-item:hover:not([disabled]), .tidy-item:focus-visible { background: var(--hover); }
@@ -773,3 +783,93 @@ select.time-input option:disabled { color: var(--muted); }
 .tonight-toggle { margin-left: 0; padding-left: 10px; }
 /* Starred to-dos: a touch heavier, not bold (Issue #55). */
 .todo.starred .t-main { font-weight: 560; }
+
+/* Note on a to-do (Issue #57, option A). */
+.note-input { min-height: 4.5rem; resize: vertical; }
+.row-note { margin: 0; padding: .6rem .75rem; background: var(--hover); border-radius: 10px; font-size: .9rem; line-height: 1.45;
+  color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
+.row-note a { color: var(--accent); }
+/* Note pill: outlined instead of filled, so it's told apart from the checklist pill
+   without shouting (Issue #57; the dark grey version drew too much attention). */
+.sub-pill.note-pill { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 28%, transparent); }
+.sub-pill.note-pill:hover, .sub-pill.note-pill.open { background: var(--hover); color: var(--text); }
+
+/* Thin outline on every pill, tinted from the pill's own text colour, so each
+   gets a darker edge in light mode and a lighter one in dark mode (Issue #58). */
+.due-label, .sub-pill, .u-chip { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 32%, transparent); }
+.due-overdue { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 70%, #000); }
+/* Overdue is a bright solid red in both modes, so it takes a darker red edge in both. */
+/* Editing a note in place (Issue #57). */
+.row-note-read { cursor: text; }
+.row-note-edit { display: block; width: 100%; box-sizing: border-box; border: 1px solid var(--accent); font: inherit; font-size: .9rem; resize: none; overflow: hidden; outline: none; }
+
+/* ===== Edit panel: compact, saves as you go (Issue #60, option A) ===== */
+.sheet.compact .edit-form { gap: .7rem; }
+.sheet.compact .sheet-grab { align-self: center; width: 36px; height: 4px; border-radius: 4px; background: var(--line); margin: -.2rem 0 .1rem; }
+.sheet.compact .title-row { display: flex; align-items: flex-start; gap: .5rem; }
+.sheet.compact .title-row textarea { flex: 1; min-height: 44px; resize: none; overflow: hidden; }
+.sheet.compact .mini-label { display: flex; align-items: center; gap: .35rem; margin: 0 0 -.35rem; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.sheet.compact .mini-label .ic { width: 1em; height: 1em; }
+.sheet.compact .field-label#edit-due-label { display: none; }
+.sheet.compact .seg.chips .chip { padding-block: .4rem; }
+.sheet.compact .add-chips { display: flex; gap: .45rem; flex-wrap: wrap; }
+.sheet.compact .add-chip { display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: 0 .75rem; border-radius: 99px;
+  border: 1px dashed color-mix(in srgb, var(--text) 30%, transparent); background: var(--surface); color: var(--text); font: inherit; font-size: .88rem; cursor: pointer; }
+.sheet.compact .add-chip .ic { width: 1em; height: 1em; }
+.sheet.compact .edit-actions { justify-content: space-between; margin-top: .2rem; }
+.sheet.compact .quiet-delete { background: none; border: 0; color: color-mix(in srgb, var(--danger) 80%, var(--text)); font: inherit; font-size: .9rem; min-height: 44px; padding: 0 .4rem; cursor: pointer; }
+.sheet.compact .done-btn { min-width: 6.5rem; }
+/* In-panel Undo note (the toast can't show above an open dialog) */
+.sheet.compact .sheet-undo { display: flex; align-items: center; gap: .45rem; min-height: 2.1rem; margin: -.3rem 0 -.2rem; font-size: .85rem; color: var(--muted); }
+.sheet.compact .sheet-undo:empty { min-height: 0; margin: 0; }
+.sheet.compact .sheet-undo .ic { width: 1em; height: 1em; }
+.sheet.compact .sheet-undo span { flex: 1; color: var(--text); }
+.sheet.compact .sheet-undo-btn { display: inline-flex; align-items: center; gap: .3rem; min-height: 32px; padding: 0 .7rem; border: 0; border-radius: 99px;
+  background: var(--hover); color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+
+/* Screen edges (Issue #65): with viewport-fit=cover the page learns the size of
+   the iPhone home-bar strip and side notches (env(safe-area-inset-*)), so the
+   add bar sits above the home bar and nothing hides behind a notch in landscape. */
+/* Add the insets to the page's own padding (never replace it: that lost the side margins). */
+body { padding-left: calc(1rem + env(safe-area-inset-left)); padding-right: calc(1rem + env(safe-area-inset-right));
+  padding-top: calc(1rem + env(safe-area-inset-top)); padding-bottom: calc(8rem + env(safe-area-inset-bottom)); }
+body.has-banner { padding-top: calc(3rem + env(safe-area-inset-top)); }
+body.is-offline { padding-top: calc(4.5rem + env(safe-area-inset-top)); }
+body.has-banner.is-offline { padding-top: calc(6rem + env(safe-area-inset-top)); }
+#stage-banner { padding-top: calc(.4rem + env(safe-area-inset-top)); }
+.offline-strip { top: env(safe-area-inset-top); }
+body.has-banner .offline-strip { top: calc(2.15rem + env(safe-area-inset-top)); }
+.account { top: calc(.8rem + env(safe-area-inset-top)); }
+body.has-banner .account { top: calc(2.8rem + env(safe-area-inset-top)); }
+body.is-offline .account { top: calc(3.2rem + env(safe-area-inset-top)); }
+body.has-banner.is-offline .account { top: calc(5rem + env(safe-area-inset-top)); }
+.add-bar { padding-left: calc(1rem + env(safe-area-inset-left)); padding-right: calc(1rem + env(safe-area-inset-right)); }
+
+/* ===== Add bar: a floating pill with a big rounded box and a round + (Issue #66, option 1 + 2) ===== */
+.add-bar {
+  left: calc(12px + env(safe-area-inset-left)); right: calc(12px + env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom));
+  padding: .7rem .7rem .75rem; border: 1px solid var(--line); border-radius: 34px;
+  box-shadow: 0 10px 30px rgba(16,24,40,.16), 0 2px 6px rgba(16,24,40,.06); }
+:root[data-theme="dark"] .add-bar { box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .add-bar { box-shadow: 0 10px 30px rgba(0,0,0,.5); } }
+.add-bar:has(.understood) { padding-bottom: .9rem; }
+.add-inner { position: relative; }
+#todo-input { height: 3.3rem; font-size: 1.06rem; border-radius: 26px; padding-left: 1.1rem; padding-right: 9.4rem; }
+#todo-input.no-word { padding-right: 6rem; }
+.add-bar .flag-btn { right: 3.45rem; }
+/* Add: a round + inside the right end of the box (the word stays for screen readers) */
+.add-bar .btn.primary { position: absolute; right: .4rem; top: .4rem; width: 2.5rem; height: 2.5rem; min-height: 0; padding: 0;
+  border-radius: 50%; font-size: 0; gap: 0; }
+.add-bar .btn.primary .ic { width: 1.4rem; height: 1.4rem; }
+/* Chips line up with the text inside the box, with room under them */
+.add-bar .understood { padding: .15rem .55rem .2rem; margin-top: .15rem; row-gap: .45rem; }
+body { padding-bottom: calc(9rem + env(safe-area-inset-bottom)); }
+.install-tip, .update-bar { bottom: calc(7.4rem + env(safe-area-inset-bottom)); }
+/* Wide screens: the pill stays the width of the list column, centred (Issue #66). */
+.add-bar { left: max(calc(12px + env(safe-area-inset-left)), calc(50% - 300px)); right: max(calc(12px + env(safe-area-inset-right)), calc(50% - 300px)); }
+
+/* The swipe layers are only drawn while a row is being swiped (or sliding back):
+   iPhone Safari could leave them showing through under a row (Issue #70). */
+.todo > .swipe-under { visibility: hidden; }
+.todo:has(> .todo-row.swiping) > .swipe-under, .todo:has(> .todo-row.settle) > .swipe-under { visibility: visible; }
+.todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
