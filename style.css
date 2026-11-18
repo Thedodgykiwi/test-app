@@ -867,3 +867,9 @@ body { padding-bottom: calc(9rem + env(safe-area-inset-bottom)); }
 .install-tip, .update-bar { bottom: calc(7.4rem + env(safe-area-inset-bottom)); }
 /* Wide screens: the pill stays the width of the list column, centred (Issue #66). */
 .add-bar { left: max(calc(12px + env(safe-area-inset-left)), calc(50% - 300px)); right: max(calc(12px + env(safe-area-inset-right)), calc(50% - 300px)); }
+
+/* The swipe layers are only drawn while a row is being swiped (or sliding back):
+   iPhone Safari could leave them showing through under a row (Issue #70). */
+.todo > .swipe-under { visibility: hidden; }
+.todo:has(> .todo-row.swiping) > .swipe-under, .todo:has(> .todo-row.settle) > .swipe-under { visibility: visible; }
+.todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
