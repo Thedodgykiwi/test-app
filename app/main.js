@@ -5,7 +5,7 @@
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, keyOf, LEVELS, LABELS } from './store.js';
+import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, restore, keyOf, LEVELS, LABELS, lists, addList, updateList, removeList } from './store.js';
 
 // Phosphor icon from icons.js
 const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => {
@@ -171,11 +171,78 @@ function setStar(t, k, starred) {
   });
 }
 
-// Swipe right on a row to star / un-star it; swipe left to send it to tomorrow,
-// or, when it's already due tomorrow, to bring it forward to today; a to-do
-// with no date asks "When?" and opens the due-date menu (Issue #39; the same
-// choices as the due label's menu). Vertical moves still scroll
+// Swipe a row right or left to do what Settings says (Issue #81; default: right
+// stars / un-stars, left sends it to tomorrow, or forward to today when it's
+// already due tomorrow, or asks "When?" for a to-do with no date, Issue #39). Vertical moves still scroll
 // the page; a tap still opens the editor. Done to-dos don't swipe.
+// ---- Choose what each swipe does (Issue #81) -------------------------------
+const SWIPE_ACTIONS = window.SWIPE_ACTIONS;   // the list of actions lives in menu.js (Settings)
+const swipePrefs = signal(readSwipePrefs());
+function readSwipePrefs() {
+  try { const p = JSON.parse(localStorage.getItem(`prefs:${location.pathname.split('/')[1] || 'app'}`) || '{}');
+    return { right: SWIPE_ACTIONS[p.swipeRight] ? p.swipeRight : 'star', left: SWIPE_ACTIONS[p.swipeLeft] ? p.swipeLeft : 'tomorrow' }; } catch { return { right: 'star', left: 'tomorrow' }; }
+}
+addEventListener('prefschange', () => { swipePrefs.value = readSwipePrefs(); });
+const swipeMenu = signal(null);   // { key, kind: 'priority' | 'list', right, top, bottom }
+// What the swipe layer says for this to-do (some actions flip: Star/Unstar, Tomorrow/Today/When?).
+function swipeFace(id, t) {
+  const a = SWIPE_ACTIONS[id];
+  if (id === 'star') return t.starred ? { label: 'Unstar', icon: 'star' } : { label: 'Star', icon: 'star-fill' };
+  if (id === 'tomorrow') return !validDue(t.due) ? { label: 'When?', icon: 'calendar-blank' } : t.due === tomorrowDay() ? { label: 'Today', icon: 'clock' } : { label: 'Tomorrow', icon: 'arrow-right' };
+  if (id === 'myday') return inMyDay(t) ? { label: 'Remove', icon: 'sun' } : { label: 'My Day', icon: 'sun' };
+  if (id === 'list') return { label: 'List', icon: 'folder-simple' };
+  if (id === 'priority') return { label: 'Priority', icon: 'flag' };
+  if (id === 'none') return { label: 'None', icon: 'x' };
+  return { label: a.label, icon: a.icon };
+}
+function runSwipe(id, t, k, el) { 
+  if (!ready() || id === 'none') return;
+  const r = el.getBoundingClientRect(), at = { key: k, right: r.right - 12, top: r.top + 6, bottom: r.bottom - 6 };
+  if (id === 'star') setStar(t, k, !t.starred);
+  else if (id === 'tomorrow') {
+    if (!validDue(t.due)) dueMenu.value = at;
+    else if (t.due === tomorrowDay()) setDue(k, today.value, 'moved to today');
+    else setDue(k, tomorrowDay(), 'moved to tomorrow');
+  } else if (id === 'done') markDone(t, k);
+  else if (id === 'delete') {
+    const copy = { ...t };
+    if (remove(t)) window.AppToast?.show(`“${t.text}” deleted`, { icon: 'trash',
+      action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick() { restore(copy); } } });
+  } else if (id === 'myday') {
+    const on = inMyDay(t);
+    update(t, { myDay: on ? null : today.value });
+    window.AppToast?.show(`“${t.text}” ${on ? 'taken out of My Day' : 'added to My Day'}`, { icon: 'sun' });
+  } else if (id === 'priority' || id === 'list') swipeMenu.value = { ...at, kind: id };
+  else if (id === 'edit') openEditor(t, k);
+}
+function SwipeMenu() {
+  const m = swipeMenu.value, box = useRef();
+  const t = m && todos.value.find((x, i) => keyOf(x, i) === m.key);
+  useEffect(() => {
+    if (!m || !box.current) return;
+    const el = box.current, h = el.offsetHeight, w = el.offsetWidth;
+    const below = m.bottom + 6;
+    el.style.top = `${below + h <= innerHeight - 8 ? below : Math.max(8, m.top - h - 6)}px`;
+    el.style.left = `${Math.max(8, Math.min(m.right - w, innerWidth - w - 8))}px`;
+    el.style.visibility = 'visible';
+    el.querySelector('button')?.focus({ preventScroll: true });
+    const away = (e) => { if (!el.contains(e.target)) swipeMenu.value = null; };
+    const gone = () => { swipeMenu.value = null; };
+    document.addEventListener('pointerdown', away, true);
+    const esc = (e) => { if (e.key === 'Escape') swipeMenu.value = null; };
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', esc); };
+  }, [m]);
+  if (!m || !t) return null;
+  const items = m.kind === 'priority'
+    ? LEVELS.map((p) => [`prio-${p}`, LABELS[p], () => { update(t, { p }); window.AppToast?.show(`“${t.text}”: ${LABELS[p]}`, { icon: 'flag' }); }, t.p === p])
+    : [...lists.value.map((l) => ['folder-simple', l.name, () => { update(t, { list: l.id }); window.AppToast?.show(`“${t.text}” moved to ${l.name}`, { icon: 'folder-simple' }); }, t.list === l.id]),
+       ...(t.list ? [['x', 'No list', () => update(t, { list: null }), false]] : [])];
+  return html`<div class="due-menu" ref=${box} role="menu" style="visibility:hidden" aria-label=${m.kind === 'priority' ? 'Set priority' : 'Move to a list'}>
+    ${items.map(([ic, label, run, on]) => html`<button type="button" role="menuitem" aria-current=${on ? 'true' : undefined} onClick=${() => { swipeMenu.value = null; run(); }}><${Icon} name=${ic} />${label}${on ? ' ✓' : ''}</button>`)}
+    ${items.length === 0 && html`<button type="button" disabled>No lists yet</button>`}
+  </div>`;
+}
 const SWIPE_AT = 72;   // px to drag before letting go stars it
 function useSwipe(t, k) {
   const row = useRef(), s = useRef(null);
@@ -204,15 +271,8 @@ function useSwipe(t, k) {
     el.parentElement.classList.remove('swipe-ready');
     setTimeout(() => el.parentElement?.classList.remove('swipe-left'), 230);   // after it slides back
     swallowClick = true; setTimeout(() => { swallowClick = false; }, 60);   // not also a tap
-    if (st.dx >= SWIPE_AT) setTimeout(() => setStar(t, k, !t.starred), 180);
-    else if (st.dx <= -SWIPE_AT) setTimeout(() => {
-      if (!ready()) return;
-      if (!validDue(t.due)) {   // no date yet: ask when, in a menu by the row's right-hand end
-        const r = el.getBoundingClientRect();
-        dueMenu.value = { key: k, right: r.right - 12, top: r.top + 6, bottom: r.bottom - 6 };
-      } else if (t.due === tomorrowDay()) setDue(k, today.value, 'moved to today');
-      else setDue(k, tomorrowDay(), 'moved to tomorrow');
-    }, 180);
+    if (st.dx >= SWIPE_AT) setTimeout(() => runSwipe(swipePrefs.value.right, t, k, el), 180);
+    else if (st.dx <= -SWIPE_AT) setTimeout(() => runSwipe(swipePrefs.value.left, t, k, el), 180);
   };
   return { row, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up } };
 }
@@ -318,11 +378,9 @@ function Row({ t, k }) {
   const ds = dueState(t);
   return html`
     <li class=${`todo${t.done ? ' done' : ''}${t.starred && !t.done ? ' starred' : ''}${hl ? ' just-edited' : ''}`}>
-      ${!t.done && html`<div class="swipe-under" aria-hidden="true"><${Icon} name=${t.starred ? 'star' : 'star-fill'} />${t.starred ? 'Unstar' : 'Star'}</div>
-        ${!validDue(t.due) ? html`<div class="swipe-under left when" aria-hidden="true">When?<${Icon} name="calendar-blank" /></div>`
-          : t.due === tomorrowDay()
-          ? html`<div class="swipe-under left to-today" aria-hidden="true">Today<${Icon} name="clock" /></div>`
-          : html`<div class="swipe-under left" aria-hidden="true">Tomorrow<${Icon} name="arrow-right" /></div>`}`}
+      ${!t.done && (() => { const R = swipePrefs.value.right, L = swipePrefs.value.left, fr = swipeFace(R, t), fl = swipeFace(L, t);
+        return html`<div class=${`swipe-under act-${R}`} aria-hidden="true"><${Icon} name=${fr.icon} />${fr.label}</div>
+          <div class=${`swipe-under left act-${L}`} aria-hidden="true">${fl.label}<${Icon} name=${fl.icon} /></div>`; })()}
       <div class="todo-row" ref=${row} ...${handlers}>
         <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
         <div class="text-col">
@@ -345,9 +403,10 @@ function Row({ t, k }) {
             aria-expanded=${noteOpen.value.has(k)} aria-label=${`Note. ${noteOpen.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(noteOpen.value); s.has(k) ? s.delete(k) : s.add(k); noteOpen.value = s; }}>
             <${Icon} name="note" />Note<${Icon} name="caret-down" cls="caret" /></button>`}
-          ${!t.done && inMyDay(t) && view.value !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
+          ${!t.done && inMyDay(t) && curView() !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
+          ${listOf(t.list) && curView() !== `list:${t.list}` && html`<span class="meta-tag list-tag"><i style=${`background:${lc(listOf(t.list))}`}></i>${listOf(t.list).name}</span>`}
         </div>
-        ${t.starred && !t.done && !['all', 'important'].includes(view.value) && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
+        ${t.starred && !t.done && !['all', 'important'].includes(curView()) && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name=${`prio-${t.p}`} cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
@@ -487,7 +546,7 @@ const VIEWS = [['all', 'list-checks', 'All to-dos'], ['myday', 'sun', 'My Day'],
   ['planned', 'calendar-blank', 'Planned'], ['completed', 'check-circle', 'Completed']];
 const viewKey = `view-${window.STAGE || 'local'}`;
 const savedView = (() => { try { return localStorage.getItem(viewKey); } catch { return null; } })();
-const view = signal(VIEWS.some(([k]) => k === savedView) ? savedView : 'all');
+const view = signal(VIEWS.some(([k]) => k === savedView) || /^list:/.test(savedView || '') ? savedView : 'all');
 const listsOpen = signal(false);
 // Settings → List style: how My Day, Important and Planned group their to-dos.
 // pills (default): small headings over plain cards; lines: Done-style centred
@@ -499,12 +558,13 @@ const wideQ = matchMedia('(min-width: 1100px)');
 const wide = signal(wideQ.matches);
 wideQ.addEventListener('change', () => { wide.value = wideQ.matches; if (wide.value) listsOpen.value = false; });
 const inMyDay = (t) => t.myDay === today.value;
-const viewInfo = (v) => VIEWS.find(([k]) => k === v) || VIEWS[0];
+const viewInfo = (v) => { if (v.startsWith('list:')) { const l = listOf(v.slice(5)); if (l) return [v, l.icon, l.name, l]; } return VIEWS.find(([k]) => k === v) || VIEWS[0]; };
 function inView(v, t) {
   if (v === 'myday') return inMyDay(t);
   if (v === 'important') return !!t.starred;
   if (v === 'planned') return validDue(t.due) && !t.done;
   if (v === 'completed') return !!t.done;
+  if (v.startsWith('list:')) return t.list === v.slice(5);
   return true;
 }
 const countOf = (v) => todos.value.filter((t) => !t.archived && (v === 'completed' ? t.done : !t.done) && inView(v, t)).length;
@@ -514,7 +574,85 @@ function setView(v) {
   document.body.dataset.view = v; scrollTo(0, 0);
   setTimeout(() => document.getElementById('view-title-btn')?.focus({ preventScroll: true }));
 }
-document.body.dataset.view = view.value;
+document.body.dataset.view = curView();
+
+// ---- Your own lists (Issue #72) -------------------------------------------------
+// "+ New list" in the Lists panel; each list has a name, one of 12 colours (shown as a
+// filled tile behind its icon) and one of 16 icons. Data and syncing: store.js / sync.js.
+const LIST_COLORS = ['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'purple', 'grape', 'pink', 'graphite'];
+const LIST_ICONS = ['list', 'house', 'briefcase', 'shopping-cart', 'heart', 'airplane', 'book-open', 'barbell', 'gift', 'folder-simple', 'car', 'paw-print', 'fork-knife', 'wallet', 'wrench', 'graduation-cap'];
+function listOf(id) { return id ? lists.value.find((l) => l.id === id) : undefined; }
+// The view on screen: a list that no longer exists (deleted here or on another
+// device, or with the account) shows All to-dos instead. The saved choice is kept.
+function curView() { const v = view.value; return v.startsWith('list:') && !listOf(v.slice(5)) ? 'all' : v; }
+const lc = (l) => `var(--lc-${l.color})`;
+const listDialog = signal(null);   // { mode: 'new' | 'edit' | 'delete', id }
+const listMenu = signal(false);
+function ListDialog() {
+  const dlg = useRef(), name = useRef();
+  const d = listDialog.value, l = d && d.id ? listOf(d.id) : null;
+  const [color, setColor] = useState('green'), [ic, setIc] = useState('list');
+  useEffect(() => {
+    if (!d) { if (dlg.current?.open) dlg.current.close(); return; }
+    setColor(l?.color || LIST_COLORS[lists.value.length % LIST_COLORS.length]); setIc(l?.icon || 'list');
+    dlg.current.showModal(); setTimeout(() => { if (name.current) { name.current.value = l?.name || ''; name.current.focus(); } });
+  }, [d]);
+  const close = () => { listDialog.value = null; };
+  // Like the to-do edit panel: changes apply at once and there's just Done (also Esc or
+  // tapping outside). Editing: colour and icon save on tap, the name when you leave the box.
+  // New list: Done makes it if it has a name; with no name, nothing is made.
+  const saveName = () => { const n = name.current?.value.trim().slice(0, 40); if (l && n && n !== l.name) updateList(l, { name: n }); };
+  const done = (e) => {
+    e?.preventDefault(); const cur = listDialog.value; if (!cur || cur.mode === 'delete') { close(); return; }
+    const n = name.current?.value.trim().slice(0, 40);
+    if (cur.mode === 'edit') { saveName(); close(); return; }
+    close(); if (!n) return;
+    const made = addList({ name: n, color, icon: ic }); if (!made) return;
+    if (cur.forKey != null) {   // made from the edit panel's list picker: put that to-do in it
+      const t = todos.value.find((x, i) => keyOf(x, i) === cur.forKey); if (t) update(t, { list: made.id });
+    } else setView(`list:${made.id}`);
+  };
+  const pickColor = (c) => { setColor(c); if (l) updateList(l, { color: c }); };
+  const pickIcon = (i) => { setIc(i); if (l) updateList(l, { icon: i }); };
+  const n = l ? todos.value.filter((t) => t.list === l.id && !t.archived).length : 0;
+  const del = (keep) => { todos.value.filter((t) => t.list === l.id).forEach((t) => (keep ? update(t, { list: null }) : remove(t)));
+    removeList(l); close(); setView('all');
+    window.AppToast?.show(keep ? `“${l.name}” deleted. Its to-dos are kept, with no list` : `“${l.name}” and its to-dos deleted`, { icon: 'trash' }); };
+  return html`<dialog ref=${dlg} class="sheet compact list-dialog" aria-label=${d?.mode === 'delete' ? 'Delete list' : d?.mode === 'edit' ? 'Edit list' : 'New list'}
+      onClose=${() => { if (listDialog.value) done(); }} onClick=${(ev) => { if (ev.target === dlg.current) done(); }}>
+    ${d && d.mode === 'delete' && l ? html`<div class="edit-form">
+        <h2 class="ld-title">Delete “${l.name}”?</h2>
+        <p class="muted">${n ? `It has ${n} to-do${n === 1 ? '' : 's'}. What should happen to ${n === 1 ? 'it' : 'them'}?` : 'It has no to-dos.'}</p>
+        ${n > 0 && html`<button type="button" class="btn primary ld-btn" onClick=${() => del(true)}>Delete the list, keep its to-dos</button>
+        <button type="button" class="btn ld-btn danger-btn" onClick=${() => del(false)}>Delete the list and its ${n} to-do${n === 1 ? '' : 's'}</button>`}
+        ${!n && html`<button type="button" class="btn primary ld-btn" onClick=${() => del(true)}>Delete list</button>`}
+        <button type="button" class="btn ghost ld-btn" onClick=${close}>Cancel</button></div>`
+    : d && html`<form class="edit-form" onSubmit=${done}>
+        <h2 class="ld-title">${d.mode === 'new' ? 'New list' : 'Edit list'}</h2>
+        <div class="ld-name"><span class=${`tile big c-${color}`}><${Icon} name=${ic} /></span>
+          <input ref=${name} class="input" maxlength="40" placeholder="e.g. Home, Work, Errands" aria-label="List name" onBlur=${saveName} /></div>
+        <p class="mini-label">Colour</p>
+        <div class="ld-colors" role="radiogroup" aria-label="Colour">${LIST_COLORS.map((c) => html`<button type="button" role="radio" aria-checked=${c === color} aria-label=${c[0].toUpperCase() + c.slice(1)}
+          class=${`ld-color c-${c}`} onClick=${() => pickColor(c)}>${c === color && html`<${Icon} name="check" />`}</button>`)}</div>
+        <p class="mini-label">Icon</p>
+        <div class="ld-icons" role="radiogroup" aria-label="Icon">${LIST_ICONS.map((i) => html`<button type="button" role="radio" aria-checked=${i === ic} aria-label=${i.replace(/-/g, ' ')}
+          class=${`ld-icon${i === ic ? ` on c-${color}` : ''}`} onClick=${() => pickIcon(i)}><${Icon} name=${i} /></button>`)}</div>
+        <div class="row edit-actions"><button type="submit" class="btn primary done-btn">Done</button></div></form>`}
+  </dialog>`;
+}
+function ListMenu() {
+  const box = useRef();
+  useEffect(() => { if (!listMenu.value) return;
+    const off = (e) => { if (!box.current?.contains(e.target) && !e.target.closest('.list-more')) listMenu.value = false; };
+    const esc = (e) => { if (e.key === 'Escape') listMenu.value = false; };
+    document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); }; }, [listMenu.value]);
+  const v = curView(); if (!v.startsWith('list:') || !listMenu.value) return null;
+  const id = v.slice(5);
+  return html`<div class="tidy-menu list-menu" role="menu" ref=${box}>
+    <button type="button" role="menuitem" class="tidy-item" onClick=${() => { listMenu.value = false; listDialog.value = { mode: 'edit', id }; }}><span>Rename, colour or icon</span></button>
+    <button type="button" role="menuitem" class="tidy-item danger" onClick=${() => { listMenu.value = false; listDialog.value = { mode: 'delete', id }; }}><span>Delete list…</span></button></div>`;
+}
 function ListsPanel() {
   const panel = useRef();
   const open = listsOpen.value, pinned = wide.value;
@@ -531,25 +669,32 @@ function ListsPanel() {
       role=${pinned ? null : 'dialog'} aria-modal=${pinned ? null : 'true'}>
       <div class="lists-top"><h2>Lists</h2>${!pinned && html`<button type="button" class="close-btn" aria-label="Close" onClick=${() => { listsOpen.value = false; document.getElementById('view-title-btn')?.focus(); }}><${Icon} name="x" /></button>`}</div>
       <nav class="lv" aria-label="Views">${VIEWS.map(([v, ic, name]) => { const n = countOf(v);
-        return html`<button type="button" class="lv-item" aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
-          <${Icon} name=${ic} cls="lv-ic" /><span class="lv-name">${name}</span>${n > 0 && html`<span class="lv-n" aria-label=${`, ${n}`}>${n}</span>`}</button>`; })}</nav>
+        return html`<button type="button" class="lv-item" data-v=${v} aria-current=${curView() === v ? 'page' : null} onClick=${() => setView(v)}>
+          <${Icon} name=${ic} cls="lv-ic" /><span class="lv-name">${name}</span>${n > 0 && html`<span class="lv-n" aria-label=${`, ${n}`}>${n}</span>`}</button>`; })}
+        <p class="lv-head">Your lists</p>
+        ${lists.value.map((l) => { const v = `list:${l.id}`, n = countOf(v);
+          return html`<button type="button" class="lv-item" aria-current=${curView() === v ? 'page' : null} onClick=${() => setView(v)}>
+            <span class=${`tile c-${l.color}`}><${Icon} name=${l.icon} /></span><span class="lv-name">${l.name}</span>${n > 0 && html`<span class="lv-n">${n}</span>`}</button>`; })}
+        <button type="button" class="lv-item lv-new" onClick=${() => { listDialog.value = { mode: 'new' }; }}><${Icon} name="plus" cls="lv-ic" /><span class="lv-name">New list</span></button></nav>
     </aside>`;
 }
 // Above the title: "‹ Lists". The title itself (app name, or the view's name) also opens the panel.
 function ViewHead() {
-  const v = view.value, [, ic, name] = viewInfo(v), pinned = wide.value;
+  const v = curView(), [, ic, name, l] = viewInfo(v), pinned = wide.value;
+  const more = l && html`<button type="button" class="list-more" aria-label="List options" aria-expanded=${listMenu.value} onClick=${() => { listMenu.value = !listMenu.value; }}><${Icon} name="dots-three" /></button>`;
   const toggle = () => { if (!pinned) listsOpen.value = !listsOpen.value; };
   return html`
     ${!pinned && html`<button type="button" class="lists-btn" aria-expanded=${listsOpen.value} onClick=${toggle}><${Icon} name="caret-left" />Lists</button>`}
-    <h1 class="view-title">${pinned ? html`<span class="vt">${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}</span>`
+    <h1 class="view-title" data-v=${v}>${pinned ? html`<span class="vt">${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}</span>`
       : html`<button type="button" id="view-title-btn" class="vt" aria-haspopup="dialog" aria-expanded=${listsOpen.value} title="Lists" onClick=${toggle}>
-        ${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}<${Icon} name="caret-down" cls="vt-caret" /></button>`}</h1>`;
+        ${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`${l ? html`<span class=${`tile big c-${l.color}`}><${Icon} name=${ic} /></span>` : html`<${Icon} name=${ic} cls="vt-ic" />`}${name}`}<${Icon} name="caret-down" cls="vt-caret" /></button>`}${more}</h1><${ListMenu} />`;
 }
 const dayName = (d) => parseDay(d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
 function TodoList() {
   // Archived to-dos (Issue #49) are kept but never shown.
-  const v = view.value;
+  const v = curView();
+  document.body.dataset.view = v;   // keep the page's view styles in step (e.g. a deleted list falls back to All)
   const all = todos.value.map((t, i) => [t, i]).filter(([t]) => !t.archived && inView(v, t));   // keep each to-do's saved position for stable keys
   const active = all.filter(([t]) => !t.done), done = all.filter(([t]) => t.done);
   // After a tick / toggle / edit: focus the first matching element that's visible.
@@ -592,10 +737,10 @@ function TodoList() {
   shown = shown.filter(([, l]) => l.length);
   const EMPTY = { myday: 'My Day is empty. Add a to-do below, or open one and tap “My Day”.',
     important: 'No starred to-dos. Star one to see it here.', planned: 'Nothing with a date.', completed: 'Nothing done yet.' };
-  if (v !== 'all' && !all.length && !loading.value) return html`<p class="empty">${EMPTY[v]}</p>`;
+  if (v !== 'all' && !all.length && !loading.value) return html`<p class="empty">${EMPTY[v] || 'Nothing in this list yet. Add one below.'}</p>`;
   const ls = listStyle.value;
-  if (['myday', 'important', 'planned'].includes(v) && ls !== 'boxes' && active.length) {
-    // Slim headings by when: Planned per day; My Day and Important by Overdue / Today / Tonight / …
+  if ((['myday', 'important', 'planned'].includes(v) || v.startsWith('list:')) && ls !== 'boxes' && active.length) {
+    // Slim headings by when: Planned per day; My Day, Important and your own lists by Overdue / Today / Tonight / … (Issue #82)
     let vg;
     if (v === 'planned') vg = shown.map(([p, items]) => [`${p.startsWith('day-') ? 'day' : p}-${items[0][0].due}`, HEAD[p][1], items, p === 'overdue']);
     else {
@@ -675,7 +820,10 @@ function toTime(w) {
   return m && +m[1] < 24 ? `${m[1].padStart(2, '0')}:${m[2]}` : '';
 }
 export function parseEntry(raw) {
-  let text = raw.trim(), due = '', dueWord = '', p = '', time = '', starred = false;
+  let text = raw.trim(), due = '', dueWord = '', p = '', time = '', starred = false, list = '';
+  // "#home" at the start or end puts it in one of your own lists (Issue #72).
+  const lm = text.match(/(?:^|\s)#([\p{L}\d-]+)$/u) || text.match(/^#([\p{L}\d-]+)(?=\s|$)/u);
+  if (lm) { const l = lists.value.find((x) => listKey(x) === lm[1].toLowerCase()); if (l) { list = l.id; text = text.replace(lm[0], '').trim(); } }
   const takeEnd = (re, atStart) => {
     const m = atStart ? text.match(new RegExp(`^(${re})(?=[\\s,.:;!-]|$)`, 'i')) : text.match(new RegExp(`(?:^|[\\s,.:;!-])(${re})[.!]?$`, 'i'));
     if (!m) return null;
@@ -699,23 +847,55 @@ export function parseEntry(raw) {
   if (dueWord === 'tonight' && time && !isEveningTime(time)) time = '';   // "ton 9am": tonight wins, time dropped
   if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; time = ''; starred = false; }   // only keywords typed: keep them as the title
   if (text) text = text[0].toUpperCase() + text.slice(1);
-  return { text: text.slice(0, 500), due, dueWord, p, time, pastTime, starred, evening: dueWord === 'tonight' };
+  return { text: text.slice(0, 500), due, dueWord, p, time, pastTime, starred, list, evening: dueWord === 'tonight' };
 }
 // Adds what was typed, with whatever was understood. The priority button's
 // own choice is the fallback. Returns the parsed entry, or null if nothing added.
 function addParsed(raw, pFallback) {
   const r = parseEntry(raw);
   // Added while a view is open: it goes into that view (Issue #71).
-  const v = view.value, due = r.due || (v === 'planned' ? today.value : undefined);
-  if (!r.text || !add(r.text, r.p || pFallback, due, r.evening, r.time, r.starred || v === 'important', v === 'myday' ? today.value : undefined)) return null;
+  const v = curView(), due = r.due || (v === 'planned' ? today.value : undefined);
+  const list = r.list || (v.startsWith('list:') ? v.slice(5) : undefined);
+  if (!r.text || !add(r.text, r.p || pFallback, due, r.evening, r.time, r.starred || v === 'important', v === 'myday' ? today.value : undefined, list)) return null;
   return r;
 }
+// Typing "#" + a few letters offers your lists to finish the word (Issue #72).
+// "Mum's Car" is typed as #mumscar: lower case, spaces and punctuation dropped.
+const listKey = (l) => l.name.toLowerCase().replace(/[^\p{L}\d-]/gu, '');
+function listHits(v) {
+  const m = v.match(/(?:^|\s)#([\p{L}\d-]*)$/u);
+  if (!m || !lists.value.length) return null;
+  const q = m[1].toLowerCase(), hits = lists.value.filter((l) => listKey(l).startsWith(q)).slice(0, 6);
+  if (hits.length === 1 && listKey(hits[0]) === q) return null;   // already typed in full
+  return { q: m[1], hits };
+}
+function pickList(input, l, after) {
+  const v = input.value, h = listHits(v); if (!h) return;
+  input.value = `${v.slice(0, v.length - h.q.length)}${listKey(l)} `;
+  input.focus(); after();
+}
+function ListSuggest({ input, after }) {
+  const h = input.current && listHits(input.current.value);
+  if (!h) return null;
+  return html`<div class="list-sugg" aria-live="polite">
+    ${h.hits.length ? h.hits.map((l, i) => html`<button type="button" class="u-chip list-chip ls-btn" title=${i === 0 ? 'Tab to pick' : ''}
+        aria-label=${`Put it in ${l.name}`} onPointerDown=${(e) => e.preventDefault()} onClick=${() => pickList(input.current, l, after)}>
+        <i style=${`background:${lc(l)}`}></i>${l.name}</button>`)
+      : html`<span class="ls-none">No list starting with “${h.q}”</span>`}</div>`;
+}
+// Tab finishes the "#…" word with the first suggested list.
+const tabPick = (input, after) => (e) => {
+  if (e.key !== 'Tab' || e.shiftKey) return;
+  const h = listHits(input.current.value); if (!h?.hits.length) return;
+  e.preventDefault(); pickList(input.current, h.hits[0], after);
+};
 function Understood({ r }) {
-  if (!r || (!r.due && !r.p && !r.starred)) return null;
+  if (!r || (!r.due && !r.p && !r.starred && !r.list)) return null;
   return html`<div class="understood" aria-live="polite">
     ${r.due && html`<span class="u-chip due"><${Icon} name=${r.evening ? 'moon' : 'calendar-blank'} />${r.evening ? 'Tonight' : `Due ${r.dueWord}`}</span>`}
     ${r.time && html`<span class="u-chip due"><${Icon} name="clock" />at ${fmtTime(r.time)}</span>`}
     ${r.pastTime && html`<span class="u-chip past"><${Icon} name="clock" />${fmtTime(r.pastTime)} has passed</span>`}
+    ${r.list && listOf(r.list) && html`<span class="u-chip list-chip"><i style=${`background:${lc(listOf(r.list))}`}></i>${listOf(r.list).name}</span>`}
     ${r.starred && html`<span class="u-chip star"><${Icon} name="star-fill" />Starred</span>`}
     ${r.p && html`<span class=${`u-chip p-${r.p}`}><${Icon} name=${`prio-${r.p}`} cls=${`flag-${r.p}`} />${LABELS[r.p]}</span>`}
     <span class="u-title">→ “${r.text}”</span></div>`;
@@ -832,7 +1012,7 @@ function AddBar() {
     <form id="todo-form" class="add-bar" onSubmit=${submit}>
       <div class="add-inner">
         <div class="entry">
-          <input id="todo-input" ref=${input} onInput=${onInput} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
+          <input id="todo-input" ref=${input} onInput=${onInput} onKeyDown=${tabPick(input, onInput)} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
           <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${shownP}`}
             aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Tap to change`} title=${`Priority: ${LABELS[shownP]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>
@@ -840,6 +1020,7 @@ function AddBar() {
           </button>
         </div>
         <button type="submit" class="btn primary" aria-label="Add to-do" title="Add"><${Icon} name="plus" />Add</button>
+        <${ListSuggest} input=${input} after=${onInput} />
         <${Understood} r=${r} />
       </div>
     </form>`;
@@ -935,12 +1116,13 @@ function QuickAdd() {
       onClose=${() => { quickOpen.value = false; }} onClick=${(ev) => { if (ev.target === dlg.current) quickOpen.value = false; }}>
       <form onSubmit=${submit}>
         <div class="entry">
-          <input ref=${input} id="quick-input" onInput=${onInput} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
+          <input ref=${input} id="quick-input" onInput=${onInput} onKeyDown=${tabPick(input, onInput)} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
             aria-label="New to-do" maxlength="500" autocomplete="off" />
           <button type="button" class=${`flag-btn p-${shownP}`} aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Click to change`}
             title=${`Priority: ${LABELS[shownP]} (click to change)`} onClick=${() => { setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); input.current.focus(); }}>
             <span class="word">${shownP === 'none' ? '' : LABELS[shownP]}</span><${Icon} name=${`prio-${shownP}`} cls=${`flag-${shownP}`} /></button>
         </div>
+        <${ListSuggest} input=${input} after=${onInput} />
         <${Understood} r=${r} />
         <p class="quick-keys" aria-live="polite">
           ${added.length ? html`<span class="quick-added" key=${added.length}><${Icon} name="check-circle" />${added.length} added · “${last}”</span>` : ''}
@@ -1018,6 +1200,11 @@ function EditSheet() {
       <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}
       ${listBlock}${noteBlock}
       <div class="add-chips">
+        <label class=${`list-pick${listOf(t.list) ? ' set' : ''}`} style=${listOf(t.list) ? `--lcol:${lc(listOf(t.list))}` : ''}><${Icon} name=${listOf(t.list)?.icon || 'list'} /><span class="visually-hidden">List</span>
+          <select value=${listOf(t.list) ? t.list : ''} onChange=${(ev) => { const v2 = ev.target.value;
+            if (v2 === '__new') { ev.target.value = t.list || ''; listDialog.value = { mode: 'new', forKey: e.key }; return; }
+            const x = listOf(v2); apply({ list: x ? x.id : null }, x ? `Moved to ${x.name}` : 'No list', 'list'); }}>
+            <option value="">No list</option>${lists.value.map((x) => html`<option value=${x.id}>${x.name}</option>`)}<option value="__new">+ New list…</option></select><${Icon} name="caret-down" cls="lp-caret" /></label>
         <button type="button" class=${`add-chip myday-chip${inMyDay(t) ? ' on' : ''}`} id="edit-myday" aria-pressed=${inMyDay(t)}
           onClick=${() => apply({ myDay: inMyDay(t) ? null : today.value }, inMyDay(t) ? 'Taken out of My Day' : 'Added to My Day', 'sun')}>
           <${Icon} name="sun" />${inMyDay(t) ? 'In My Day' : 'My Day'}</button>
@@ -1041,9 +1228,9 @@ function Summary() {
   if (loading.value && !todos.value.length) return 'Loading your to-dos…';
   const all = todos.value.filter((t) => !t.archived);   // archived ones don't count (Issue #49)
   if (!all.length) return 'Nothing on your list yet';
-  if (view.value !== 'all') {   // a view is open (Issue #71): its own count, and the total
-    const n = countOf(view.value), left = all.filter((t) => !t.done).length;
-    if (view.value === 'completed') return `${n} done`;
+  if (curView() !== 'all') {   // a view is open (Issue #71): its own count, and the total
+    const n = countOf(curView()), left = all.filter((t) => !t.done).length;
+    if (curView() === 'completed') return `${n} done`;
     return n ? `${n} to do here · ${left} in all` : `${left} to do in all`;
   }
   const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
@@ -1069,7 +1256,7 @@ render(html`<${App} />`, document.getElementById('todo-groups'));
 const head = document.querySelector('#app > h1'), vh = document.createElement('div');
 vh.className = 'view-head'; head.before(vh); head.remove();
 render(html`<${ViewHead} />`, vh);
-const lp = document.createElement('div'); document.body.append(lp); render(html`<${ListsPanel} />`, lp);
+const lp = document.createElement('div'); document.body.append(lp); render(html`<${ListsPanel} /><${ListDialog} />`, lp);
 // One-time tip (per stage): how to star.
 setTimeout(() => {
   const key = `swipe-tip:${window.STAGE || 'local'}`;
@@ -1084,4 +1271,4 @@ render(html`<${Summary} />`, document.getElementById('summary'));
 // The add bar and edit sheet sit outside the list (fixed bar, modal sheet).
 const extras = document.createElement('div');
 document.body.append(extras);
-render(html`<${AddBar} /><${EditSheet} /><${QuickAdd} /><${DueMenu} />`, extras);
+render(html`<${AddBar} /><${EditSheet} /><${QuickAdd} /><${DueMenu} /><${SwipeMenu} />`, extras);

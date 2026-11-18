@@ -94,6 +94,8 @@ If they say yes:
 
 - Explain in plain English and briefly define technical terms; don't
   assume development experience.
+- The app is run by APPsolute Studio Ltd, a **UK** company: for anything legal or
+  regional (privacy, data authorities, regions), think UK/EU. Don't bring up New Zealand.
 - For visual changes, show a screenshot of the result before pushing.
 - When something is ambiguous, make a sensible choice and say what you
   chose, rather than asking lots of questions. Ask first for anything
@@ -215,7 +217,7 @@ If they say yes:
 - `stage.js` is overwritten per stage at deploy time; locally it says `local`.
 - **Look and layout (Nov 2026, from the playbook starter):** the starter's style
   kit in `style.css` (top part; test-app's own rules are in the section at the
-  end), `menu.js` (menu: photo, theme, Settings with accent colour and text
+  end), `menu.js` (menu: photo, Settings with theme, accent colour and text
   size, version → What's new), `pwa.js` + `sw.js` (offline, install, "new
   version" bar), `styleguide.html`; the to-do screen is Preact components (`app/`, libraries in `vendor/`).
   Layout: a soft panel per priority (option D, Issue #19) with roomy rows, Done
@@ -226,7 +228,18 @@ If they say yes:
   "Overdue…") is its own button; tapping it opens `DueMenu` in `app/main.js`
   (Today / Tomorrow / Next week = the coming Monday, Pick a date…, No date) with an Undo note. Swipe left on a row
   also sends it to tomorrow, or brings a due-tomorrow one forward to today; a to-do with no date shows "When?" and opens the same menu (Issue #39, `useSwipe`; same code as swipe right
-  to star). Choosing each swipe's action in Settings is the rest of #39 (not built).
+  to star). Settings → Swipe actions chooses each direction's action (Issue #81, below).
+- **Swipe actions (Issue #81):** Settings → Swipe actions: a live preview strip plus a
+  "Swipe right" and a "Swipe left" picker (the usual `.due-menu` look, icon per action, tick on
+  the chosen one). Prefs `swipeRight` (default `star`) / `swipeLeft` (default `tomorrow`) in
+  `menu.js`, which also holds the action list (`window.SWIPE_ACTIONS`); `app/main.js` does them
+  (`runSwipe`, `swipeFace`, `SwipeMenu` for the Priority and List pickers) and redraws on the
+  `prefschange` event. Actions: Star, Tomorrow/today (When? opens the due menu), Done, Delete
+  (Undo only, no "tap again"; `restore()` in `app/store.js` puts it back whole), Set priority,
+  My Day, Move to a list, Edit, Nothing. Each has its own colour (`--sw-*`, `.act-<id>` in
+  `style.css`); every colour/text pair is checked at 4.5:1 or better, light and dark, so keep it that
+  way when adding one. The colour layer is only as wide as the drag (140px max), so swipe
+  labels must stay short (the My Day swipe says "Remove", not "Out of My Day").
 - **Delete (Issue #40):** red Delete on the left of Cancel / Save in the edit
   sheet; first tap arms it ("Tap again"), disarms after 3 s. `remove()` in
   `app/store.js`; `firestore.rules` allows owner-only deletes.
@@ -296,6 +309,8 @@ If they say yes:
   see archived ones again isn't built yet.
 - **Edit sheet calendar (Issue #45):** hidden behind a "Pick" chip; shows on
   its own when the date isn't today / tomorrow.
+- **Slim panel headings (Issue #83, option A):** the coloured panels' heading bar (`.prio-toggle`, about 30px instead of 39) and the Tonight divider inside Due today (`.tonight-toggle`, 26px) are kept slim so panels take less room; the fold chevron is a 1.3rem circle (still a tap target). Option B / C were slimmer still, with a smaller chevron.
+- **Overdue pill (Issue #84):** the "Overdue · 2 days" pill is solid red in light, and a soft dark-red tint with light red text (7.5:1) in dark, both Dark and Auto-dark.
 - **Add bar (Issue #66, option 1 + 2):** a floating pill (12px from the edges
   plus the home-bar space, `viewport-fit=cover`, Issue #65; capped to the
   list's width on desktop) holding a 53px rounded box with the priority button
@@ -316,7 +331,7 @@ If they say yes:
   is open puts the to-do in it (My Day / starred / due today). **My Day** = optional
   `myDay: 'YYYY-MM-DD'` (`firestore.rules` checks the format; counts only on that day, so
   it empties each morning); toggled by the edit panel's "My Day" chip; rows elsewhere
-  show a small sun "My Day" tag. Custom lists (Home, Work…) are Issue #72, not built.
+  show a small sun "My Day" tag. Custom lists: Issue #72 (below).
   **Settings → List style** (`listStyle` pref in `menu.js`, `data-list-style` on `<html>`;
   Pills default / Lines / Boxes) sets how My Day, Important and Planned group to-dos:
   Pills = small rounded headings over plain cards (`.vg-*`), Lines = Done-style
@@ -324,12 +339,56 @@ If they say yes:
   Overdue / Today / Tonight / Later / Any time; Important adds Tomorrow and No date. With
   only one group (not Planned), no heading. Folded groups are remembered (`vg-…` keys).
   Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
-  it (not on All to-dos or Important). All to-dos always keeps its panels.
-  Settings order: List style, Accent colour, Text size.
+  it (not on All to-dos or Important). All to-dos always keeps its panels; your own
+  lists group like Important (Issue #82; Boxes keeps the main view's panels).
+  Settings order: Theme, Accent colour, Text size, List style (Issue #77: the theme moved
+  out of the menu). View icons are coloured by type
+  (`data-v`): My Day `--sun` orange, Important `--gold`, Planned `--today-swipe` purple,
+  Completed `--ok` green, All to-dos the accent.
+- **Your own lists (Issue #72):** "+ New list" in the Lists panel (`ListDialog` in
+  `app/main.js`): name (≤40), one of 12 colours, one of 16 icons (`LIST_ICONS`); shown
+  under "Your lists" with a filled colour tile behind the icon (`.tile.c-<colour>`, bright
+  colour with a white or dark icon, so the hues can be vivid). A list view (`list:<id>`)
+  looks like All to-dos. Put a to-do in a list from the edit panel's list picker (with
+  "+ New list…"), by adding while the list is open, or by typing `#name` at the start or
+  end (chip under the box). Elsewhere rows show a small coloured dot + the list's name.
+  Typing `#` + letters suggests matching lists as chips under the box (and in quick add);
+  tap one or press Tab to finish the word (`listHits`, `ListSuggest`; `listKey` = name in
+  lower case without spaces or punctuation, so "Mum's Car" is `#mumscar`).
+  New / Edit list has just **Done** (Esc or tapping outside too), like the edit panel: when
+  editing, colour and icon save on tap and the name on leaving the box; a new list is made
+  on Done only if it has a name.
+  "⋯" beside a list's title: rename / colour / icon, or Delete list (keep its to-dos with
+  no list, or delete them too). Data: `lists` in `app/store.js` (`lists-<stage>` on the
+  device; signed in `users/{uid}/stages/{stage}/lists/{id}`, `cloud-lists-<stage>` copy),
+  ids made on the device so a to-do can point at a new list at once; to-dos have an
+  optional `list` id. `firestore.rules` checks both (name, colour and icon from fixed
+  lists). First sign-in copies the device's lists too (same name = reuse). Not built yet:
+  reordering lists.
+- **Accent colours (Issue #75):** 12 evenly spread hues shared with list colours (red,
+  orange, yellow, lime, green, teal, cyan, blue, purple, grape, pink, graphite; two rows
+  of 6). Swatches show the bright colour; the light theme uses a deeper shade so white
+  button text and link text pass 4.5:1, dark uses the bright one with dark text. Blue
+  (default) unchanged; teal is greener than before (cyan is the old blue-green).
 - **Done today (Issue #74):** under All to-dos, My Day and Important, `DoneSection`
   shows only to-dos ticked off today ("Done today · n", folded with the same
   `done-open` key) and a "See all completed (n) →" link to the Completed view. The
   full history, its date groups and Tidy up are only in Completed.
+- **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
+- **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;
+  signed out, the menu opens with `#signin-box` (a short reason and a full-width
+  "Sign in with Google", `#sign-in`), hidden by `sync.js` once signed in and while
+  Firebase isn't set up. Same in the playbook's starter.
+- **Privacy and Delete my account (Issue #79):** `privacy.html` (from the playbook starter,
+  filled in for this app; update it whenever the app stores something new), linked from
+  the sign-in card, the menu footer and Settings. Signed in, Settings → Your account →
+  "Delete my account…" (`#delete-account` dialog, `sync.js`) deletes `todos` and `lists` on
+  every stage, then the Firebase user (re-asks Google if needed); device-only to-dos stay.
+  A list view whose list no longer exists shows All to-dos (`curView()` in `app/main.js`).
+  **Download my data** (Issue #80) beside it: a JSON file of `todos` and `lists` on every stage
+  (dates as ISO text). The privacy page names APPsolute Studio and its business address
+  (published on purpose) and covers the UK / EU GDPR points.
+  Test stages get a noindex tag from the shared deploy.
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
   zooms the page into any box under 16px).

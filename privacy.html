@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" data-accent="blue">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Privacy · The Shortlist</title>
+  <meta name="description" content="How The Shortlist handles your data." />
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    // Same saved theme / accent / text size as the app (see menu.js).
+    try {
+      const p = JSON.parse(localStorage.getItem(`prefs:${location.pathname.split('/')[1] || 'app'}`) || '{}');
+      const d = document.documentElement.dataset;
+      d.theme = p.theme || 'auto'; d.textSize = p.textSize || 'standard'; d.accent = p.accent || d.accent;
+    } catch { /* defaults */ }
+  </script>
+  <style>
+    body { display: block; padding: 1.5rem 1rem 4rem; }
+    .privacy { width: min(640px, 100%); margin: 0 auto; line-height: 1.6; }
+    .privacy h1 { font-size: 1.6rem; margin: .6rem 0 .2rem; }
+    .privacy h2 { font-size: 1.1rem; margin: 1.6rem 0 .3rem; }
+    .privacy ul { padding-left: 1.2rem; }
+    .privacy a { color: var(--accent); }
+    .back { display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <!-- Privacy page (Issues #79, #80; from the playbook starter). Covers what the GDPR
+       (UK and EU) asks a privacy notice to say. Update it, and the date,
+       whenever the app starts storing or sharing something new. The contact address
+       is APPsolute Studio's business address, published on purpose. -->
+  <main class="privacy">
+    <a class="back" href="./">‹ Back to The Shortlist</a>
+    <h1>Privacy</h1>
+    <p class="muted">Last updated: 18 November 2026</p>
+
+    <p>The Shortlist keeps only what it needs to work. No ads, no tracking, and your data is never sold.</p>
+
+    <h2>Who's responsible</h2>
+    <p>The Shortlist is run by <b>APPsolute Studio Ltd</b>, a company registered in England and Wales (company number 16243898, <a href="https://find-and-update.company-information.service.gov.uk/company/16243898">Companies House record</a>), which decides how your data is used (the "data controller"). Questions or requests about your data: <a href="mailto:info@appsolute.studio">info@appsolute.studio</a>.</p>
+
+    <h2>Using it without signing in</h2>
+    <p>Everything you add is saved <b>only on this device</b>, in your browser's storage. It isn't sent to us, and it stays there until you delete it or clear your browser's data.</p>
+
+    <h2>When you sign in with Google</h2>
+    <ul>
+      <li><b>From Google</b> we receive your name, email address and profile photo, to sign you in and show who's signed in.</li>
+      <li><b>Your data</b> (your to-dos with their dates, notes and checklists, and your lists) is saved to your account so it's on all your devices.</li>
+      <li><b>Only you</b> can read or change it: the app's security rules block everyone else, us included in normal use.</li>
+      <li>Your settings (theme, colours, text size) stay on each device.</li>
+    </ul>
+    <p><b>Why we may use it (the legal basis):</b> to provide the app you've chosen to use (performing our agreement with you).</p>
+
+    <h2>Who else handles it</h2>
+    <ul>
+      <li><b>Google (Firebase)</b> runs sign-in and stores your account's data, and delivers part of the app's code. Your data is stored in Europe; Google's sign-in service runs in the United States.</li>
+      <li><b>GitHub</b> hosts the website and, like any web host, briefly keeps visitors' IP addresses in its server logs for security.</li>
+      <li><b>Gmail</b> (Google) sends testers a receipt and a "now live" note for their reports (see below).</li>
+    </ul>
+    <p>They act on our behalf under their data protection terms. Data sent to the United States is protected by the EU–US Data Privacy Framework (and its UK Extension) and the providers' Standard Contractual Clauses.</p>
+
+    <h2>How long it's kept</h2>
+    <ul>
+      <li>Your account and its data: until you delete them (see below).</li>
+      <li>Testers' email addresses: until their report has been dealt with, then deleted.</li>
+      <li>Hosting logs: as long as GitHub keeps them (a short time).</li>
+    </ul>
+
+    <h2>Your rights</h2>
+    <ul>
+      <li><b>See or copy your data:</b> Menu → Settings → <b>Download my data</b> gives you everything in your account as a file.</li>
+      <li><b>Correct it:</b> edit anything in the app.</li>
+      <li><b>Delete it:</b> Menu → Settings → <b>Delete my account</b> removes your account and everything saved in it, straight away, on every version of the app. Data saved only on this device: delete it in the app, or clear this site's data in your browser.</li>
+      <li><b>Object or ask us to limit</b> how your data is used: email us.</li>
+      <li><b>Complain</b> to a data protection authority: in the UK, the Information Commissioner's Office (<a href="https://ico.org.uk/make-a-complaint/">ico.org.uk</a>); in the EU, the authority in your country. We'd appreciate the chance to put things right first.</li>
+    </ul>
+
+    <h2>Testers' reports</h2>
+    <p>On the test versions of the app, invited testers can send a report with the <b>Report issue</b> button. We keep the tester's email address only to send a receipt and to say when their report has led to a change, then delete it (legal basis: our legitimate interest in improving the app). The report itself becomes a public note on the app's GitHub page, without names or email addresses.</p>
+
+    <h2>Cookies and tracking</h2>
+    <p>No analytics, advertising or tracking cookies, and no automated decisions about you. The app uses your browser's storage only to work (your data, your settings, and a copy of the app so it opens offline).</p>
+
+    <h2>Children</h2>
+    <p>The Shortlist isn't aimed at children under 16.</p>
+
+    <h2>Changes</h2>
+    <p>If this page changes, the date at the top changes too. Anything that affects how your data is used will also be mentioned in the app's What's new.</p>
+  </main>
+</body>
+</html>
