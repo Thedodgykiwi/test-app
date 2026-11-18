@@ -368,6 +368,9 @@ If they say yes:
   "Delete my account…" (`#delete-account` dialog, `sync.js`) deletes `todos` and `lists` on
   every stage, then the Firebase user (re-asks Google if needed); device-only to-dos stay.
   A list view whose list no longer exists shows All to-dos (`curView()` in `app/main.js`).
+  **Download my data** (Issue #80) beside it: a JSON file of `todos` and `lists` on every stage
+  (dates as ISO text). The privacy page names APPsolute Studio and its business address
+  (published on purpose) and covers the GDPR / NZ Privacy Act points.
   Test stages get a noindex tag from the shared deploy.
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari

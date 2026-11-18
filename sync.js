@@ -88,6 +88,37 @@ async function start() {
   });
   ui.signOut.addEventListener('click', () => { setMenu(false); authLib.signOut(auth); });
 
+  // ---- Download my data (Settings → Your account, Issue #80) ------------------
+  // A JSON copy of the to-dos and lists in the account, every stage (the right to a
+  // copy of your data). Dates come out as ISO text.
+  $('download-data').addEventListener('click', async (e) => {
+    const user = auth.currentUser, btn = e.currentTarget; if (!user) return;
+    btn.disabled = true;
+    // Firestore dates → readable text (before JSON, which would turn them into {seconds, …}).
+    const plain = (v) => (v && typeof v.toDate === 'function' ? v.toDate().toISOString()
+      : Array.isArray(v) ? v.map(plain) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)])) : v);
+    try {
+      const out = { app: 'The Shortlist', exportedAt: new Date().toISOString(),
+        account: { name: user.displayName, email: user.email }, stages: {} };
+      for (const stage of ['local', 'dev', 'alpha', 'staging', 'main']) {
+        for (const name of ['todos', 'lists']) {
+          const snap = await fs.getDocs(fs.collection(db, 'users', user.uid, 'stages', stage, name));
+          if (!snap.size) continue;
+          (out.stages[stage] ||= {})[name] = snap.docs.map((d) => ({ id: d.id, ...plain(d.data()) }));
+        }
+      }
+      const json = JSON.stringify(out, null, 2);
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([json], { type: 'application/json' })),
+        download: `the-shortlist-my-data-${new Date().toISOString().slice(0, 10)}.json`,
+      });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      toast('Your data has been downloaded.');
+    } catch (err) {
+      toast(`Couldn't download your data (${err.code || err.message}).`, 6000);
+    } finally { btn.disabled = false; }
+  });
+
   // ---- Delete my account (Settings → Your account, Issue #79) -----------------
   // Removes the to-dos and lists saved in the account on every stage, then the
   // sign-in itself (Google may ask to sign in again first). The device's own

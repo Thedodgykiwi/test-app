@@ -1029,3 +1029,6 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .notice.danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
 .delete-actions { justify-content: flex-end; gap: .5rem; flex-wrap: wrap; margin-top: .4rem; }
 #delete-account > p { margin: .3rem 0 .7rem; }
+.account-actions { gap: .5rem; flex-wrap: wrap; }
+.account-actions #download-data { background: var(--secondary); border: 1px solid var(--line); }
+.setting-help a { color: var(--accent); }
