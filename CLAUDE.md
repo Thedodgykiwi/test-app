@@ -358,6 +358,10 @@ If they say yes:
   shows only to-dos ticked off today ("Done today · n", folded with the same
   `done-open` key) and a "See all completed (n) →" link to the Completed view. The
   full history, its date groups and Tidy up are only in Completed.
+- **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;
+  signed out, the menu opens with `#signin-box` (a short reason and a full-width
+  "Sign in with Google", `#sign-in`), hidden by `sync.js` once signed in and while
+  Firebase isn't set up. Same in the playbook's starter.
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
   zooms the page into any box under 16px).

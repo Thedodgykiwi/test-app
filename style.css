@@ -174,7 +174,11 @@ body.has-banner .account { top: 2.8rem; }
 .avatar-wrap { position: relative; display: block; }
 .avatar-label { font-size: .7rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .avatar-btn:hover .avatar-label { color: var(--text); }
-.sign-in { margin-top: .2rem; }
+/* Signed out: a small card at the top of the menu with a reason and the Google button */
+.signin-box { display: grid; gap: .55rem; padding: .2rem .2rem .75rem; margin-bottom: .35rem; border-bottom: 1px solid var(--line); }
+.signin-why { margin: 0; display: grid; gap: .1rem; font-size: .9rem; }
+.signin-why span { color: var(--muted); font-size: .82rem; }
+.signin-box .sign-in { width: 100%; justify-content: center; min-height: 42px; border-radius: 10px; font-size: .92rem; }
 .avatar {
   width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; object-fit: cover;
   background: var(--surface); color: var(--muted); border: 1px solid var(--line);

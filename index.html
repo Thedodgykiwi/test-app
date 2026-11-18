@@ -56,7 +56,6 @@
        Google sign-in (sync.js) adds your photo, name and Sign in / Sign out
        once Firebase is set up (see firebase-config.js). -->
   <div id="account" class="account">
-    <button type="button" id="sign-in" class="sign-in" hidden><span data-icon="google-logo"></span>Sign in</button>
     <button type="button" id="account-btn" class="avatar-btn" aria-expanded="false" aria-controls="account-menu" aria-label="Menu" title="Menu">
       <span class="avatar-wrap">
         <img id="avatar-img" class="avatar" alt="" referrerpolicy="no-referrer" hidden>
@@ -66,6 +65,11 @@
       <span id="avatar-label" class="avatar-label" aria-hidden="true">Menu</span>
     </button>
     <div id="account-menu" class="account-menu" hidden>
+      <!-- Signed out (with sign-in set up): why, and the Google button, at the top of the menu -->
+      <div id="signin-box" class="signin-box" hidden>
+        <p class="signin-why"><b>Your to-dos, on every device</b><span>Sign in to keep them safe and in sync.</span></p>
+        <button type="button" id="sign-in" class="sign-in"><span data-icon="google-logo"></span>Sign in with Google</button>
+      </div>
       <div id="who" class="who" hidden>
         <img id="who-img" class="avatar" alt="" referrerpolicy="no-referrer" hidden>
         <span id="who-letter" class="avatar" aria-hidden="true"></span>
