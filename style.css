@@ -873,3 +873,44 @@ body { padding-bottom: calc(9rem + env(safe-area-inset-bottom)); }
 .todo > .swipe-under { visibility: hidden; }
 .todo:has(> .todo-row.swiping) > .swipe-under, .todo:has(> .todo-row.settle) > .swipe-under { visibility: visible; }
 .todo.swipe-left > .swipe-under:not(.left) { visibility: hidden; }
+
+/* ===== Lists panel and views (Issue #71, option A + tappable title) ===== */
+.view-head { display: contents; }
+body:not([data-view="all"]) .tagline { display: none; }
+.lists-btn { justify-self: start; display: inline-flex; align-items: center; gap: .3rem; min-height: 40px; margin: -.3rem 0 -.7rem -.2rem; padding: 0 .2rem;
+  background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; font-size: 1rem; cursor: pointer; }
+.lists-btn .ic { width: 1.1rem; height: 1.1rem; }
+.view-title .vt { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; font: inherit; color: inherit; }
+.view-title button.vt { background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: left; border-radius: 8px; }
+.view-title .vt-ic { width: 1.4rem; height: 1.4rem; color: var(--accent); flex: none; }
+.view-title .vt-caret { width: 1rem; height: 1rem; color: var(--muted); flex: none; }
+.lists-scrim { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .2s; }
+.lists-scrim.open { opacity: 1; pointer-events: auto; }
+.lists-panel { position: fixed; z-index: 75; top: 0; bottom: 0; left: 0; width: min(300px, 84vw); overflow: auto;
+  padding: calc(1rem + env(safe-area-inset-top)) .6rem calc(1rem + env(safe-area-inset-bottom)) calc(.6rem + env(safe-area-inset-left));
+  background: var(--surface); color: var(--text); border-radius: 0 18px 18px 0; box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  transform: translateX(-105%); visibility: hidden; transition: transform .25s cubic-bezier(.2,.8,.3,1), visibility 0s .25s; }
+.lists-panel.open { transform: none; visibility: visible; transition: transform .25s cubic-bezier(.2,.8,.3,1); }
+@media (prefers-reduced-motion: reduce) { .lists-panel, .lists-panel.open, .lists-scrim { transition: none; } }
+.lists-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 .3rem .5rem .7rem; }
+.lists-top h2 { margin: 0; font-size: 1.15rem; }
+.lv { display: grid; gap: .1rem; }
+.lv-item { display: flex; align-items: center; gap: .75rem; min-height: 46px; padding: 0 .7rem; border: 0; border-radius: 12px;
+  background: none; color: inherit; font: inherit; font-size: 1rem; text-align: left; cursor: pointer; }
+.lv-item:hover { background: var(--hover); }
+.lv-item[aria-current] { background: color-mix(in srgb, var(--accent) 12%, transparent); font-weight: 600; }
+.lv-item .lv-ic { width: 1.25rem; height: 1.25rem; color: var(--accent); flex: none; }
+.lv-name { flex: 1; }
+.lv-n { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+/* Wide screens: the panel stays open as a sidebar and the page moves over to make room. */
+body.lists-pinned .lists-panel { transform: none; visibility: visible; box-shadow: none; border-radius: 0; background: var(--bg); border-right: 1px solid var(--line); }
+body.lists-pinned.has-banner .lists-panel { padding-top: calc(3rem + env(safe-area-inset-top)); }
+body.lists-pinned { padding-left: calc(300px + 1rem); }
+body.lists-pinned .add-bar { left: calc(50% - 150px); right: calc(50% - 450px); }
+/* My Day: a small sun tag on rows (outside the My Day view) and a toggle in the edit panel */
+.meta-tag { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .3rem; font-size: .8rem; color: var(--muted); }
+.meta-tag .ic { width: .9rem; height: .9rem; color: #e67700; }
+.sheet.compact .myday-chip .ic { color: #e67700; }
+.sheet.compact .myday-chip.on { border-style: solid; border-color: #e67700; background: color-mix(in srgb, #f08c00 12%, transparent); color: var(--text); font-weight: 600; }
+body.lists-pinned .lists-panel { z-index: 9; }   /* under the stage banner (its Report issue button) */
+body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* always open in Completed */

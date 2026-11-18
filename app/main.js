@@ -345,6 +345,7 @@ function Row({ t, k }) {
             aria-expanded=${noteOpen.value.has(k)} aria-label=${`Note. ${noteOpen.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(noteOpen.value); s.has(k) ? s.delete(k) : s.add(k); noteOpen.value = s; }}>
             <${Icon} name="note" />Note<${Icon} name="caret-down" cls="caret" /></button>`}
+          ${!t.done && inMyDay(t) && view.value !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
         </div>
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
@@ -356,8 +357,8 @@ function Row({ t, k }) {
     </li>`;
 }
 
-function DoneSection({ done }) {
-  const closed = !collapsed.value.has('done-open');
+function DoneSection({ done, always }) {
+  const closed = !always && !collapsed.value.has('done-open');   // Completed view: always open (Issue #71)
   const now = new Date();
   const [tidy, setTidy] = useState(false);   // "Tidy up" menu (Issue #49, option B)
   // Tidy up only while Done is open and there's something older than today (Issue #59);
@@ -368,7 +369,7 @@ function DoneSection({ done }) {
     <div class="group group-done">
       <h2><button type="button" class="group-toggle" data-group="done" aria-expanded=${!closed} aria-controls="group-list-done"
         title=${closed ? 'Show this section' : 'Hide this section'}
-        onClick=${() => { setTidy(false); toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
+        onClick=${() => { if (always) return; setTidy(false); toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
         <${Icon} name=${closed ? 'caret-right' : 'caret-down'} cls="chevron" /><${Icon} name="check-circle" cls="done-icon" />Done · ${done.length}
       </button>
       ${canTidy && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
@@ -460,9 +461,74 @@ function TidyMenu({ done, now, close }) {
   </div>`;
 }
 
+// ---- Lists panel and views (Issue #71, option A + the tappable title from C) ---
+// "‹ Lists" (or tapping the title) opens a side panel of views: All to-dos,
+// My Day, Important (starred), Planned (has a date) and Completed. On wide
+// screens the panel stays open as a sidebar. The chosen view is remembered
+// per stage. My Day is a `myDay: 'YYYY-MM-DD'` date on a to-do: it only
+// counts on that day, so My Day starts empty each morning.
+const VIEWS = [['all', 'list-checks', 'All to-dos'], ['myday', 'sun', 'My Day'], ['important', 'star', 'Important'],
+  ['planned', 'calendar-blank', 'Planned'], ['completed', 'check-circle', 'Completed']];
+const viewKey = `view-${window.STAGE || 'local'}`;
+const savedView = (() => { try { return localStorage.getItem(viewKey); } catch { return null; } })();
+const view = signal(VIEWS.some(([k]) => k === savedView) ? savedView : 'all');
+const listsOpen = signal(false);
+const wideQ = matchMedia('(min-width: 1100px)');
+const wide = signal(wideQ.matches);
+wideQ.addEventListener('change', () => { wide.value = wideQ.matches; if (wide.value) listsOpen.value = false; });
+const inMyDay = (t) => t.myDay === today.value;
+const viewInfo = (v) => VIEWS.find(([k]) => k === v) || VIEWS[0];
+function inView(v, t) {
+  if (v === 'myday') return inMyDay(t);
+  if (v === 'important') return !!t.starred;
+  if (v === 'planned') return validDue(t.due) && !t.done;
+  if (v === 'completed') return !!t.done;
+  return true;
+}
+const countOf = (v) => todos.value.filter((t) => !t.archived && (v === 'completed' ? t.done : !t.done) && inView(v, t)).length;
+function setView(v) {
+  view.value = v; listsOpen.value = false;
+  try { localStorage.setItem(viewKey, v); } catch { /* storage blocked: not remembered */ }
+  document.body.dataset.view = v; scrollTo(0, 0);
+  setTimeout(() => document.getElementById('view-title-btn')?.focus({ preventScroll: true }));
+}
+document.body.dataset.view = view.value;
+function ListsPanel() {
+  const panel = useRef();
+  const open = listsOpen.value, pinned = wide.value;
+  useEffect(() => {
+    if (!open) return;
+    panel.current?.querySelector('[aria-current]')?.focus();
+    const esc = (e) => { if (e.key === 'Escape') { listsOpen.value = false; document.getElementById('view-title-btn')?.focus(); } };
+    addEventListener('keydown', esc); return () => removeEventListener('keydown', esc);
+  }, [open]);
+  document.body.classList.toggle('lists-pinned', pinned);
+  return html`
+    ${!pinned && html`<div class=${`lists-scrim${open ? ' open' : ''}`} onClick=${() => { listsOpen.value = false; }}></div>`}
+    <aside class=${`lists-panel${open || pinned ? ' open' : ''}`} ref=${panel} aria-label="Lists" inert=${!open && !pinned}
+      role=${pinned ? null : 'dialog'} aria-modal=${pinned ? null : 'true'}>
+      <div class="lists-top"><h2>Lists</h2>${!pinned && html`<button type="button" class="close-btn" aria-label="Close" onClick=${() => { listsOpen.value = false; document.getElementById('view-title-btn')?.focus(); }}><${Icon} name="x" /></button>`}</div>
+      <nav class="lv" aria-label="Views">${VIEWS.map(([v, ic, name]) => { const n = countOf(v);
+        return html`<button type="button" class="lv-item" aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
+          <${Icon} name=${ic} cls="lv-ic" /><span class="lv-name">${name}</span>${n > 0 && html`<span class="lv-n" aria-label=${`, ${n}`}>${n}</span>`}</button>`; })}</nav>
+    </aside>`;
+}
+// Above the title: "‹ Lists". The title itself (app name, or the view's name) also opens the panel.
+function ViewHead() {
+  const v = view.value, [, ic, name] = viewInfo(v), pinned = wide.value;
+  const toggle = () => { if (!pinned) listsOpen.value = !listsOpen.value; };
+  return html`
+    ${!pinned && html`<button type="button" class="lists-btn" aria-expanded=${listsOpen.value} onClick=${toggle}><${Icon} name="caret-left" />Lists</button>`}
+    <h1 class="view-title">${pinned ? html`<span class="vt">${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}</span>`
+      : html`<button type="button" id="view-title-btn" class="vt" aria-haspopup="dialog" aria-expanded=${listsOpen.value} title="Lists" onClick=${toggle}>
+        ${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}<${Icon} name="caret-down" cls="vt-caret" /></button>`}</h1>`;
+}
+const dayName = (d) => parseDay(d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
 function TodoList() {
   // Archived to-dos (Issue #49) are kept but never shown.
-  const all = todos.value.map((t, i) => [t, i]).filter(([t]) => !t.archived);   // keep each to-do's saved position for stable keys
+  const v = view.value;
+  const all = todos.value.map((t, i) => [t, i]).filter(([t]) => !t.archived && inView(v, t));   // keep each to-do's saved position for stable keys
   const active = all.filter(([t]) => !t.done), done = all.filter(([t]) => t.done);
   // After a tick / toggle / edit: focus the first matching element that's visible.
   useEffect(() => {
@@ -491,14 +557,28 @@ function TodoList() {
   const groups = [['starred', starred], ['overdue', overdue], ['today', dueToday], ['tomorrow', dueTomorrow],
     ...LEVELS.map((p) => [p, rest.filter(([t]) => t.p === p)])].filter(([, l]) => l.length);
   const HEAD = { overdue: ['warning', 'Overdue'], today: ['clock', 'Due today'], tomorrow: ['calendar-blank', 'Due tomorrow'], starred: ['star-fill', 'Starred'] };
+  let shown = groups;
+  if (v === 'important') shown = [['starred', starred]];
+  if (v === 'planned') {   // Planned: Overdue, then one panel per day, like a diary
+    const days = [...new Set(active.filter(([t]) => ds.get(t) !== 'overdue').map(([t]) => t.due))].sort();
+    shown = [['overdue', active.filter(([t]) => ds.get(t) === 'overdue').sort(byDue)],
+      ...days.map((d) => [d === today.value ? 'today' : d === tomorrowDay() ? 'tomorrow' : `day-${d}`,
+        active.filter(([t]) => t.due === d && ds.get(t) !== 'overdue').sort((x, y) => ((x[0].evening ? 1 : 0) - (y[0].evening ? 1 : 0)) || byTime(x, y))])];
+    days.forEach((d) => { HEAD[`day-${d}`] = ['calendar-blank', dayName(d)]; });
+    HEAD.today = ['clock', 'Today']; HEAD.tomorrow = ['calendar-blank', 'Tomorrow'];
+  }
+  shown = shown.filter(([, l]) => l.length);
+  const EMPTY = { myday: 'My Day is empty. Add a to-do below, or open one and tap “My Day”.',
+    important: 'No starred to-dos. Star one to see it here.', planned: 'Nothing with a date.', completed: 'Nothing done yet.' };
+  if (v !== 'all' && !all.length && !loading.value) return html`<p class="empty">${EMPTY[v]}</p>`;
   return html`
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
-    ${all.length > 0 && !active.length && html`<p class="empty">All done. Nothing left to do!</p>`}
+    ${all.length > 0 && !active.length && v !== 'completed' && html`<p class="empty">All done. Nothing left to do!</p>`}
     ${active.length > 0 && html`<div id="todo-list" class="prio-groups">
-      ${groups.map(([p, items]) => html`
+      ${shown.map(([p, items]) => html`
         <${Panel} key=${p} p=${p} items=${items} head=${HEAD[p]} />`)}
     </div>`}
-    ${done.length > 0 && html`<${DoneSection} done=${done} />`}
+    ${done.length > 0 && html`<${DoneSection} done=${done} always=${v === 'completed'} />`}
     ${movedHint.value && html`<p class="moved-hint">Moved to Done ↓</p>`}`;
 }
 
@@ -576,7 +656,9 @@ export function parseEntry(raw) {
 // own choice is the fallback. Returns the parsed entry, or null if nothing added.
 function addParsed(raw, pFallback) {
   const r = parseEntry(raw);
-  if (!r.text || !add(r.text, r.p || pFallback, r.due || undefined, r.evening, r.time, r.starred)) return null;
+  // Added while a view is open: it goes into that view (Issue #71).
+  const v = view.value, due = r.due || (v === 'planned' ? today.value : undefined);
+  if (!r.text || !add(r.text, r.p || pFallback, due, r.evening, r.time, r.starred || v === 'important', v === 'myday' ? today.value : undefined)) return null;
   return r;
 }
 function Understood({ r }) {
@@ -887,6 +969,9 @@ function EditSheet() {
       <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}
       ${listBlock}${noteBlock}
       <div class="add-chips">
+        <button type="button" class=${`add-chip myday-chip${inMyDay(t) ? ' on' : ''}`} id="edit-myday" aria-pressed=${inMyDay(t)}
+          onClick=${() => apply({ myDay: inMyDay(t) ? null : today.value }, inMyDay(t) ? 'Taken out of My Day' : 'Added to My Day', 'sun')}>
+          <${Icon} name="sun" />${inMyDay(t) ? 'In My Day' : 'My Day'}</button>
         ${due && !time && !timeOn && html`<button type="button" class="add-chip" id="edit-time-add" onClick=${() => setTimeOn(true)}><${Icon} name="clock" />Time</button>`}
         ${!itemsOf(t).length && !startList && html`<button type="button" class="add-chip" onClick=${() => setStartList(true)}><${Icon} name="list-checks" />Checklist</button>`}
         ${!noteOn && html`<button type="button" class="add-chip" id="edit-note-add" onClick=${() => { setNoteOn(true); setTimeout(() => noteRef.current?.focus()); }}><${Icon} name="note" />Note</button>`}
@@ -907,6 +992,11 @@ function Summary() {
   if (loading.value && !todos.value.length) return 'Loading your to-dos…';
   const all = todos.value.filter((t) => !t.archived);   // archived ones don't count (Issue #49)
   if (!all.length) return 'Nothing on your list yet';
+  if (view.value !== 'all') {   // a view is open (Issue #71): its own count, and the total
+    const n = countOf(view.value), left = all.filter((t) => !t.done).length;
+    if (view.value === 'completed') return `${n} done`;
+    return n ? `${n} to do here · ${left} in all` : `${left} to do in all`;
+  }
   const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
   const left = all.filter((t) => !t.done).length;
   const doneToday = all.filter((t) => t.done && Number.isFinite(t.doneAt) && t.doneAt >= startOfToday).length;
@@ -926,6 +1016,11 @@ function App() {
 }
 
 render(html`<${App} />`, document.getElementById('todo-groups'));
+// The Lists button and tappable title replace the page's own heading (Issue #71).
+const head = document.querySelector('#app > h1'), vh = document.createElement('div');
+vh.className = 'view-head'; head.before(vh); head.remove();
+render(html`<${ViewHead} />`, vh);
+const lp = document.createElement('div'); document.body.append(lp); render(html`<${ListsPanel} />`, lp);
 // One-time tip (per stage): how to star.
 setTimeout(() => {
   const key = `swipe-tip:${window.STAGE || 'local'}`;

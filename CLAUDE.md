@@ -307,6 +307,16 @@ If they say yes:
   stages share one sample list in the browser; no sync) and the banner's stage
   menu. This app's part: `compare-sample.json` (keep one of each feature in it
   when adding features) and `window.COMPARE` skips the swipe tip.
+- **Lists panel and views (Issue #71, option A + tappable title from C):** "‹ Lists"
+  above the title, or tapping the title ("The Shortlist ▾" / "My Day ▾"), opens a side
+  panel (`ListsPanel`, `ViewHead` in `app/main.js`; the page's static `<h1>` is replaced):
+  All to-dos, My Day, Important (starred), Planned (has a date; one panel per day) and
+  Completed (Done, always open), each with a count. From 1100px wide it stays open as a
+  sidebar. The chosen view is remembered per stage (`view-<stage>`). Adding while a view
+  is open puts the to-do in it (My Day / starred / due today). **My Day** = optional
+  `myDay: 'YYYY-MM-DD'` (`firestore.rules` checks the format; counts only on that day, so
+  it empties each morning); toggled by the edit panel's "My Day" chip; rows elsewhere
+  show a small sun "My Day" tag. Custom lists (Home, Work…) are Issue #72, not built.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves

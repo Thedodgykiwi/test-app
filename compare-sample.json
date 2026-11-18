@@ -2,11 +2,11 @@
   "key": "todos",
   "about": "Sample list for compare mode (playbook guides/compare-stages.md). Every stage shows this same list when opened with ?compare. @today+1 = tomorrow's date, @now-2h = two hours ago.",
   "items": [
-    { "text": "Call the venue", "done": false, "p": "high", "starred": true, "due": "@today", "time": "16:00", "note": "Ask for Sam (events). Back door 4471." },
+    { "text": "Call the venue", "done": false, "p": "high", "starred": true, "due": "@today", "time": "16:00", "myDay": "@today", "note": "Ask for Sam (events). Back door 4471." },
     { "text": "Pay the deposit", "done": false, "p": "med", "due": "@today-2" },
     { "text": "Order flowers", "done": false, "p": "med", "due": "@today+1", "items": [ { "text": "Roses", "done": true }, { "text": "Lilies", "done": false }, { "text": "Ribbon", "done": false } ] },
     { "text": "Put the bins out", "done": false, "p": "none", "due": "@today", "evening": true },
-    { "text": "Draft the speech", "done": false, "p": "low", "starred": true },
+    { "text": "Draft the speech", "done": false, "p": "low", "starred": true, "myDay": "@today" },
     { "text": "Book the taxi", "done": false, "p": "none" },
     { "text": "Send the invites", "done": true, "p": "none", "doneAt": "@now-2h" },
     { "text": "Pick a band", "done": true, "p": "high", "doneAt": "@now-3d" }
