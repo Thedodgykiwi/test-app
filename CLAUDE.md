@@ -310,13 +310,21 @@ If they say yes:
 - **Lists panel and views (Issue #71, option A + tappable title from C):** "‹ Lists"
   above the title, or tapping the title ("The Shortlist ▾" / "My Day ▾"), opens a side
   panel (`ListsPanel`, `ViewHead` in `app/main.js`; the page's static `<h1>` is replaced):
-  All to-dos, My Day, Important (starred), Planned (has a date; one panel per day) and
+  All to-dos, My Day, Important (starred), Planned (has a date; one group per day) and
   Completed (Done, always open), each with a count. From 1100px wide it stays open as a
   sidebar. The chosen view is remembered per stage (`view-<stage>`). Adding while a view
   is open puts the to-do in it (My Day / starred / due today). **My Day** = optional
   `myDay: 'YYYY-MM-DD'` (`firestore.rules` checks the format; counts only on that day, so
   it empties each morning); toggled by the edit panel's "My Day" chip; rows elsewhere
   show a small sun "My Day" tag. Custom lists (Home, Work…) are Issue #72, not built.
+  **Settings → List style** (`listStyle` pref in `menu.js`, `data-list-style` on `<html>`;
+  Pills default / Lines / Boxes) sets how My Day, Important and Planned group to-dos:
+  Pills = small rounded headings over plain cards (`.vg-*`), Lines = Done-style
+  dividers, Boxes = the main view's coloured panels. Planned groups by day; My Day by
+  Overdue / Today / Tonight / Later / Any time; Important adds Tomorrow and No date. With
+  only one group (not Planned), no heading. Folded groups are remembered (`vg-…` keys).
+  Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
+  it (not on All to-dos or Important). All to-dos always keeps its panels.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves

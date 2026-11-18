@@ -914,3 +914,26 @@ body.lists-pinned .add-bar { left: calc(50% - 150px); right: calc(50% - 450px); 
 .sheet.compact .myday-chip.on { border-style: solid; border-color: #e67700; background: color-mix(in srgb, #f08c00 12%, transparent); color: var(--text); font-weight: 600; }
 body.lists-pinned .lists-panel { z-index: 9; }   /* under the stage banner (its Report issue button) */
 body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* always open in Completed */
+/* My Day / Important / Planned: slim headings (Settings → List style; Issue #71).
+   Pills (default): small rounded headings; Lines: Done-style centred dividers. Rows are plain cards. */
+.vg-groups { display: grid; gap: .5rem; }
+.vg-h { margin: 0; }
+.vg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.vg-list > .todo { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: clip; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+.vg-list > .todo > .todo-row { padding: .8rem .9rem; gap: .85rem; background: var(--surface); touch-action: pan-y; }
+.vg-list > .todo.just-edited > .todo-row { animation-name: edited-card; }
+.vg-pills .vg + .vg { margin-top: .4rem; }
+.vg-pill { display: inline-flex; align-items: center; gap: .35rem; min-height: 34px; padding: 0 .75rem 0 .55rem; margin-bottom: .1rem; border: 0; border-radius: 10px;
+  background: var(--secondary); color: var(--text); font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; }
+.vg-pill .chevron { width: 1em; height: 1em; color: var(--muted); }
+.vg-pill:hover { background: var(--line); }
+.vg.overdue .vg-pill { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+.vg.overdue .done-divider { color: var(--danger); }
+.vg-lines .done-divider { font-size: .85rem; }
+.vg-groups > .group-done { margin-top: .5rem; }
+/* A small gold star beside the priority bars where no Starred panel says it */
+.row-star { display: grid; flex: none; color: var(--gold); margin-right: -.35rem; }
+.row-star .ic { width: 1.15em; height: 1.15em; }
+.setting-help { margin: -.3rem 0 .5rem; font-size: .85rem; color: var(--muted); }
+.prio-starred .row-star { display: none; }   /* the panel already says it */
+.vg.overdue .vg-pill, .vg.overdue .done-divider { color: color-mix(in srgb, var(--danger) 75%, var(--text)); }   /* readable red (4.5:1+) on the tint */

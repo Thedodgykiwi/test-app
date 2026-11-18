@@ -347,6 +347,7 @@ function Row({ t, k }) {
             <${Icon} name="note" />Note<${Icon} name="caret-down" cls="caret" /></button>`}
           ${!t.done && inMyDay(t) && view.value !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
         </div>
+        ${t.starred && !t.done && !['all', 'important'].includes(view.value) && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
         ${t.p !== 'none' && html`
           <span class="row-flag" title=${`Priority: ${LABELS[t.p]}`}>
             <${Icon} name=${`prio-${t.p}`} cls=${`flag-${t.p}`} /><span class="visually-hidden">Priority: ${LABELS[t.p]}</span>
@@ -473,6 +474,12 @@ const viewKey = `view-${window.STAGE || 'local'}`;
 const savedView = (() => { try { return localStorage.getItem(viewKey); } catch { return null; } })();
 const view = signal(VIEWS.some(([k]) => k === savedView) ? savedView : 'all');
 const listsOpen = signal(false);
+// Settings → List style: how My Day, Important and Planned group their to-dos.
+// pills (default): small headings over plain cards; lines: Done-style centred
+// dividers; boxes: the coloured panels the main view uses.
+const listStyle = signal(document.documentElement.dataset.listStyle || 'pills');
+new MutationObserver(() => { listStyle.value = document.documentElement.dataset.listStyle || 'pills'; })
+  .observe(document.documentElement, { attributes: true, attributeFilter: ['data-list-style'] });
 const wideQ = matchMedia('(min-width: 1100px)');
 const wide = signal(wideQ.matches);
 wideQ.addEventListener('change', () => { wide.value = wideQ.matches; if (wide.value) listsOpen.value = false; });
@@ -571,6 +578,33 @@ function TodoList() {
   const EMPTY = { myday: 'My Day is empty. Add a to-do below, or open one and tap “My Day”.',
     important: 'No starred to-dos. Star one to see it here.', planned: 'Nothing with a date.', completed: 'Nothing done yet.' };
   if (v !== 'all' && !all.length && !loading.value) return html`<p class="empty">${EMPTY[v]}</p>`;
+  const ls = listStyle.value;
+  if (['myday', 'important', 'planned'].includes(v) && ls !== 'boxes' && active.length) {
+    // Slim headings by when: Planned per day; My Day and Important by Overdue / Today / Tonight / …
+    let vg;
+    if (v === 'planned') vg = shown.map(([p, items]) => [`${p.startsWith('day-') ? 'day' : p}-${items[0][0].due}`, HEAD[p][1], items, p === 'overdue']);
+    else {
+      const when = (t) => { const d = ds.get(t); if (d === 'overdue') return 'Overdue'; if (d === 'today') return t.evening ? 'Tonight' : 'Today';
+        if (d === 'tomorrow') return v === 'myday' ? 'Later' : 'Tomorrow'; return validDue(t.due) ? 'Later' : (v === 'myday' ? 'Any time' : 'No date'); };
+      const ORDER = ['Overdue', 'Today', 'Tonight', 'Tomorrow', 'Later', 'Any time', 'No date'];
+      const byPrio = (x, y) => byTime(x, y) || ((PRANK[x[0].p] ?? 3) - (PRANK[y[0].p] ?? 3));
+      vg = ORDER.map((label) => [label, active.filter(([t]) => when(t) === label)]).filter(([, l]) => l.length)
+        .map(([label, items]) => [`${v}-${label}`, label, [...items].sort(label === 'Later' || label === 'Overdue' ? (x, y) => byDue(x, y) || byPrio(x, y) : byPrio), label === 'Overdue']);
+    }
+    const one = vg.length === 1 && v !== 'planned';   // one group only: no heading, just the cards
+    return html`<div class=${`vg-groups vg-${ls}`}>
+      ${vg.map(([key, label, items, od]) => { const ck = `vg-${key}`, hidden = !one && collapsed.value.has(ck), listId = `vg-list-${key}`;
+        return html`<section class=${`vg${od ? ' overdue' : ''}`} key=${key} aria-label=${`${label}: ${items.length}`}>
+          ${!one && html`<h2 class="vg-h"><button type="button" class=${ls === 'pills' ? 'vg-pill' : 'done-divider'} data-group=${ck}
+            aria-expanded=${!hidden} aria-controls=${listId} title=${hidden ? 'Show this section' : 'Hide this section'}
+            onClick=${() => { toggleCollapsed(ck); focusAfter = [`[data-group="${ck}"]`]; }}>
+            ${ls === 'pills' && html`<${Icon} name=${hidden ? 'caret-right' : 'caret-down'} cls="chevron" />`}<span>${label} · ${items.length}</span>
+            ${ls !== 'pills' && html`<${Icon} name=${hidden ? 'caret-down' : 'caret-up'} cls="chevron" />`}</button></h2>`}
+          <ul class="todos vg-list" id=${listId} hidden=${hidden}>${items.map(([t, i]) => html`<${Row} key=${keyOf(t, i)} t=${t} k=${keyOf(t, i)} />`)}</ul>
+        </section>`; })}
+      ${done.length > 0 && html`<${DoneSection} done=${done} always=${false} />`}
+      ${movedHint.value && html`<p class="moved-hint">Moved to Done ↓</p>`}</div>`;
+  }
   return html`
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
     ${all.length > 0 && !active.length && v !== 'completed' && html`<p class="empty">All done. Nothing left to do!</p>`}

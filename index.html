@@ -36,6 +36,7 @@
       document.documentElement.dataset.theme = p.theme || 'auto';
       document.documentElement.dataset.textSize = p.textSize || 'standard';
       document.documentElement.dataset.accent = p.accent || document.documentElement.dataset.accent;
+      document.documentElement.dataset.listStyle = p.listStyle || 'pills';
     } catch { /* storage blocked: defaults */ }
   </script>
 </head>
@@ -105,6 +106,15 @@
       <div class="seg" role="radiogroup" aria-labelledby="text-size-label" data-pref="textSize">
         <button type="button" role="radio" data-value="standard">Standard</button>
         <button type="button" role="radio" data-value="large">Large</button>
+      </div>
+    </section>
+    <section class="setting">
+      <p class="setting-name" id="list-style-label">List style</p>
+      <p class="setting-help" id="list-style-help">How My Day, Important and Planned group your to-dos</p>
+      <div class="seg" role="radiogroup" aria-labelledby="list-style-label" aria-describedby="list-style-help" data-pref="listStyle">
+        <button type="button" role="radio" data-value="pills">Pills</button>
+        <button type="button" role="radio" data-value="lines">Lines</button>
+        <button type="button" role="radio" data-value="boxes">Boxes</button>
       </div>
     </section>
       <p id="styleguide-link" class="setting-foot" hidden><a href="styleguide.html">Style guide</a> (building blocks for this app; not shown on Production)</p>
