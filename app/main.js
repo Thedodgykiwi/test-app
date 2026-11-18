@@ -5,7 +5,7 @@
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, keyOf, LEVELS, LABELS } from './store.js';
+import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, keyOf, LEVELS, LABELS, lists, addList, updateList, removeList } from './store.js';
 
 // Phosphor icon from icons.js
 const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => {
@@ -346,6 +346,7 @@ function Row({ t, k }) {
             onClick=${() => { if (swallowClick) return; const s = new Set(noteOpen.value); s.has(k) ? s.delete(k) : s.add(k); noteOpen.value = s; }}>
             <${Icon} name="note" />Note<${Icon} name="caret-down" cls="caret" /></button>`}
           ${!t.done && inMyDay(t) && view.value !== 'myday' && html`<span class="meta-tag"><${Icon} name="sun" />My Day</span>`}
+          ${listOf(t.list) && view.value !== `list:${t.list}` && html`<span class="meta-tag list-tag"><i style=${`background:${lc(listOf(t.list))}`}></i>${listOf(t.list).name}</span>`}
         </div>
         ${t.starred && !t.done && !['all', 'important'].includes(view.value) && html`<span class="row-star" title="Starred"><${Icon} name="star-fill" /><span class="visually-hidden">Starred</span></span>`}
         ${t.p !== 'none' && html`
@@ -487,7 +488,7 @@ const VIEWS = [['all', 'list-checks', 'All to-dos'], ['myday', 'sun', 'My Day'],
   ['planned', 'calendar-blank', 'Planned'], ['completed', 'check-circle', 'Completed']];
 const viewKey = `view-${window.STAGE || 'local'}`;
 const savedView = (() => { try { return localStorage.getItem(viewKey); } catch { return null; } })();
-const view = signal(VIEWS.some(([k]) => k === savedView) ? savedView : 'all');
+const view = signal(VIEWS.some(([k]) => k === savedView) || /^list:/.test(savedView || '') ? savedView : 'all');
 const listsOpen = signal(false);
 // Settings → List style: how My Day, Important and Planned group their to-dos.
 // pills (default): small headings over plain cards; lines: Done-style centred
@@ -499,12 +500,13 @@ const wideQ = matchMedia('(min-width: 1100px)');
 const wide = signal(wideQ.matches);
 wideQ.addEventListener('change', () => { wide.value = wideQ.matches; if (wide.value) listsOpen.value = false; });
 const inMyDay = (t) => t.myDay === today.value;
-const viewInfo = (v) => VIEWS.find(([k]) => k === v) || VIEWS[0];
+const viewInfo = (v) => { if (v.startsWith('list:')) { const l = listOf(v.slice(5)); if (l) return [v, l.icon, l.name, l]; } return VIEWS.find(([k]) => k === v) || VIEWS[0]; };
 function inView(v, t) {
   if (v === 'myday') return inMyDay(t);
   if (v === 'important') return !!t.starred;
   if (v === 'planned') return validDue(t.due) && !t.done;
   if (v === 'completed') return !!t.done;
+  if (v.startsWith('list:')) return t.list === v.slice(5);
   return true;
 }
 const countOf = (v) => todos.value.filter((t) => !t.archived && (v === 'completed' ? t.done : !t.done) && inView(v, t)).length;
@@ -515,6 +517,72 @@ function setView(v) {
   setTimeout(() => document.getElementById('view-title-btn')?.focus({ preventScroll: true }));
 }
 document.body.dataset.view = view.value;
+
+// ---- Your own lists (Issue #72) -------------------------------------------------
+// "+ New list" in the Lists panel; each list has a name, one of 12 colours (shown as a
+// filled tile behind its icon) and one of 16 icons. Data and syncing: store.js / sync.js.
+const LIST_COLORS = ['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'purple', 'grape', 'pink', 'graphite'];
+const LIST_ICONS = ['list', 'house', 'briefcase', 'shopping-cart', 'heart', 'airplane', 'book-open', 'barbell', 'gift', 'folder-simple', 'car', 'paw-print', 'fork-knife', 'wallet', 'wrench', 'graduation-cap'];
+function listOf(id) { return id ? lists.value.find((l) => l.id === id) : undefined; }
+const lc = (l) => `var(--lc-${l.color})`;
+const listDialog = signal(null);   // { mode: 'new' | 'edit' | 'delete', id }
+const listMenu = signal(false);
+function ListDialog() {
+  const dlg = useRef(), name = useRef();
+  const d = listDialog.value, l = d && d.id ? listOf(d.id) : null;
+  const [color, setColor] = useState('green'), [ic, setIc] = useState('list');
+  useEffect(() => {
+    if (!d) { if (dlg.current?.open) dlg.current.close(); return; }
+    setColor(l?.color || LIST_COLORS[lists.value.length % LIST_COLORS.length]); setIc(l?.icon || 'list');
+    dlg.current.showModal(); setTimeout(() => { if (name.current) { name.current.value = l?.name || ''; name.current.focus(); } });
+  }, [d]);
+  const close = () => { listDialog.value = null; };
+  const save = (e) => { e?.preventDefault(); const n = name.current.value.trim().slice(0, 40); if (!n) { name.current.focus(); return; }
+    if (d.mode === 'new') { const made = addList({ name: n, color, icon: ic }); close(); if (!made) return;
+      if (d.forKey != null) {   // made from the edit panel's list picker: put that to-do in it
+        const t = todos.value.find((x, i) => keyOf(x, i) === d.forKey); if (t) update(t, { list: made.id });
+      } else setView(`list:${made.id}`); }
+    else { updateList(l, { name: n, color, icon: ic }); close(); } };
+  const n = l ? todos.value.filter((t) => t.list === l.id && !t.archived).length : 0;
+  const del = (keep) => { todos.value.filter((t) => t.list === l.id).forEach((t) => (keep ? update(t, { list: null }) : remove(t)));
+    removeList(l); close(); setView('all');
+    window.AppToast?.show(keep ? `“${l.name}” deleted. Its to-dos are kept, with no list` : `“${l.name}” and its to-dos deleted`, { icon: 'trash' }); };
+  return html`<dialog ref=${dlg} class="sheet compact list-dialog" aria-label=${d?.mode === 'delete' ? 'Delete list' : d?.mode === 'edit' ? 'Edit list' : 'New list'}
+      onClose=${() => { listDialog.value = null; }} onClick=${(ev) => { if (ev.target === dlg.current) close(); }}>
+    ${d && d.mode === 'delete' && l ? html`<div class="edit-form">
+        <h2 class="ld-title">Delete “${l.name}”?</h2>
+        <p class="muted">${n ? `It has ${n} to-do${n === 1 ? '' : 's'}. What should happen to ${n === 1 ? 'it' : 'them'}?` : 'It has no to-dos.'}</p>
+        ${n > 0 && html`<button type="button" class="btn primary ld-btn" onClick=${() => del(true)}>Delete the list, keep its to-dos</button>
+        <button type="button" class="btn ld-btn danger-btn" onClick=${() => del(false)}>Delete the list and its ${n} to-do${n === 1 ? '' : 's'}</button>`}
+        ${!n && html`<button type="button" class="btn primary ld-btn" onClick=${() => del(true)}>Delete list</button>`}
+        <button type="button" class="btn ghost ld-btn" onClick=${close}>Cancel</button></div>`
+    : d && html`<form class="edit-form" onSubmit=${save}>
+        <h2 class="ld-title">${d.mode === 'new' ? 'New list' : 'Edit list'}</h2>
+        <div class="ld-name"><span class=${`tile big c-${color}`}><${Icon} name=${ic} /></span>
+          <input ref=${name} class="input" maxlength="40" placeholder="e.g. Home, Work, Errands" aria-label="List name" /></div>
+        <p class="mini-label">Colour</p>
+        <div class="ld-colors" role="radiogroup" aria-label="Colour">${LIST_COLORS.map((c) => html`<button type="button" role="radio" aria-checked=${c === color} aria-label=${c[0].toUpperCase() + c.slice(1)}
+          class=${`ld-color c-${c}`} onClick=${() => setColor(c)}>${c === color && html`<${Icon} name="check" />`}</button>`)}</div>
+        <p class="mini-label">Icon</p>
+        <div class="ld-icons" role="radiogroup" aria-label="Icon">${LIST_ICONS.map((i) => html`<button type="button" role="radio" aria-checked=${i === ic} aria-label=${i.replace(/-/g, ' ')}
+          class=${`ld-icon${i === ic ? ` on c-${color}` : ''}`} onClick=${() => setIc(i)}><${Icon} name=${i} /></button>`)}</div>
+        <div class="row edit-actions"><button type="button" class="btn ghost" onClick=${close}>Cancel</button>
+          <button type="submit" class="btn primary">${d.mode === 'new' ? 'Create list' : 'Save'}</button></div></form>`}
+  </dialog>`;
+}
+function ListMenu() {
+  const box = useRef();
+  useEffect(() => { if (!listMenu.value) return;
+    const off = (e) => { if (!box.current?.contains(e.target) && !e.target.closest('.list-more')) listMenu.value = false; };
+    const esc = (e) => { if (e.key === 'Escape') listMenu.value = false; };
+    document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); }; }, [listMenu.value]);
+  const v = view.value; if (!v.startsWith('list:') || !listMenu.value) return null;
+  const id = v.slice(5);
+  return html`<div class="tidy-menu list-menu" role="menu" ref=${box}>
+    <button type="button" role="menuitem" class="tidy-item" onClick=${() => { listMenu.value = false; listDialog.value = { mode: 'edit', id }; }}><span>Rename, colour or icon</span></button>
+    <button type="button" role="menuitem" class="tidy-item danger" onClick=${() => { listMenu.value = false; listDialog.value = { mode: 'delete', id }; }}><span>Delete list…</span></button></div>`;
+}
 function ListsPanel() {
   const panel = useRef();
   const open = listsOpen.value, pinned = wide.value;
@@ -532,18 +600,24 @@ function ListsPanel() {
       <div class="lists-top"><h2>Lists</h2>${!pinned && html`<button type="button" class="close-btn" aria-label="Close" onClick=${() => { listsOpen.value = false; document.getElementById('view-title-btn')?.focus(); }}><${Icon} name="x" /></button>`}</div>
       <nav class="lv" aria-label="Views">${VIEWS.map(([v, ic, name]) => { const n = countOf(v);
         return html`<button type="button" class="lv-item" data-v=${v} aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
-          <${Icon} name=${ic} cls="lv-ic" /><span class="lv-name">${name}</span>${n > 0 && html`<span class="lv-n" aria-label=${`, ${n}`}>${n}</span>`}</button>`; })}</nav>
+          <${Icon} name=${ic} cls="lv-ic" /><span class="lv-name">${name}</span>${n > 0 && html`<span class="lv-n" aria-label=${`, ${n}`}>${n}</span>`}</button>`; })}
+        <p class="lv-head">Your lists</p>
+        ${lists.value.map((l) => { const v = `list:${l.id}`, n = countOf(v);
+          return html`<button type="button" class="lv-item" aria-current=${view.value === v ? 'page' : null} onClick=${() => setView(v)}>
+            <span class=${`tile c-${l.color}`}><${Icon} name=${l.icon} /></span><span class="lv-name">${l.name}</span>${n > 0 && html`<span class="lv-n">${n}</span>`}</button>`; })}
+        <button type="button" class="lv-item lv-new" onClick=${() => { listDialog.value = { mode: 'new' }; }}><${Icon} name="plus" cls="lv-ic" /><span class="lv-name">New list</span></button></nav>
     </aside>`;
 }
 // Above the title: "‹ Lists". The title itself (app name, or the view's name) also opens the panel.
 function ViewHead() {
-  const v = view.value, [, ic, name] = viewInfo(v), pinned = wide.value;
+  const v = view.value, [, ic, name, l] = viewInfo(v), pinned = wide.value;
+  const more = l && html`<button type="button" class="list-more" aria-label="List options" aria-expanded=${listMenu.value} onClick=${() => { listMenu.value = !listMenu.value; }}><${Icon} name="dots-three" /></button>`;
   const toggle = () => { if (!pinned) listsOpen.value = !listsOpen.value; };
   return html`
     ${!pinned && html`<button type="button" class="lists-btn" aria-expanded=${listsOpen.value} onClick=${toggle}><${Icon} name="caret-left" />Lists</button>`}
     <h1 class="view-title" data-v=${v}>${pinned ? html`<span class="vt">${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}</span>`
       : html`<button type="button" id="view-title-btn" class="vt" aria-haspopup="dialog" aria-expanded=${listsOpen.value} title="Lists" onClick=${toggle}>
-        ${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`<${Icon} name=${ic} cls="vt-ic" />${name}`}<${Icon} name="caret-down" cls="vt-caret" /></button>`}</h1>`;
+        ${v === 'all' ? html`<${Icon} name="list-checks-duotone" cls="title-icon" />The Shortlist` : html`${l ? html`<span class=${`tile big c-${l.color}`}><${Icon} name=${ic} /></span>` : html`<${Icon} name=${ic} cls="vt-ic" />`}${name}`}<${Icon} name="caret-down" cls="vt-caret" /></button>`}${more}</h1><${ListMenu} />`;
 }
 const dayName = (d) => parseDay(d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
@@ -592,7 +666,7 @@ function TodoList() {
   shown = shown.filter(([, l]) => l.length);
   const EMPTY = { myday: 'My Day is empty. Add a to-do below, or open one and tap “My Day”.',
     important: 'No starred to-dos. Star one to see it here.', planned: 'Nothing with a date.', completed: 'Nothing done yet.' };
-  if (v !== 'all' && !all.length && !loading.value) return html`<p class="empty">${EMPTY[v]}</p>`;
+  if (v !== 'all' && !all.length && !loading.value) return html`<p class="empty">${EMPTY[v] || 'Nothing in this list yet. Add one below.'}</p>`;
   const ls = listStyle.value;
   if (['myday', 'important', 'planned'].includes(v) && ls !== 'boxes' && active.length) {
     // Slim headings by when: Planned per day; My Day and Important by Overdue / Today / Tonight / …
@@ -675,7 +749,10 @@ function toTime(w) {
   return m && +m[1] < 24 ? `${m[1].padStart(2, '0')}:${m[2]}` : '';
 }
 export function parseEntry(raw) {
-  let text = raw.trim(), due = '', dueWord = '', p = '', time = '', starred = false;
+  let text = raw.trim(), due = '', dueWord = '', p = '', time = '', starred = false, list = '';
+  // "#home" at the start or end puts it in one of your own lists (Issue #72).
+  const lm = text.match(/(?:^|\s)#([\p{L}\d-]+)$/u) || text.match(/^#([\p{L}\d-]+)(?=\s|$)/u);
+  if (lm) { const l = lists.value.find((x) => x.name.toLowerCase().replace(/\s+/g, '') === lm[1].toLowerCase()); if (l) { list = l.id; text = text.replace(lm[0], '').trim(); } }
   const takeEnd = (re, atStart) => {
     const m = atStart ? text.match(new RegExp(`^(${re})(?=[\\s,.:;!-]|$)`, 'i')) : text.match(new RegExp(`(?:^|[\\s,.:;!-])(${re})[.!]?$`, 'i'));
     if (!m) return null;
@@ -699,7 +776,7 @@ export function parseEntry(raw) {
   if (dueWord === 'tonight' && time && !isEveningTime(time)) time = '';   // "ton 9am": tonight wins, time dropped
   if (!text) { text = raw.trim(); due = ''; dueWord = ''; p = ''; time = ''; starred = false; }   // only keywords typed: keep them as the title
   if (text) text = text[0].toUpperCase() + text.slice(1);
-  return { text: text.slice(0, 500), due, dueWord, p, time, pastTime, starred, evening: dueWord === 'tonight' };
+  return { text: text.slice(0, 500), due, dueWord, p, time, pastTime, starred, list, evening: dueWord === 'tonight' };
 }
 // Adds what was typed, with whatever was understood. The priority button's
 // own choice is the fallback. Returns the parsed entry, or null if nothing added.
@@ -707,15 +784,17 @@ function addParsed(raw, pFallback) {
   const r = parseEntry(raw);
   // Added while a view is open: it goes into that view (Issue #71).
   const v = view.value, due = r.due || (v === 'planned' ? today.value : undefined);
-  if (!r.text || !add(r.text, r.p || pFallback, due, r.evening, r.time, r.starred || v === 'important', v === 'myday' ? today.value : undefined)) return null;
+  const list = r.list || (v.startsWith('list:') ? v.slice(5) : undefined);
+  if (!r.text || !add(r.text, r.p || pFallback, due, r.evening, r.time, r.starred || v === 'important', v === 'myday' ? today.value : undefined, list)) return null;
   return r;
 }
 function Understood({ r }) {
-  if (!r || (!r.due && !r.p && !r.starred)) return null;
+  if (!r || (!r.due && !r.p && !r.starred && !r.list)) return null;
   return html`<div class="understood" aria-live="polite">
     ${r.due && html`<span class="u-chip due"><${Icon} name=${r.evening ? 'moon' : 'calendar-blank'} />${r.evening ? 'Tonight' : `Due ${r.dueWord}`}</span>`}
     ${r.time && html`<span class="u-chip due"><${Icon} name="clock" />at ${fmtTime(r.time)}</span>`}
     ${r.pastTime && html`<span class="u-chip past"><${Icon} name="clock" />${fmtTime(r.pastTime)} has passed</span>`}
+    ${r.list && listOf(r.list) && html`<span class="u-chip list-chip"><i style=${`background:${lc(listOf(r.list))}`}></i>${listOf(r.list).name}</span>`}
     ${r.starred && html`<span class="u-chip star"><${Icon} name="star-fill" />Starred</span>`}
     ${r.p && html`<span class=${`u-chip p-${r.p}`}><${Icon} name=${`prio-${r.p}`} cls=${`flag-${r.p}`} />${LABELS[r.p]}</span>`}
     <span class="u-title">→ “${r.text}”</span></div>`;
@@ -1018,6 +1097,11 @@ function EditSheet() {
       <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}
       ${listBlock}${noteBlock}
       <div class="add-chips">
+        <label class="list-pick" style=${listOf(t.list) ? `--lcol:${lc(listOf(t.list))}` : ''}><${Icon} name=${listOf(t.list)?.icon || 'list'} /><span class="visually-hidden">List</span>
+          <select value=${listOf(t.list) ? t.list : ''} onChange=${(ev) => { const v2 = ev.target.value;
+            if (v2 === '__new') { ev.target.value = t.list || ''; listDialog.value = { mode: 'new', forKey: e.key }; return; }
+            const x = listOf(v2); apply({ list: x ? x.id : null }, x ? `Moved to ${x.name}` : 'No list', 'list'); }}>
+            <option value="">No list</option>${lists.value.map((x) => html`<option value=${x.id}>${x.name}</option>`)}<option value="__new">+ New list…</option></select></label>
         <button type="button" class=${`add-chip myday-chip${inMyDay(t) ? ' on' : ''}`} id="edit-myday" aria-pressed=${inMyDay(t)}
           onClick=${() => apply({ myDay: inMyDay(t) ? null : today.value }, inMyDay(t) ? 'Taken out of My Day' : 'Added to My Day', 'sun')}>
           <${Icon} name="sun" />${inMyDay(t) ? 'In My Day' : 'My Day'}</button>
@@ -1069,7 +1153,7 @@ render(html`<${App} />`, document.getElementById('todo-groups'));
 const head = document.querySelector('#app > h1'), vh = document.createElement('div');
 vh.className = 'view-head'; head.before(vh); head.remove();
 render(html`<${ViewHead} />`, vh);
-const lp = document.createElement('div'); document.body.append(lp); render(html`<${ListsPanel} />`, lp);
+const lp = document.createElement('div'); document.body.append(lp); render(html`<${ListsPanel} /><${ListDialog} />`, lp);
 // One-time tip (per stage): how to star.
 setTimeout(() => {
   const key = `swipe-tip:${window.STAGE || 'local'}`;

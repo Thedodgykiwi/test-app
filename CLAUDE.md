@@ -328,6 +328,25 @@ If they say yes:
   Settings order: List style, Accent colour, Text size. View icons are coloured by type
   (`data-v`): My Day `--sun` orange, Important `--gold`, Planned `--today-swipe` purple,
   Completed `--ok` green, All to-dos the accent.
+- **Your own lists (Issue #72):** "+ New list" in the Lists panel (`ListDialog` in
+  `app/main.js`): name (≤40), one of 12 colours, one of 16 icons (`LIST_ICONS`); shown
+  under "Your lists" with a filled colour tile behind the icon (`.tile.c-<colour>`, bright
+  colour with a white or dark icon, so the hues can be vivid). A list view (`list:<id>`)
+  looks like All to-dos. Put a to-do in a list from the edit panel's list picker (with
+  "+ New list…"), by adding while the list is open, or by typing `#name` at the start or
+  end (chip under the box). Elsewhere rows show a small coloured dot + the list's name.
+  "⋯" beside a list's title: rename / colour / icon, or Delete list (keep its to-dos with
+  no list, or delete them too). Data: `lists` in `app/store.js` (`lists-<stage>` on the
+  device; signed in `users/{uid}/stages/{stage}/lists/{id}`, `cloud-lists-<stage>` copy),
+  ids made on the device so a to-do can point at a new list at once; to-dos have an
+  optional `list` id. `firestore.rules` checks both (name, colour and icon from fixed
+  lists). First sign-in copies the device's lists too (same name = reuse). Not built yet:
+  reordering lists.
+- **Accent colours (Issue #75):** 12 evenly spread hues shared with list colours (red,
+  orange, yellow, lime, green, teal, cyan, blue, purple, grape, pink, graphite; two rows
+  of 6). Swatches show the bright colour; the light theme uses a deeper shade so white
+  button text and link text pass 4.5:1, dark uses the bright one with dark text. Blue
+  (default) unchanged; teal is greener than before (cyan is the old blue-green).
 - **Done today (Issue #74):** under All to-dos, My Day and Important, `DoneSection`
   shows only to-dos ticked off today ("Done today · n", folded with the same
   `done-open` key) and a "See all completed (n) →" link to the Completed view. The

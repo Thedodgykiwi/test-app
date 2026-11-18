@@ -80,6 +80,10 @@ await t('take out of My Day', () => assertSucceeds(updateDoc(p(alice), { myDay: 
 await t('create in My Day', () => assertSucceeds(setDoc(p(alice, 'dev', 'md1'), { ...good(), myDay: '2026-11-18' })));
 await t('My Day must be a date', () => assertFails(updateDoc(p(alice), { myDay: true })));
 await t('other user cannot add to My Day', () => assertFails(updateDoc(p(bob), { myDay: '2026-11-18' })));
+await t('put a to-do in a list', () => assertSucceeds(updateDoc(p(alice), { list: 'home' })));
+await t('take a to-do out of its list', () => assertSucceeds(updateDoc(p(alice), { list: null })));
+await t('list id must be a short id', () => assertFails(updateDoc(p(alice), { list: 'not a valid id!' })));
+await t('list must be text', () => assertFails(updateDoc(p(alice), { list: 7 })));
 await t('archive a to-do', () => assertSucceeds(updateDoc(p(alice), { archived: true })));
 await t('archived must be a bool', () => assertFails(updateDoc(p(alice), { archived: 'yes' })));
 await t('other user cannot archive', () => assertFails(updateDoc(p(bob), { archived: true })));
@@ -96,6 +100,26 @@ await t('other user cannot delete', () => assertFails(deleteDoc(p(bob))));
 await t('owner can delete', () => assertSucceeds(deleteDoc(p(alice))));
 await t('parent user doc not writable', () => assertFails(setDoc(doc(alice, 'users', 'alice'), { a: 1 })));
 await t('other collections denied', () => assertFails(setDoc(doc(alice, 'other', 'x'), { a: 1 })));
+
+// ---- Own lists (Issue #72) ----
+const goodList = () => ({ name: 'Home', color: 'green', icon: 'house', pos: Date.now(), createdAt: serverTimestamp() });
+const L = (db, id = 'home', user = 'alice') => doc(db, 'users', user, 'stages', 'dev', 'lists', id);
+await t('owner can create a list', () => assertSucceeds(setDoc(L(alice), goodList())));
+await t('owner can read their lists', () => assertSucceeds(getDocs(query(collection(alice, 'users/alice/stages/dev/lists'), orderBy('pos')))));
+await t('owner can rename and recolour a list', () => assertSucceeds(updateDoc(L(alice), { name: 'House', color: 'teal', icon: 'car' })));
+await t('owner can reorder a list', () => assertSucceeds(updateDoc(L(alice), { pos: 5 })));
+await t('list name cannot be empty', () => assertFails(updateDoc(L(alice), { name: '' })));
+await t('list name max 40', () => assertFails(updateDoc(L(alice), { name: 'x'.repeat(41) })));
+await t('list colour must be one of the twelve', () => assertFails(updateDoc(L(alice), { color: 'beige' })));
+await t('list icon must be one of the sixteen', () => assertFails(updateDoc(L(alice), { icon: 'skull' })));
+await t('list extra field rejected', () => assertFails(setDoc(L(alice, 'w2'), { ...goodList(), evil: 1 })));
+await t('list createdAt cannot change', () => assertFails(updateDoc(L(alice), { createdAt: Timestamp.fromMillis(0) })));
+await t('list bad id rejected', () => assertFails(setDoc(L(alice, 'bad id!'), goodList())));
+await t('other user cannot read a list', () => assertFails(getDoc(L(bob))));
+await t('other user cannot create in my lists', () => assertFails(setDoc(L(bob, 'b1'), goodList())));
+await t('other user cannot delete a list', () => assertFails(deleteDoc(L(bob))));
+await t('signed-out cannot read lists', () => assertFails(getDoc(L(anon))));
+await t('owner can delete a list', () => assertSucceeds(deleteDoc(L(alice))));
 
 // ---- Issue reports from the stage banner (Issue #28) ----
 // Made-up addresses only (this repo is public).

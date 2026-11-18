@@ -114,9 +114,10 @@ async function start() {
   const failed = (err) => { error = err.code === 'permission-denied' ? 'not allowed' : (err.code || err.message); showStatus(); };
 
   // ---- Signed in / out ----------------------------------------------------
-  let unsubscribe = null;
+  let unsubscribe = null, unsubscribeLists = null;
   authLib.onAuthStateChanged(auth, (user) => {
     if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+    if (unsubscribeLists) { unsubscribeLists(); unsubscribeLists = null; }
     setMenu(false);
     ui.box.classList.toggle('signed-in', !!user);
     ui.signIn.hidden = !!user;
@@ -145,6 +146,7 @@ async function start() {
     error = '';
 
     const todosRef = fs.collection(db, 'users', user.uid, 'stages', app.stage, 'todos');
+    const listsRef = fs.collection(db, 'users', user.uid, 'stages', app.stage, 'lists');   // your own lists (Issue #72)
     let migrated = false;
     app.useCloud({
       add(t) {
@@ -156,20 +158,32 @@ async function start() {
       remove(t) {
         fs.deleteDoc(fs.doc(todosRef, t.id)).catch(failed);
       },
+      addList(l) {
+        fs.setDoc(fs.doc(listsRef, l.id), newList(l)).catch(failed);
+      },
+      updateList(l, changes) {
+        fs.updateDoc(fs.doc(listsRef, l.id), changes).catch(failed);
+      },
+      removeList(l) {
+        fs.deleteDoc(fs.doc(listsRef, l.id)).catch(failed);
+      },
     });
+    unsubscribeLists = fs.onSnapshot(fs.query(listsRef, fs.orderBy('pos')), (snap) => {
+      app.setLists(snap.docs.map((d) => { const { name, color, icon, pos } = d.data(); return { id: d.id, name, color, icon, pos }; }));
+    }, failed);
     showStatus();
 
     unsubscribe = fs.onSnapshot(fs.query(todosRef, fs.orderBy('pos')), { includeMetadataChanges: true }, (snap) => {
       const list = snap.docs.map((d) => {
-        const { text, done, p, doneAt = null, starred = false, due = null, evening = false, time = null, items = [], archived = false, note = null, myDay = null } = d.data();
-        return { id: d.id, text, done, p, doneAt, starred, due, evening, time, items, archived, note, myDay };
+        const { text, done, p, doneAt = null, starred = false, due = null, evening = false, time = null, items = [], archived = false, note = null, myDay = null, list = null } = d.data();
+        return { id: d.id, text, done, p, doneAt, starred, due, evening, time, items, archived, note, myDay, list };
       });
       app.setTodos(list, { fromServer: !snap.metadata.fromCache });
       pending = snap.metadata.hasPendingWrites;
       if (!pending) error = '';
       showStatus();
       // Once we've heard from the server, copy this device's to-dos in (first time only).
-      if (!migrated && !snap.metadata.fromCache) { migrated = true; copyLocalTodos(user, list, todosRef); }
+      if (!migrated && !snap.metadata.fromCache) { migrated = true; copyLocalTodos(user, list, todosRef, listsRef); }
     }, failed);
   });
 
@@ -189,23 +203,39 @@ async function start() {
     if (t.archived === true) doc.archived = true;   // Issue #49
     if (typeof t.note === 'string' && t.note.trim()) doc.note = t.note.trim().slice(0, 2000);   // Issue #57
     if (typeof t.myDay === 'string' && /^20\d\d-[01]\d-[0-3]\d$/.test(t.myDay)) doc.myDay = t.myDay;   // My Day (Issue #71)
+    if (typeof t.list === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(t.list)) doc.list = t.list;   // own list (Issue #72)
     if (Array.isArray(t.items) && t.items.length) doc.items = cleanItems(t.items);   // checklist (Issue #44)
     return doc;
+  }
+  const LIST_COLORS = ['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'purple', 'grape', 'pink', 'graphite'];
+  function newList(l) {
+    return { name: String(l.name).trim().slice(0, 40) || 'List', color: LIST_COLORS.includes(l.color) ? l.color : 'blue',
+      icon: typeof l.icon === 'string' ? l.icon : 'list', pos: Number.isFinite(l.pos) ? l.pos : Date.now(), createdAt: fs.serverTimestamp() };
   }
 
   // The first time someone signs in on a device, add the to-dos saved on that
   // device to their account (skipping any already there). The device's own
   // copy is left untouched, so it's still there after signing out.
-  async function copyLocalTodos(user, existing, todosRef) {
+  async function copyLocalTodos(user, existing, todosRef, listsRef) {
     const flag = `copied-${app.stage}-${user.uid}`;
     if (localStorage.getItem(flag)) return;
+    // This device's own lists first (Issue #72): a list with the same name in the
+    // account is reused; the others are added with the same id, so to-dos still match.
+    const moved = new Map();
+    try {
+      const have = new Map((await fs.getDocs(listsRef)).docs.map((d) => [String(d.data().name).toLowerCase(), d.id]));
+      for (const l of app.localLists()) {
+        const same = have.get(String(l.name).toLowerCase());
+        if (same) moved.set(l.id, same); else if (/^[A-Za-z0-9_-]{1,40}$/.test(l.id)) await fs.setDoc(fs.doc(listsRef, l.id), newList(l));
+      }
+    } catch (err) { failed(err); return; }
     const have = new Set(existing.map((t) => t.text));
     const toAdd = app.localTodos().filter((t) => t.text && !have.has(String(t.text).slice(0, 500)));
     if (toAdd.length) {
       const base = Date.now();
       for (let i = 0; i < toAdd.length; i += 400) { // Firestore batches hold up to 500 writes
         const batch = fs.writeBatch(db);
-        toAdd.slice(i, i + 400).forEach((t, j) => batch.set(fs.doc(todosRef), newDoc(t, base + i + j)));
+        toAdd.slice(i, i + 400).forEach((t, j) => batch.set(fs.doc(todosRef), newDoc(moved.has(t.list) ? { ...t, list: moved.get(t.list) } : t, base + i + j)));
         try { await batch.commit(); } catch (err) { failed(err); return; }
       }
       const n = toAdd.length;
