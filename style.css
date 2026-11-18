@@ -785,8 +785,6 @@ select.time-input option:disabled { color: var(--muted); }
 .todo.starred .t-main { font-weight: 560; }
 
 /* Note on a to-do (Issue #57, option A). */
-.sheet-adds { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .5rem; }
-.sheet-adds .cl-open { width: auto; min-width: 0; padding: .65rem .7rem; gap: .45rem; font-size: .92rem; white-space: nowrap; }
 .note-input { min-height: 4.5rem; resize: vertical; }
 .row-note { margin: 0; padding: .6rem .75rem; background: var(--hover); border-radius: 10px; font-size: .9rem; line-height: 1.45;
   color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
@@ -804,3 +802,27 @@ select.time-input option:disabled { color: var(--muted); }
 /* Editing a note in place (Issue #57). */
 .row-note-read { cursor: text; }
 .row-note-edit { display: block; width: 100%; box-sizing: border-box; border: 1px solid var(--accent); font: inherit; font-size: .9rem; resize: none; overflow: hidden; outline: none; }
+
+/* ===== Edit panel: compact, saves as you go (Issue #60, option A) ===== */
+.sheet.compact .edit-form { gap: .7rem; }
+.sheet.compact .sheet-grab { align-self: center; width: 36px; height: 4px; border-radius: 4px; background: var(--line); margin: -.2rem 0 .1rem; }
+.sheet.compact .title-row { display: flex; align-items: flex-start; gap: .5rem; }
+.sheet.compact .title-row textarea { flex: 1; min-height: 44px; resize: none; overflow: hidden; }
+.sheet.compact .mini-label { display: flex; align-items: center; gap: .35rem; margin: 0 0 -.35rem; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.sheet.compact .mini-label .ic { width: 1em; height: 1em; }
+.sheet.compact .field-label#edit-due-label { display: none; }
+.sheet.compact .seg.chips .chip { padding-block: .4rem; }
+.sheet.compact .add-chips { display: flex; gap: .45rem; flex-wrap: wrap; }
+.sheet.compact .add-chip { display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: 0 .75rem; border-radius: 99px;
+  border: 1px dashed color-mix(in srgb, var(--text) 30%, transparent); background: var(--surface); color: var(--text); font: inherit; font-size: .88rem; cursor: pointer; }
+.sheet.compact .add-chip .ic { width: 1em; height: 1em; }
+.sheet.compact .edit-actions { justify-content: space-between; margin-top: .2rem; }
+.sheet.compact .quiet-delete { background: none; border: 0; color: color-mix(in srgb, var(--danger) 80%, var(--text)); font: inherit; font-size: .9rem; min-height: 44px; padding: 0 .4rem; cursor: pointer; }
+.sheet.compact .done-btn { min-width: 6.5rem; }
+/* In-panel Undo note (the toast can't show above an open dialog) */
+.sheet.compact .sheet-undo { display: flex; align-items: center; gap: .45rem; min-height: 2.1rem; margin: -.3rem 0 -.2rem; font-size: .85rem; color: var(--muted); }
+.sheet.compact .sheet-undo:empty { min-height: 0; margin: 0; }
+.sheet.compact .sheet-undo .ic { width: 1em; height: 1em; }
+.sheet.compact .sheet-undo span { flex: 1; color: var(--text); }
+.sheet.compact .sheet-undo-btn { display: inline-flex; align-items: center; gap: .3rem; min-height: 32px; padding: 0 .7rem; border: 0; border-radius: 99px;
+  background: var(--hover); color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
