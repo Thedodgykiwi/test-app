@@ -71,7 +71,7 @@ export function remove(t) {
 }
 // Add a to-do (optionally with a due date, Issue #42). Returns false while
 // we don't yet know which list to add to.
-export function add(text, p, due, evening, time, starred, myDay) {
+export function add(text, p, due, evening, time, starred, myDay, list) {
   if (!text || !ready()) return false;
   const item = { text, done: false, p };
   if (due) item.due = due;
@@ -79,8 +79,38 @@ export function add(text, p, due, evening, time, starred, myDay) {
   if (due && time) item.time = time;
   if (starred) item.starred = true;   // typed S (Issue #53)
   if (myDay) item.myDay = myDay;   // added while My Day was open (Issue #71)
+  if (list) item.list = list;   // one of your own lists (Issue #72)
   if (cloud) cloud.add(item); else { todos.value = [...todos.value, item]; save(); }
   return true;
+}
+
+// ---- Your own lists (Issue #72) ------------------------------------------------
+// { id, name, color, icon, pos }. On this device (lists-<stage>) or, signed in, in the
+// account (sync.js), like to-dos. Ids are made here so a to-do can point at a new
+// list straight away, even before the server has answered.
+const listsKey = `lists-${stage}`, listsCacheKey = `cloud-lists-${stage}`;
+const readJSON = (k) => { try { const v = JSON.parse(localStorage.getItem(k)); return Array.isArray(v) ? v : null; } catch { return null; } };
+const loadLocalLists = () => readJSON(listsKey) || [];
+const byPos = (a, b) => (a.pos || 0) - (b.pos || 0);
+export const lists = signal(loading.value ? (readJSON(listsCacheKey) || []) : loadLocalLists());
+let cloudLists = null;
+const saveLists = () => { if (!cloudLists && !loading.value) localStorage.setItem(listsKey, JSON.stringify(lists.value)); };
+export function addList({ name, color, icon }) {
+  if (!ready()) return null;
+  const item = { id: `l${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, name, color, icon, pos: Date.now() };
+  lists.value = [...lists.value, item].sort(byPos);
+  if (cloudLists) cloudLists.addList(item); else saveLists();
+  return item;
+}
+export function updateList(l, changes) {
+  if (!ready()) return;
+  lists.value = lists.value.map((x) => (x.id === l.id ? { ...x, ...changes } : x)).sort(byPos);
+  if (cloudLists) cloudLists.updateList(l, changes); else saveLists();
+}
+export function removeList(l) {
+  if (!ready()) return;
+  lists.value = lists.value.filter((x) => x.id !== l.id);
+  if (cloudLists) cloudLists.removeList(l); else saveLists();
 }
 
 // Which sections are collapsed, remembered per stage (same key and values as before).
@@ -102,7 +132,13 @@ window.TodoApp = {
   get updating() { return updating.value; },
   // Signed in: show the account's to-dos and save changes through `api`.
   // Keep the saved copy on screen (if any) until the account's list arrives.
-  useCloud(api) { cloud = api; if (!shownCopy) todos.value = []; loading.value = true; },
+  useCloud(api) { cloud = api; cloudLists = api; if (!shownCopy) todos.value = []; loading.value = true; },
+  localLists: loadLocalLists,
+  // The account's own lists (Issue #72), live from sync.js.
+  setLists(list) {
+    lists.value = [...list].sort(byPos);
+    try { localStorage.setItem(listsCacheKey, JSON.stringify(lists.value)); } catch { /* full */ }
+  },
   // To-dos from the account (first load and live updates). `fromServer`: the
   // server has answered (not just Firestore's copy on this device).
   setTodos(list, { fromServer = true } = {}) {
@@ -123,8 +159,9 @@ window.TodoApp = {
   // Signed out (or sign-in couldn't load): back to the to-dos saved on this device.
   // `forget`: really signed out, so also drop the copy of the account's list.
   useLocal({ forget = false } = {}) {
-    cloud = null; shownCopy = null; updating.value = false;
-    if (forget) localStorage.removeItem(cacheKey);
+    cloud = null; cloudLists = null; shownCopy = null; updating.value = false;
+    if (forget) { localStorage.removeItem(cacheKey); localStorage.removeItem(listsCacheKey); }
+    lists.value = loadLocalLists();
     todos.value = loadLocal(); loading.value = false;
   },
 };

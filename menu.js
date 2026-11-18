@@ -1,5 +1,5 @@
-// App menu (top-right): theme (Light / Auto / Dark), Settings panel,
-// and the version number at the bottom, which opens "What's new".
+// App menu (top-right): Settings panel (theme Light / Auto / Dark, accent colour,
+// text size) and the version number at the bottom, which opens "What's new".
 // Works with or without Google sign-in; account.js adds the photo, name and
 // Sign in / Sign out when sign-in is switched on.
 //

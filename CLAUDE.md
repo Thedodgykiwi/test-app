@@ -215,7 +215,7 @@ If they say yes:
 - `stage.js` is overwritten per stage at deploy time; locally it says `local`.
 - **Look and layout (Nov 2026, from the playbook starter):** the starter's style
   kit in `style.css` (top part; test-app's own rules are in the section at the
-  end), `menu.js` (menu: photo, theme, Settings with accent colour and text
+  end), `menu.js` (menu: photo, Settings with theme, accent colour and text
   size, version → What's new), `pwa.js` + `sw.js` (offline, install, "new
   version" bar), `styleguide.html`; the to-do screen is Preact components (`app/`, libraries in `vendor/`).
   Layout: a soft panel per priority (option D, Issue #19) with roomy rows, Done
@@ -316,7 +316,7 @@ If they say yes:
   is open puts the to-do in it (My Day / starred / due today). **My Day** = optional
   `myDay: 'YYYY-MM-DD'` (`firestore.rules` checks the format; counts only on that day, so
   it empties each morning); toggled by the edit panel's "My Day" chip; rows elsewhere
-  show a small sun "My Day" tag. Custom lists (Home, Work…) are Issue #72, not built.
+  show a small sun "My Day" tag. Custom lists: Issue #72 (below).
   **Settings → List style** (`listStyle` pref in `menu.js`, `data-list-style` on `<html>`;
   Pills default / Lines / Boxes) sets how My Day, Important and Planned group to-dos:
   Pills = small rounded headings over plain cards (`.vg-*`), Lines = Done-style
@@ -325,7 +325,35 @@ If they say yes:
   only one group (not Planned), no heading. Folded groups are remembered (`vg-…` keys).
   Starred to-dos show a small gold ★ beside the priority bars where no Starred panel says
   it (not on All to-dos or Important). All to-dos always keeps its panels.
-  Settings order: List style, Accent colour, Text size.
+  Settings order: Theme, Accent colour, Text size, List style (Issue #77: the theme moved
+  out of the menu). View icons are coloured by type
+  (`data-v`): My Day `--sun` orange, Important `--gold`, Planned `--today-swipe` purple,
+  Completed `--ok` green, All to-dos the accent.
+- **Your own lists (Issue #72):** "+ New list" in the Lists panel (`ListDialog` in
+  `app/main.js`): name (≤40), one of 12 colours, one of 16 icons (`LIST_ICONS`); shown
+  under "Your lists" with a filled colour tile behind the icon (`.tile.c-<colour>`, bright
+  colour with a white or dark icon, so the hues can be vivid). A list view (`list:<id>`)
+  looks like All to-dos. Put a to-do in a list from the edit panel's list picker (with
+  "+ New list…"), by adding while the list is open, or by typing `#name` at the start or
+  end (chip under the box). Elsewhere rows show a small coloured dot + the list's name.
+  Typing `#` + letters suggests matching lists as chips under the box (and in quick add);
+  tap one or press Tab to finish the word (`listHits`, `ListSuggest`; `listKey` = name in
+  lower case without spaces or punctuation, so "Mum's Car" is `#mumscar`).
+  New / Edit list has just **Done** (Esc or tapping outside too), like the edit panel: when
+  editing, colour and icon save on tap and the name on leaving the box; a new list is made
+  on Done only if it has a name.
+  "⋯" beside a list's title: rename / colour / icon, or Delete list (keep its to-dos with
+  no list, or delete them too). Data: `lists` in `app/store.js` (`lists-<stage>` on the
+  device; signed in `users/{uid}/stages/{stage}/lists/{id}`, `cloud-lists-<stage>` copy),
+  ids made on the device so a to-do can point at a new list at once; to-dos have an
+  optional `list` id. `firestore.rules` checks both (name, colour and icon from fixed
+  lists). First sign-in copies the device's lists too (same name = reuse). Not built yet:
+  reordering lists.
+- **Accent colours (Issue #75):** 12 evenly spread hues shared with list colours (red,
+  orange, yellow, lime, green, teal, cyan, blue, purple, grape, pink, graphite; two rows
+  of 6). Swatches show the bright colour; the light theme uses a deeper shade so white
+  button text and link text pass 4.5:1, dark uses the bright one with dark text. Blue
+  (default) unchanged; teal is greener than before (cyan is the old blue-green).
 - **Done today (Issue #74):** under All to-dos, My Day and Important, `DoneSection`
   shows only to-dos ticked off today ("Done today · n", folded with the same
   `done-open` key) and a "See all completed (n) →" link to the Completed view. The
