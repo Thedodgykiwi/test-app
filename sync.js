@@ -74,7 +74,9 @@ async function start() {
 
   ui.signIn.addEventListener('click', async () => {
     try {
-      await authLib.signInWithPopup(auth, new authLib.GoogleAuthProvider());
+      const provider = new authLib.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });   // always show Google's account chooser (Issue #85)
+      await authLib.signInWithPopup(auth, provider);
     } catch (err) {
       const msg = {
         'auth/popup-closed-by-user': null,
