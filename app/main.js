@@ -752,7 +752,7 @@ export function parseEntry(raw) {
   let text = raw.trim(), due = '', dueWord = '', p = '', time = '', starred = false, list = '';
   // "#home" at the start or end puts it in one of your own lists (Issue #72).
   const lm = text.match(/(?:^|\s)#([\p{L}\d-]+)$/u) || text.match(/^#([\p{L}\d-]+)(?=\s|$)/u);
-  if (lm) { const l = lists.value.find((x) => x.name.toLowerCase().replace(/\s+/g, '') === lm[1].toLowerCase()); if (l) { list = l.id; text = text.replace(lm[0], '').trim(); } }
+  if (lm) { const l = lists.value.find((x) => listKey(x) === lm[1].toLowerCase()); if (l) { list = l.id; text = text.replace(lm[0], '').trim(); } }
   const takeEnd = (re, atStart) => {
     const m = atStart ? text.match(new RegExp(`^(${re})(?=[\\s,.:;!-]|$)`, 'i')) : text.match(new RegExp(`(?:^|[\\s,.:;!-])(${re})[.!]?$`, 'i'));
     if (!m) return null;
@@ -788,6 +788,36 @@ function addParsed(raw, pFallback) {
   if (!r.text || !add(r.text, r.p || pFallback, due, r.evening, r.time, r.starred || v === 'important', v === 'myday' ? today.value : undefined, list)) return null;
   return r;
 }
+// Typing "#" + a few letters offers your lists to finish the word (Issue #72).
+// "Mum's Car" is typed as #mumscar: lower case, spaces and punctuation dropped.
+const listKey = (l) => l.name.toLowerCase().replace(/[^\p{L}\d-]/gu, '');
+function listHits(v) {
+  const m = v.match(/(?:^|\s)#([\p{L}\d-]*)$/u);
+  if (!m || !lists.value.length) return null;
+  const q = m[1].toLowerCase(), hits = lists.value.filter((l) => listKey(l).startsWith(q)).slice(0, 6);
+  if (hits.length === 1 && listKey(hits[0]) === q) return null;   // already typed in full
+  return { q: m[1], hits };
+}
+function pickList(input, l, after) {
+  const v = input.value, h = listHits(v); if (!h) return;
+  input.value = `${v.slice(0, v.length - h.q.length)}${listKey(l)} `;
+  input.focus(); after();
+}
+function ListSuggest({ input, after }) {
+  const h = input.current && listHits(input.current.value);
+  if (!h) return null;
+  return html`<div class="list-sugg" aria-live="polite">
+    ${h.hits.length ? h.hits.map((l, i) => html`<button type="button" class="u-chip list-chip ls-btn" title=${i === 0 ? 'Tab to pick' : ''}
+        aria-label=${`Put it in ${l.name}`} onPointerDown=${(e) => e.preventDefault()} onClick=${() => pickList(input.current, l, after)}>
+        <i style=${`background:${lc(l)}`}></i>#${listKey(l)}</button>`)
+      : html`<span class="ls-none">No list starting with “${h.q}”</span>`}</div>`;
+}
+// Tab finishes the "#…" word with the first suggested list.
+const tabPick = (input, after) => (e) => {
+  if (e.key !== 'Tab' || e.shiftKey) return;
+  const h = listHits(input.current.value); if (!h?.hits.length) return;
+  e.preventDefault(); pickList(input.current, h.hits[0], after);
+};
 function Understood({ r }) {
   if (!r || (!r.due && !r.p && !r.starred && !r.list)) return null;
   return html`<div class="understood" aria-live="polite">
@@ -911,7 +941,7 @@ function AddBar() {
     <form id="todo-form" class="add-bar" onSubmit=${submit}>
       <div class="add-inner">
         <div class="entry">
-          <input id="todo-input" ref=${input} onInput=${onInput} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
+          <input id="todo-input" ref=${input} onInput=${onInput} onKeyDown=${tabPick(input, onInput)} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
           <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${shownP}`}
             aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Tap to change`} title=${`Priority: ${LABELS[shownP]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>
@@ -919,6 +949,7 @@ function AddBar() {
           </button>
         </div>
         <button type="submit" class="btn primary" aria-label="Add to-do" title="Add"><${Icon} name="plus" />Add</button>
+        <${ListSuggest} input=${input} after=${onInput} />
         <${Understood} r=${r} />
       </div>
     </form>`;
@@ -1014,12 +1045,13 @@ function QuickAdd() {
       onClose=${() => { quickOpen.value = false; }} onClick=${(ev) => { if (ev.target === dlg.current) quickOpen.value = false; }}>
       <form onSubmit=${submit}>
         <div class="entry">
-          <input ref=${input} id="quick-input" onInput=${onInput} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
+          <input ref=${input} id="quick-input" onInput=${onInput} onKeyDown=${tabPick(input, onInput)} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder="New to-do…"
             aria-label="New to-do" maxlength="500" autocomplete="off" />
           <button type="button" class=${`flag-btn p-${shownP}`} aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Click to change`}
             title=${`Priority: ${LABELS[shownP]} (click to change)`} onClick=${() => { setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); input.current.focus(); }}>
             <span class="word">${shownP === 'none' ? '' : LABELS[shownP]}</span><${Icon} name=${`prio-${shownP}`} cls=${`flag-${shownP}`} /></button>
         </div>
+        <${ListSuggest} input=${input} after=${onInput} />
         <${Understood} r=${r} />
         <p class="quick-keys" aria-live="polite">
           ${added.length ? html`<span class="quick-added" key=${added.length}><${Icon} name="check-circle" />${added.length} added · “${last}”</span>` : ''}

@@ -335,6 +335,9 @@ If they say yes:
   looks like All to-dos. Put a to-do in a list from the edit panel's list picker (with
   "+ New list…"), by adding while the list is open, or by typing `#name` at the start or
   end (chip under the box). Elsewhere rows show a small coloured dot + the list's name.
+  Typing `#` + letters suggests matching lists as chips under the box (and in quick add);
+  tap one or press Tab to finish the word (`listHits`, `ListSuggest`; `listKey` = name in
+  lower case without spaces or punctuation, so "Mum's Car" is `#mumscar`).
   "⋯" beside a list's title: rename / colour / icon, or Delete list (keep its to-dos with
   no list, or delete them too). Data: `lists` in `app/store.js` (`lists-<stage>` on the
   device; signed in `users/{uid}/stages/{stage}/lists/{id}`, `cloud-lists-<stage>` copy),

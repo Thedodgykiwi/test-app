@@ -1000,3 +1000,10 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .ld-icon.on { border: 2px solid var(--lc); background: var(--lc); color: var(--lfg); }
 .ld-btn { width: 100%; justify-content: center; }
 .danger-btn { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+/* "#" list suggestions under the add box and quick add (Issue #72) */
+.list-sugg { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; padding: .25rem .55rem .1rem; animation: quick-fade .2s ease-out; }
+.add-bar:has(.list-sugg) { padding-bottom: .9rem; }
+.quick-add .list-sugg { padding: .45rem .2rem 0; }
+.ls-btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: .85rem; font-weight: 600; min-height: 32px; padding: 0 .65rem; border-radius: 99px; cursor: pointer; }
+.ls-btn:hover, .ls-btn:focus-visible { background: var(--hover); }
+.ls-none { font-size: .82rem; color: var(--muted); }
