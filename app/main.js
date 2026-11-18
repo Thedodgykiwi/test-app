@@ -1138,11 +1138,11 @@ function EditSheet() {
       <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}
       ${listBlock}${noteBlock}
       <div class="add-chips">
-        <label class="list-pick" style=${listOf(t.list) ? `--lcol:${lc(listOf(t.list))}` : ''}><${Icon} name=${listOf(t.list)?.icon || 'list'} /><span class="visually-hidden">List</span>
+        <label class=${`list-pick${listOf(t.list) ? ' set' : ''}`} style=${listOf(t.list) ? `--lcol:${lc(listOf(t.list))}` : ''}><${Icon} name=${listOf(t.list)?.icon || 'list'} /><span class="visually-hidden">List</span>
           <select value=${listOf(t.list) ? t.list : ''} onChange=${(ev) => { const v2 = ev.target.value;
             if (v2 === '__new') { ev.target.value = t.list || ''; listDialog.value = { mode: 'new', forKey: e.key }; return; }
             const x = listOf(v2); apply({ list: x ? x.id : null }, x ? `Moved to ${x.name}` : 'No list', 'list'); }}>
-            <option value="">No list</option>${lists.value.map((x) => html`<option value=${x.id}>${x.name}</option>`)}<option value="__new">+ New list…</option></select></label>
+            <option value="">No list</option>${lists.value.map((x) => html`<option value=${x.id}>${x.name}</option>`)}<option value="__new">+ New list…</option></select><${Icon} name="caret-down" cls="lp-caret" /></label>
         <button type="button" class=${`add-chip myday-chip${inMyDay(t) ? ' on' : ''}`} id="edit-myday" aria-pressed=${inMyDay(t)}
           onClick=${() => apply({ myDay: inMyDay(t) ? null : today.value }, inMyDay(t) ? 'Taken out of My Day' : 'Added to My Day', 'sun')}>
           <${Icon} name="sun" />${inMyDay(t) ? 'In My Day' : 'My Day'}</button>
