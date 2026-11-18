@@ -281,7 +281,7 @@ If they say yes:
   after 6am keeps Today, drops the time and shows a "6am has passed" chip; a
   time alone that has passed ("6am") means tomorrow. Reminders: not built (Issue #51).
 - **Archive done to-dos (Issue #49, option B):** "Tidy up" on the Done heading
-  (shown when there are done to-dos older than today) opens `TidyMenu`: Older
+  (only while Done is open and there are done to-dos older than today; small and quiet, Issue #59) opens `TidyMenu`: Older
   than 30 days / Older than 7 days / Everything except today, each with a
   count. Sets `archived: true` (kept, hidden everywhere, not counted); Undo in
   the note sets it back. `firestore.rules` allows the optional bool. A way to

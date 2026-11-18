@@ -367,9 +367,9 @@ function DoneSection({ done }) {
         onClick=${() => { toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
         <${Icon} name=${closed ? 'caret-right' : 'caret-down'} cls="chevron" /><${Icon} name="check-circle" cls="done-icon" />Done · ${done.length}
       </button>
-      ${done.some(([t]) => doneRange(t, now) !== 'today') && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
+      ${!closed && done.some(([t]) => doneRange(t, now) !== 'today') && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
         onClick=${() => setTidy(!tidy)}><${Icon} name="archive" />Tidy up</button>`}</h2>
-      ${tidy && html`<${TidyMenu} done=${done} now=${now} close=${() => { setTidy(false); setTimeout(() => document.getElementById('tidy-up')?.focus()); }} />`}
+      ${tidy && !closed && html`<${TidyMenu} done=${done} now=${now} close=${() => { setTidy(false); setTimeout(() => document.getElementById('tidy-up')?.focus()); }} />`}
       <div class="done-ranges" id="group-list-done" hidden=${closed}>
         ${DONE_RANGES.map(([key, label]) => {
           const items = done.filter(([t]) => doneRange(t, now) === key).sort(([a], [b]) => (b.doneAt || 0) - (a.doneAt || 0));
