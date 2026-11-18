@@ -826,3 +826,9 @@ select.time-input option:disabled { color: var(--muted); }
 .sheet.compact .sheet-undo span { flex: 1; color: var(--text); }
 .sheet.compact .sheet-undo-btn { display: inline-flex; align-items: center; gap: .3rem; min-height: 32px; padding: 0 .7rem; border: 0; border-radius: 99px;
   background: var(--hover); color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+
+/* Screen edges (Issue #65): with viewport-fit=cover the page learns the size of
+   the iPhone home-bar strip and side notches (env(safe-area-inset-*)), so the
+   add bar sits above the home bar and nothing hides behind a notch in landscape. */
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.add-bar { padding-left: calc(1rem + env(safe-area-inset-left)); padding-right: calc(1rem + env(safe-area-inset-right)); }
