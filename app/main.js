@@ -930,6 +930,7 @@ render(html`<${App} />`, document.getElementById('todo-groups'));
 setTimeout(() => {
   const key = `swipe-tip:${window.STAGE || 'local'}`;
   try {
+    if (window.COMPARE) return;   // not while comparing stages (Issue #69)
     if (localStorage.getItem(key) || !todos.value.some((t) => !t.done)) return;
     localStorage.setItem(key, '1');
   } catch { return; }

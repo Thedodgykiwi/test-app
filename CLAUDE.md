@@ -272,7 +272,8 @@ If they say yes:
   an open dialog); title and note save when you leave the box.
 - **Edit sheet layout (Issues #46, #47):** star is a round toggle in the header
   (`#edit-star`, gold when on); "Add a checklist" sits right under the text box.
-  Starred panel sorts by due state, then High/Medium/Low/none (Issue #48).
+  Starred panel sorts by due state, then High/Medium/Low/none (Issue #48), and
+  has a thin gold edge (other panels don't; Issue #68).
 - **Scheduled time (Issue #50, option B):** optional `time: 'HH:MM'` (24-hour)
   on a to-do with a date. Edit sheet: "Add a time" under Due, then a time
   box + "Remove time"; clearing the date clears it. Typed: 4pm, 4:30pm, 13:00
@@ -301,6 +302,11 @@ If they say yes:
   and a round **+** (the Add button, text hidden but read out) inside its right
   end. The typing chips sit under the box, lined up with its text. Rules are
   at the end of `style.css`.
+- **Compare stages (Issue #69):** shared, from the playbook's deploy
+  (`compare-stages.md`): Pipeline page → Compare tab, `?compare` mode (all
+  stages share one sample list in the browser; no sync) and the banner's stage
+  menu. This app's part: `compare-sample.json` (keep one of each feature in it
+  when adding features) and `window.COMPARE` skips the swipe tip.
 - **Add-box hint lines (Issue #37):** `HINTS` in `app/main.js`, a random
   award-night line per open and after each add (never the same twice running).
   Keep each to about 22 characters so it fits a phone; the box only reserves
