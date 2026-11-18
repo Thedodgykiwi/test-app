@@ -6,7 +6,7 @@
 const stage = window.STAGE || 'local';
 if (stage !== 'main') {
   const banner = document.getElementById('stage-banner');
-  document.getElementById('stage-name').textContent = `${stage.toUpperCase()} environment`;
+  document.getElementById('stage-name').textContent = stage.toUpperCase();   // just the stage name: "environment" made the banner overlap on phones
   banner.className = `stage-${stage}`;
   banner.hidden = false;
   document.body.classList.add('has-banner');
