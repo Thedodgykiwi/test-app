@@ -176,6 +176,22 @@
         <button type="button" id="push-off" class="btn" hidden><span data-icon="x"></span>Turn off on this device</button>
       </div>
     </section>
+    <!-- Daily summary (Issue #91, option B; sync.js). Sent by the server, so it needs phone notifications on. -->
+    <section class="setting" id="summary-setting" hidden>
+      <div class="sum-head"><p class="setting-name" id="sum-label">Daily summary</p>
+        <label class="check"><input type="checkbox" role="switch" id="sum-on" aria-labelledby="sum-label" aria-describedby="sum-help"></label></div>
+      <p class="setting-help" id="sum-help">A notification each day with what's due and anything overdue.</p>
+      <div id="sum-opts" class="sum-opts" hidden>
+        <div class="sum-row"><label for="sum-time" class="sf-label">Time</label><select id="sum-time" class="input sum-time"></select></div>
+        <div class="sum-row"><span class="sf-label" id="sum-days-label">Days</span>
+          <div class="seg" role="radiogroup" aria-labelledby="sum-days-label" data-pref="summaryDays">
+            <button type="button" role="radio" data-value="all">Every day</button>
+            <button type="button" role="radio" data-value="week">Weekdays</button>
+          </div></div>
+        <label class="check"><input type="checkbox" id="sum-skip"> Skip days with nothing due</label>
+        <div class="row account-actions"><button type="button" id="sum-now" class="btn"><span data-icon="bell"></span>Send me today's summary now</button></div>
+      </div>
+    </section>
       </div>
     </div>
     <div class="st-group" id="st-account">

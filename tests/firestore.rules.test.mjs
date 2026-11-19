@@ -115,6 +115,10 @@ await t('other collections denied', () => assertFails(setDoc(doc(alice, 'other',
 const dev = (db, user = 'alice', id = 'abcdef1234567890') => doc(db, 'users', user, 'devices', id);
 const goodDev = () => ({ token: 'fcm-token-123', stage: 'dev', lead: 15, tz: 'Europe/London', url: 'https://thedodgykiwi.github.io/test-app/dev/', updatedAt: serverTimestamp() });
 await t('owner can save a device for notifications', () => assertSucceeds(setDoc(dev(alice), goodDev())));
+await t('owner can turn on the daily summary', () => assertSucceeds(setDoc(dev(alice), { ...goodDev(), sumOn: true, sumTime: '08:00', sumDays: 'week', sumSkip: true })));
+await t('summary time must be HH:MM', () => assertFails(setDoc(dev(alice), { ...goodDev(), sumTime: '8am' })));
+await t('summary days must be all or week', () => assertFails(setDoc(dev(alice), { ...goodDev(), sumDays: 'weekends' })));
+await t('summary on must be true/false', () => assertFails(setDoc(dev(alice), { ...goodDev(), sumOn: 'yes' })));
 await t('owner can read own device', () => assertSucceeds(getDoc(dev(alice))));
 await t('owner can change the default lead', () => assertSucceeds(updateDoc(dev(alice), { lead: 60, updatedAt: serverTimestamp() })));
 await t('device lead must be 0, 15 or 60', () => assertFails(setDoc(dev(alice), { ...goodDev(), lead: 5 })));

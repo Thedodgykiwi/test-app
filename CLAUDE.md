@@ -422,6 +422,16 @@ If they say yes:
   says "Snoozed until 1am · Cancel"; a new date or time clears the snooze. Ticking a to-do off closes its notification. Deploy server changes with
   `npx -y firebase-tools@latest deploy --only functions --project test-app-52149` (needs a Firebase
   sign-in in the session); logs: `functions:log --only sendReminders`.
+- **Daily summary (Issue #91, option B):** Settings → Reminders → **Daily summary** (switch, Time 5am–10pm
+  in half hours, Days: Every day / Weekdays, "Skip days with nothing due", "Send me today's summary now").
+  Needs phone notifications on this device (the switch is disabled otherwise). Prefs `summaryOn/Time/Days/Skip`
+  in `menu.js` (other scripts use `window.AppPrefs.get/set`, so the one prefs copy stays in step); `sync.js`
+  copies them onto the device record (`sumOn`, `sumTime`, `sumDays`, `sumSkip`; optional, rules-checked).
+  `sendReminders` sends it at the device's time in its time zone, once a day (`…_sum_<day>` in the sent log);
+  `summaryFor()` builds it: "☀️ Today: n to do", then one line each, overdue first ("⚠️ … (overdue)",
+  "⏰ 9:30am …", "🌙 …", "• …"), at most 3 + "+n more" (fits the Lock Screen). `sendSummaryNow` (callable)
+  sends today's summary on demand. Tapping it opens **All to-dos** (`view` in the push → `?view=all` /
+  `open-view` message / noted tap; `openView()` in `app/main.js`).
 - **Sync status line (Issue #87):** the line in the account menu (`#sync-status`, `showStatus()` in `sync.js`) is hidden while everything is saved; it shows for saving, updating, offline and error. The dot on the photo and the button's label always carry the state.
 - **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
 - **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;

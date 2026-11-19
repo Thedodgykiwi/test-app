@@ -43,6 +43,24 @@ const safeTz = (tz) => { try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }
 const fmtTime = (t) => { const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}${m ? ':' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
 const bodyFor = (lead, time) => (lead === 0 ? `Due now · ${fmtTime(time)}` : `Due in ${lead === 60 ? '1 hour' : `${lead} min`} · ${fmtTime(time)}`);
 
+// ---- Daily summary (Issue #91, option B) ---------------------------------------
+// Title "☀️ Today: n to do"; body one line each (overdue first, then today's by time):
+// "⚠️ Pay the deposit (overdue)", "⏰ 9:30am Pick up the suit", "🌙 Put the bins out", "• Order flowers",
+// at most 3 lines plus "+n more". Fits a Lock Screen notification (title ~40, body ~150 characters).
+async function summaryFor(uid, stage, tz, now) {
+  const today = dayIn(now, tz);
+  const snap = await db.collection(`users/${uid}/stages/${stage}/todos`).where('due', '<=', today).get();
+  const open = snap.docs.map((d) => d.data()).filter((t) => !t.done && !t.archived && DAY_RE.test(t.due || ''));
+  const overdue = open.filter((t) => t.due < today).sort((a, b) => a.due.localeCompare(b.due));
+  const due = open.filter((t) => t.due === today).sort((a, b) => ((a.evening ? 1 : 0) - (b.evening ? 1 : 0)) || (TIME_RE.test(a.time || '') ? a.time : '99').localeCompare(TIME_RE.test(b.time || '') ? b.time : '99'));
+  const cut = (s) => (s.length > 42 ? s.slice(0, 41) + '…' : s);
+  const lines = [...overdue.map((t) => `⚠️ ${cut(t.text)} (overdue)`),
+    ...due.map((t) => (TIME_RE.test(t.time || '') ? `⏰ ${fmtTime(t.time)} ${cut(t.text)}` : t.evening ? `🌙 ${cut(t.text)}` : `• ${cut(t.text)}`))];
+  const n = lines.length;
+  return { n, title: n ? `☀️ Today: ${n} to do` : '☀️ Nothing due today',
+    body: n ? lines.slice(0, 3).join('\n') + (n > 3 ? `\n+${n - 3} more` : '') : 'Enjoy your day.' };
+}
+
 // Data-only message: the app's own service worker (sw.js) shows it, so it looks the
 // same on every stage and tapping it opens the right to-do.
 function message(token, data) {
@@ -71,6 +89,21 @@ exports.sendReminders = onSchedule({ schedule: 'every 1 minutes', timeZone: 'Eur
   for (const [key, devs] of groups) {
     const [uid, stage] = key.split('|');
     const tz = devs[0].tz;
+    for (const dev of devs) {   // daily summary at the device's chosen time, in its time zone (Issue #91)
+      if (dev.sumOn !== true || !TIME_RE.test(dev.sumTime || '')) continue;
+      const localDay = dayIn(now, dev.tz), at = zonedMs(localDay, dev.sumTime, dev.tz);
+      if (at <= from || at > now) continue;
+      const wd = new Date(Date.UTC(...localDay.split('-').map((x, i) => (i === 1 ? x - 1 : +x)))).getUTCDay();
+      if (dev.sumDays === 'week' && (wd === 0 || wd === 6)) continue;
+      const sref = db.doc(`system/reminders/sent/${dev.id}_sum_${localDay}`);
+      try { await sref.create({ at: Timestamp.now() }); } catch { continue; }
+      const s = await summaryFor(uid, stage, dev.tz, now);
+      if (!s.n && dev.sumSkip !== false) continue;
+      try {
+        await getMessaging().send(message(dev.token, { title: s.title, body: s.body, tag: 'summary', todo: '', view: 'all', url: dev.url || '' }));
+        sent++;
+      } catch (err) { if (GONE.includes(err.code)) await dev.ref.delete().catch(() => {}); }
+    }
     // A reminder can be up to an hour before its to-do: look at to-dos due from the day of `from` to the day an hour ahead.
     const snap = await db.collection(`users/${uid}/stages/${stage}/todos`)
       .where('due', '>=', dayIn(from - 864e5, tz)).where('due', '<=', dayIn(now + 61 * 60000, tz)).get();
@@ -131,4 +164,21 @@ exports.sendTestReminder = onCall(async (req) => {
     throw new HttpsError('unavailable', `Couldn't send (${err.code || err.message}).`);
   }
   return { ok: true };
+});
+
+// Settings → Daily summary → "Send me today's summary now": the real summary, to one of the caller's devices.
+exports.sendSummaryNow = onCall(async (req) => {
+  const uid = req.auth?.uid, device = String(req.data?.device || '');
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in first.');
+  if (!/^[A-Za-z0-9_-]{8,40}$/.test(device)) throw new HttpsError('invalid-argument', 'Unknown device.');
+  const ref = db.doc(`users/${uid}/devices/${device}`), snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Phone notifications are not on for this device.');
+  const d = snap.data(), s = await summaryFor(uid, d.stage, safeTz(d.tz), Date.now());
+  try {
+    await getMessaging().send(message(d.token, { title: s.title, body: s.body, tag: 'summary', todo: '', view: 'all', url: d.url || '' }));
+  } catch (err) {
+    if (GONE.includes(err.code)) await ref.delete().catch(() => {});
+    throw new HttpsError('unavailable', `Couldn't send (${err.code || err.message}).`);
+  }
+  return { ok: true, n: s.n };
 });

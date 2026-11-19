@@ -194,9 +194,13 @@ async function start() {
   };
   const leadPref = () => { try { const v = +JSON.parse(localStorage.getItem(`prefs:${location.pathname.split('/')[1] || 'app'}`) || '{}').remindLead; return [0, 15, 60].includes(v) ? v : 15; } catch { return 15; } };
   const devRef = (uid) => fs.doc(db, 'users', uid, 'devices', deviceId());
+  // The daily summary's settings travel with the device record, so the server knows when to send it (Issue #91).
+  const P = (k) => window.AppPrefs?.get(k);
+  const summaryFields = () => ({ sumOn: P('summaryOn') === '1', sumTime: /^([01]\d|2[0-3]):[0-5]\d$/.test(P('summaryTime') || '') ? P('summaryTime') : '08:00',
+    sumDays: P('summaryDays') === 'week' ? 'week' : 'all', sumSkip: P('summarySkip') !== '0' });
   const saveDevice = (user, token) => fs.setDoc(devRef(user.uid), {
     token, stage: app.stage, lead: leadPref(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/London',
-    url: location.origin + location.pathname, updatedAt: fs.serverTimestamp(),
+    url: location.origin + location.pathname, updatedAt: fs.serverTimestamp(), ...summaryFields(),
   });
   const pushToken = async () => { const lib = await useMessaging(); return lib.getToken(messaging, { vapidKey: VAPID, serviceWorkerRegistration: await navigator.serviceWorker.ready }); };
   function pushState() {
@@ -221,7 +225,31 @@ async function start() {
     $('push-help').textContent = PUSH_TEXT[s];
     $('push-on').hidden = s !== 'off';
     $('push-test').hidden = $('push-off').hidden = s !== 'on';
+    showSummary(s);
   }
+  // ---- Daily summary (Settings → Reminders, Issue #91) ----
+  const fmtT = (v) => { const [h, m] = v.split(':').map(Number); return `${h % 12 || 12}${m ? ':' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
+  for (let m = 5 * 60; m <= 22 * 60; m += 30) { const v = `${String(m / 60 | 0).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; $('sum-time').append(new Option(fmtT(v), v)); }
+  function showSummary(s = pushState()) {
+    const on = P('summaryOn') === '1', ready = s === 'on';
+    $('summary-setting').hidden = !VAPID;
+    $('sum-on').checked = on && ready; $('sum-on').disabled = !ready;
+    $('sum-help').textContent = ready ? "A notification each day with what's due and anything overdue."
+      : "A notification each day with what's due and anything overdue. Turn on phone notifications above first.";
+    $('sum-opts').hidden = !(on && ready);
+    $('sum-time').value = summaryFields().sumTime; $('sum-skip').checked = P('summarySkip') !== '0';
+  }
+  $('sum-on').addEventListener('change', (e) => window.AppPrefs?.set('summaryOn', e.target.checked ? '1' : '0'));
+  $('sum-time').addEventListener('change', (e) => window.AppPrefs?.set('summaryTime', e.target.value));
+  $('sum-skip').addEventListener('change', (e) => window.AppPrefs?.set('summarySkip', e.target.checked ? '1' : '0'));
+  $('sum-now').addEventListener('click', async (e) => {
+    const btn = e.currentTarget; btn.disabled = true;
+    try {
+      const fns = await import(`${SDK}/firebase-functions.js`);
+      await fns.httpsCallable(fns.getFunctions(fbApp, 'europe-west2'), 'sendSummaryNow')({ device: deviceId() });
+      toast("Today's summary is on its way.");
+    } catch (err) { toast(`Couldn't send it (${err.message || err.code}).`, 6000); } finally { btn.disabled = false; }
+  });
   async function pushOff(user) {
     localStorage.removeItem(pushKey);
     try { if (user) await fs.deleteDoc(devRef(user.uid)); } catch { /* offline: the server drops it once the token stops working */ }
@@ -252,9 +280,10 @@ async function start() {
       toast(`Couldn't send a test (${err.message || err.code}).`, 6000);
     } finally { btn.disabled = false; }
   });
-  addEventListener('prefschange', () => {   // the default "remind me" changed: tell the server
+  addEventListener('prefschange', () => {   // "remind me" default or the daily summary changed: tell the server
     const u = auth.currentUser;
-    if (u && pushState() === 'on') fs.updateDoc(devRef(u.uid), { lead: leadPref(), updatedAt: fs.serverTimestamp() }).catch(() => {});
+    if (u && pushState() === 'on') fs.updateDoc(devRef(u.uid), { lead: leadPref(), ...summaryFields(), updatedAt: fs.serverTimestamp() }).catch(() => {});
+    showSummary();
   });
   showPush();
 

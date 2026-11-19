@@ -9,7 +9,8 @@
 (() => {
   const PREFS_KEY = `prefs:${location.pathname.split('/')[1] || 'app'}`;
   // The app's default accent is the data-accent on <html> in index.html.
-  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills', swipeRight: 'star', swipeLeft: 'tomorrow', remindLead: '15' };
+  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills', swipeRight: 'star', swipeLeft: 'tomorrow', remindLead: '15',
+    summaryOn: '0', summaryTime: '08:00', summaryDays: 'all', summarySkip: '1' };   // daily summary (Issue #91)
   const load = () => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch { return { ...DEFAULTS }; } };
   const prefs = load();
   const root = document.documentElement;
@@ -142,6 +143,11 @@
     if (e.key === 'Escape' && !menu.hidden) { setMenu(false); btn.focus(); }
   });
   window.AppMenu = { close: () => setMenu(false) };
+  // Other scripts read and change preferences through here, so this one copy stays in step (Issue #91).
+  window.AppPrefs = {
+    get: (k) => prefs[k],
+    set(k, v) { prefs[k] = v; try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage blocked */ } applyPrefs(); dispatchEvent(new Event('prefschange')); },
+  };
 
   // ---- Panels (Settings, What's new) -----------------------------------------
   // <dialog> handles focus and Escape; a tap on the dimmed backdrop closes it.

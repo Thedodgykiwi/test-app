@@ -1390,7 +1390,17 @@ function openWantedTodo() {
   if (validDue(t.due) && validTime(t.time)) { remSeen[remKey(t)] = { at: Date.now() }; saveSeen(); }   // shown now: the in-app check won't repeat it
   remCard.value = { key: remKey(t), k };   // its actions: Done / Snooze / Change date; tap the name for the full edit panel
 }
-navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data?.type === 'open-todo' && e.data.id) { openWanted = e.data.id; openWantedTodo(); } });
+navigator.serviceWorker?.addEventListener('message', (e) => {
+  if (e.data?.type === 'open-todo' && e.data.id) { openWanted = e.data.id; openWantedTodo(); }
+  if (e.data?.type === 'open-view') openView(e.data.view);
+});
+// The daily summary opens a view (Issue #91): ?view=all, or a message / noted tap from sw.js.
+function openView(v) {
+  if (!['all', 'myday', 'planned', 'important'].includes(v)) return;
+  editing.value = null; setView(v);
+  if (location.search.includes('view=')) { const u = new URL(location.href); u.searchParams.delete('view'); history.replaceState(null, '', u); }
+}
+openView(new URLSearchParams(location.search).get('view'));
 // The service worker also notes each tap (sw.js, '__tapped' in its cache): pick it up when the app
 // opens or comes to the front, in case iOS didn't pass the message on.
 async function checkTapped() {
@@ -1399,8 +1409,9 @@ async function checkTapped() {
     const scope = reg.scope, cache = await caches.open('app-' + new URL(scope).pathname);
     const res = await cache.match(scope + '__tapped'); if (!res) return;
     await cache.delete(scope + '__tapped');
-    const { id, at } = await res.json();
-    if (id && Date.now() - at < 5 * 60000) { openWanted = id; openWantedTodo(); }
+    const { id, view: v, at } = await res.json();
+    if (Date.now() - at > 5 * 60000) return;
+    if (id) { openWanted = id; openWantedTodo(); } else if (v) openView(v);
   } catch { /* no service worker or storage: the ?todo= link still works */ }
 }
 checkTapped();
