@@ -1228,7 +1228,7 @@ function EditSheet() {
     </select>${time && html`<button type="button" class="btn ghost" onClick=${() => { setT(''); setTimeOn(false); }}>Remove</button>`}</div>`;
   const curRem = remOf(t);   // Issue #51: per-to-do reminder; choosing the default stores nothing (follows Settings)
   const setRem = (v) => apply({ remind: v === remLead.value ? null : v }, v === 'off' ? 'Reminder off' : `Reminder ${leadWords(v)}`, 'bell');
-  const remBlock = time && !t.done && html`<p class="mini-label"><${Icon} name="bell" />Remind me</p>
+  const remBlock = time && !t.done && html`<p class="mini-label"><${Icon} name="bell" />Remind me before its time</p>
     <div class="seg chips rem-chips" role="group" aria-label="Remind me">
       ${[['off', 'Off'], [0, 'At the time'], [15, '15 min'], [60, '1 hour']].map(([v, l]) => html`<button type="button" class="chip"
         aria-pressed=${v === 'off' ? curRem === null : curRem === v} onClick=${() => setRem(v)}>${l}</button>`)}</div>`;

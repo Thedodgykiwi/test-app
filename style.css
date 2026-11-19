@@ -224,6 +224,8 @@ body.has-banner .account { top: 2.8rem; }
   flex: 1; background: none; color: var(--text); font-size: .82rem; padding: .4rem .3rem; border-radius: 8px; gap: .25rem;
 }
 .seg button:hover { background: var(--surface); }
+/* Remind me: longer labels ("15 min before"); size to the words so none wraps unless the text is Large on a small phone. */
+#remind-setting .seg button { flex: 1 1 auto; padding-inline: .2rem; }
 .seg button[aria-checked="true"] { background: var(--surface); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .seg .ic { width: 1em; height: 1em; }
 .chips .ic { width: 1.1em; height: 1.1em; }

@@ -158,11 +158,11 @@
     <!-- Reminders (Issue #51, option C): the default for to-dos with a time; each to-do can change it in its edit panel. -->
     <section class="setting" id="remind-setting">
       <p class="setting-name" id="remind-label">Remind me</p>
-      <p class="setting-help" id="remind-help">For to-dos with a time. You can change it on each to-do.</p>
+      <p class="setting-help" id="remind-help">How long before a to-do's time you're reminded (for to-dos with a time). You can change it on each to-do.</p>
       <div class="seg" role="radiogroup" aria-labelledby="remind-label" aria-describedby="remind-help" data-pref="remindLead">
         <button type="button" role="radio" data-value="0">At the time</button>
-        <button type="button" role="radio" data-value="15">15 min</button>
-        <button type="button" role="radio" data-value="60">1 hour</button>
+        <button type="button" role="radio" data-value="15">15 min before</button>
+        <button type="button" role="radio" data-value="60">1 hour before</button>
       </div>
     </section>
     <!-- Phone notifications (Issue #51, part 2; sync.js). One reminder channel per device:
