@@ -414,7 +414,9 @@ If they say yes:
   `app/main.js`; sw.js also notes the tap in its cache as `__tapped`, which the app picks up on open / coming to the front, because iOS may refuse `focus()` + `postMessage` when the app is in the background), not the edit panel: **Done** ticks it off, **Snooze 10 min** saves `snooze` (ms) on
   the to-do (rules-checked) so every device reminds again then (the server sends a fresh
   notification; devices without them show the card), **Change date** opens the due menu, and the
-  to-do's name opens the edit panel. Ticking a to-do off closes its notification. Deploy server changes with
+  to-do's name opens the edit panel. Snoozing keeps the to-do's own time; while snoozed, the row's
+  bell shows when it rings again ("🔔 1am", `snoozedUntil()`, redrawn each minute) and the edit panel
+  says "Snoozed until 1am · Cancel"; a new date or time clears the snooze. Ticking a to-do off closes its notification. Deploy server changes with
   `npx -y firebase-tools@latest deploy --only functions --project test-app-52149` (needs a Firebase
   sign-in in the session); logs: `functions:log --only sendReminders`.
 - **Sync status line (Issue #87):** the line in the account menu (`#sync-status`, `showStatus()` in `sync.js`) is hidden while everything is saved; it shows for saving, updating, offline and error. The dot on the photo and the button's label always carry the state.

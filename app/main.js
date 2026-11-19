@@ -30,6 +30,24 @@ function remOf(t) {   // minutes before its time, or null for no reminder
   return REM_LEADS.includes(t.remind) ? t.remind : remLead.value;
 }
 const leadWords = (n) => (n === 0 ? 'at the time' : n === 60 ? '1 hour before' : `${n} min before`);
+const remSeenKey = `reminded-${window.STAGE || 'local'}`;
+const remSeen = (() => { try { return JSON.parse(localStorage.getItem(remSeenKey)) || {}; } catch { return {}; } })();
+const saveSeen = () => { try { localStorage.setItem(remSeenKey, JSON.stringify(remSeen)); } catch { /* full */ } };
+const remKey = (t) => `${t.id || t.text}|${t.due}|${t.time}`;
+// Snoozed until (ms), while it's still ahead: saved on the to-do (signed in) or on this device.
+// Reading minuteTick re-draws rows each minute, so the snooze time drops off once it has passed.
+const minuteTick = signal(0);
+setInterval(() => { minuteTick.value++; }, 60000);
+function snoozedUntil(t) {
+  minuteTick.value;
+  const v = typeof t.snooze === 'number' ? t.snooze : remSeen[`${t.id || t.text}|${t.due}|${t.time}`]?.snooze;
+  return !t.done && v > Date.now() ? v : 0;
+}
+const clockOf = (ms) => { const d = new Date(ms); return fmtTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`); };
+function cancelSnooze(t) {
+  const s = remSeen[remKey(t)]; if (s?.snooze) { delete s.snooze; saveSeen(); }
+  if (typeof t.snooze === 'number' && ready()) update(t, { snooze: null });
+}
 const remAt = (t) => { const [y, m, d] = t.due.split('-').map(Number), [h, mi] = t.time.split(':').map(Number); return new Date(y, m - 1, d, h, mi).getTime(); };
 
 // Short-lived UI state shared between components
@@ -311,6 +329,7 @@ function setDue(k, due, said, evening = false) {
   if (!cur || !ready()) return;
   const before = validDue(cur.due) ? cur.due : null, beforeEv = !!cur.evening, beforeTime = validTime(cur.time) ? cur.time : null;
   const ch = cur.evening || evening ? { due, evening } : { due };   // any other date clears "Tonight" (Issue #43)
+  if (typeof cur.snooze === 'number') ch.snooze = null;   // a snooze was for the old date (Issue #51)
   // A time that no longer fits goes: a daytime one when moved to Tonight, an
   // evening one when moved to (daytime) Today, any time when the date is removed.
   if (beforeTime && (!due || (evening && !isEveningTime(beforeTime)) || (!evening && due === today.value && isEveningTime(beforeTime)))) ch.time = null;
@@ -409,13 +428,13 @@ function Row({ t, k }) {
             onClick=${() => { if (swallowClick || !ready()) return; openEditor(t, k); }}>
             <span class="t-main">${t.text}</span></button>
           ${ds && html`<button type="button" class=${`due-label due-${ds}${ds === 'today' && t.evening ? ' tn' : ''}`} data-due-btn=${k} aria-haspopup="menu" aria-expanded=${dueMenu.value?.key === k}
-            aria-label=${`${withTime(dueLabel(t.due), t)}${remOf(t) !== null ? ', reminder on' : ''}. Change the due date`}
+            aria-label=${`${withTime(dueLabel(t.due), t)}${remOf(t) !== null ? (snoozedUntil(t) ? `, reminder snoozed until ${clockOf(snoozedUntil(t))}` : ', reminder on') : ''}. Change the due date`}
             onClick=${(e) => {   // tap the label for a quick menu: Tomorrow, Pick a date, No date (Issue #38)
               if (swallowClick || !ready()) return;
               if (dueMenu.value?.key === k) { dueMenu.value = null; return; }
               const r = e.currentTarget.getBoundingClientRect();
               dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom };
-            }}><${Icon} name=${ds === 'today' && t.evening ? 'moon' : DUE_ICON[ds]} />${withTime(ds === 'today' && t.evening ? 'Tonight' : dueLabel(t.due), t)}${remOf(t) !== null && html`<${Icon} name="bell" cls="rem-bell" />`}<${Icon} name="caret-down" cls="caret" /></button>`}
+            }}><${Icon} name=${ds === 'today' && t.evening ? 'moon' : DUE_ICON[ds]} />${withTime(ds === 'today' && t.evening ? 'Tonight' : dueLabel(t.due), t)}${remOf(t) !== null && html`<${Icon} name="bell" cls="rem-bell" />${snoozedUntil(t) ? html`<span class="snz">${clockOf(snoozedUntil(t))}</span>` : ''}`}<${Icon} name="caret-down" cls="caret" /></button>`}
           ${itemsOf(t).length > 0 && html`<button type="button" class=${`sub-pill${expanded.value.has(k) ? ' open' : ''}`}
             aria-expanded=${expanded.value.has(k)} aria-label=${`Checklist, ${progress(t)} done. ${expanded.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(expanded.value); s.has(k) ? s.delete(k) : s.add(k); expanded.value = s; }}>
@@ -1194,9 +1213,9 @@ function EditSheet() {
   if (!t) return html`<dialog id="edit-todo" ref=${dlg} class="sheet compact"></dialog>`;
   const due = validDue(t.due) ? t.due : '', time = validTime(t.time) ? t.time : '', tonight = !!t.evening && due === today.value;
   const setPrio = (v) => apply({ p: v }, `Priority: ${v === 'none' ? 'none' : LABELS[v]}`, `prio-${v}`);
-  const setDate = (v) => { const ch = { due: v || null }; if (t.evening) ch.evening = false; if (!v || (v === today.value && (isEveningTime(time) || isPast(v, time)))) ch.time = null;
+  const setDate = (v) => { const ch = { due: v || null }; if (typeof t.snooze === 'number') ch.snooze = null; if (t.evening) ch.evening = false; if (!v || (v === today.value && (isEveningTime(time) || isPast(v, time)))) ch.time = null;
     apply(ch, v ? withTime(dueLabel(v), { time: ch.time === null ? null : time }) : 'Date removed', v ? 'calendar-blank' : 'x'); };
-  const setT = (v) => { const ch = { time: v || null }; if (due === today.value) ch.evening = isEveningTime(v); apply(ch, v ? `At ${fmtTime(v)}` : 'Time removed', 'clock'); };
+  const setT = (v) => { const ch = { time: v || null }; if (typeof t.snooze === 'number') ch.snooze = null; if (due === today.value) ch.evening = isEveningTime(v); apply(ch, v ? `At ${fmtTime(v)}` : 'Time removed', 'clock'); };
   const star = () => apply({ starred: !t.starred }, t.starred ? 'Unstarred' : 'Starred', t.starred ? 'star' : 'star-fill');
   const prioChips = html`<div class="seg chips" role="group" aria-label="Priority">
     ${['high', 'med', 'low', 'none'].map((v) => html`<button type="button" class=${`chip ${v}`} aria-pressed=${t.p === v} onClick=${() => setPrio(v)}>
@@ -1213,6 +1232,8 @@ function EditSheet() {
     <div class="seg chips rem-chips" role="group" aria-label="Remind me">
       ${[['off', 'Off'], [0, 'At the time'], [15, '15 min'], [60, '1 hour']].map(([v, l]) => html`<button type="button" class="chip"
         aria-pressed=${v === 'off' ? curRem === null : curRem === v} onClick=${() => setRem(v)}>${l}</button>`)}</div>`;
+  const snz = snoozedUntil(t);
+  const snoozeLine = snz && html`<p class="rem-snoozed"><${Icon} name="clock" />Snoozed until ${clockOf(snz)} · <button type="button" class="link-btn" onClick=${() => cancelSnooze(t)}>Cancel</button></p>`;
   const listBlock = (itemsOf(t).length || startList) && html`<p class="mini-label"><${Icon} name="list-checks" />Checklist${progress(t) ? ` · ${progress(t)}` : ''}</p><${Checklist} t=${t} autoFocus=${startList} />`;
   const noteBlock = noteOn && html`<p class="mini-label"><${Icon} name="note" />Note</p>
     <textarea ref=${noteRef} class="textarea note-input" rows="2" maxlength="2000" aria-label="Note" placeholder="Details, links, who to ask…" value=${noteOf(t)}
@@ -1224,7 +1245,7 @@ function EditSheet() {
   const body = html`
       ${titleRow}
       <p class="mini-label"><${Icon} name="prio-high" />Priority</p>${prioChips}
-      <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}${remBlock}
+      <p class="mini-label"><${Icon} name=${tonight ? 'moon' : 'calendar-blank'} />When${tonight ? ' · Tonight' : ''}</p>${dueField}${timeSel}${remBlock}${snoozeLine}
       ${listBlock}${noteBlock}
       <div class="add-chips">
         <label class=${`list-pick${listOf(t.list) ? ' set' : ''}`} style=${listOf(t.list) ? `--lcol:${lc(listOf(t.list))}` : ''}><${Icon} name=${listOf(t.list)?.icon || 'list'} /><span class="visually-hidden">List</span>
@@ -1300,10 +1321,6 @@ render(html`<${Summary} />`, document.getElementById('summary'));
 // Checks every 20 s (and when the app comes back to the front). A reminder shows from its
 // time until an hour after the to-do's time, once; Snooze brings it back in 10 minutes.
 // What's been shown or snoozed is kept on this device (`reminded-<stage>`), pruned after 3 days.
-const remSeenKey = `reminded-${window.STAGE || 'local'}`;
-const remSeen = (() => { try { return JSON.parse(localStorage.getItem(remSeenKey)) || {}; } catch { return {}; } })();
-const saveSeen = () => { try { localStorage.setItem(remSeenKey, JSON.stringify(remSeen)); } catch { /* full */ } };
-const remKey = (t) => `${t.id || t.text}|${t.due}|${t.time}`;
 const remCard = signal(null);   // { key, k }
 function remCheck() {
   if (window.REMIND_CHANNEL === 'push' || remCard.value || loading.value) return;   // phone notifications on this device instead (part 2)

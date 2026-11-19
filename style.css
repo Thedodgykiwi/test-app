@@ -1101,3 +1101,7 @@ dialog#settings[open] { animation: st-drop .22s cubic-bezier(.2,.8,.3,1); }
 .ir-x { flex: none; border: 0; background: none; color: var(--muted); padding: .2rem; min-width: 32px; min-height: 32px; cursor: pointer; }
 .ir-x .ic { width: 1.1em; height: 1.1em; }
 @media (prefers-reduced-motion: reduce) { .inapp-rem { animation: none; } }
+.rem-bell + .snz { font-variant-numeric: tabular-nums; }   /* snoozed: the bell shows when it rings again (Issue #51) */
+.rem-snoozed { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; margin: .45rem 0 0; font-size: .85rem; color: var(--muted); }
+.rem-snoozed .ic { width: 1em; height: 1em; }
+.link-btn { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
