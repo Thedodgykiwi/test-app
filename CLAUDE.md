@@ -347,8 +347,8 @@ If they say yes:
   Completed `--ok` green, All to-dos the accent.
 - **Your own lists (Issue #72):** "+ New list" in the Lists panel (`ListDialog` in
   `app/main.js`): name (≤40), one of 12 colours, one of 16 icons (`LIST_ICONS`); shown
-  under "Your lists" with a filled colour tile behind the icon (`.tile.c-<colour>`, bright
-  colour with a white or dark icon, so the hues can be vivid). A list view (`list:<id>`)
+  under "Your lists" with the icon in the list's colour, no background (`.tile.c-<colour>`; Issue #89,
+  option A: the filled squares looked heavy; light theme uses a deeper shade, 3:1+ on white). A list view (`list:<id>`)
   looks like All to-dos. Put a to-do in a list from the edit panel's list picker (with
   "+ New list…"), by adding while the list is open, or by typing `#name` at the start or
   end (chip under the box). Elsewhere rows show a small coloured dot + the list's name.

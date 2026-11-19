@@ -973,7 +973,12 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .c-grape { --lc: #cc5de8; --lfg: #fff; } .c-pink { --lc: #f06595; --lfg: #fff; } .c-graphite { --lc: #868e96; --lfg: #fff; }
 :root { --lc-red: #fa5252; --lc-orange: #fd7e14; --lc-yellow: #fcc419; --lc-lime: #94d82d; --lc-green: #40c057; --lc-teal: #20c997;
   --lc-cyan: #22b8cf; --lc-blue: #4c6ef5; --lc-purple: #845ef7; --lc-grape: #cc5de8; --lc-pink: #f06595; --lc-graphite: #868e96; }
-.tile { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px; background: var(--lc); color: var(--lfg); flex: none; }
+.tile { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px; flex: none;
+  /* Plain icon in the list's colour, like the built-in views (Issue #89, option A; was a filled square).
+     Light theme: a deeper shade so yellow and lime still show on white (3:1+); dark: the bright colour. */
+  background: none; color: color-mix(in srgb, var(--lc) 65%, #000); }
+:root[data-theme="dark"] .tile { color: var(--lc); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .tile { color: var(--lc); } }
 .tile .ic { width: 1.05rem; height: 1.05rem; }
 .tile.big { width: 2.1rem; height: 2.1rem; border-radius: 10px; } .tile.big .ic { width: 1.3rem; height: 1.3rem; }
 .lv-head { margin: .7rem .7rem .2rem; padding-top: .7rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
