@@ -77,9 +77,22 @@ exports.sendReminders = onSchedule({ schedule: 'every 1 minutes', timeZone: 'Eur
     for (const doc of snap.docs) {
       const t = doc.data();
       if (t.done || t.archived || t.remind === 'off' || !DAY_RE.test(t.due || '') || !TIME_RE.test(t.time || '')) continue;
+      const snz = typeof t.snooze === 'number' && t.snooze > from && t.snooze <= now ? t.snooze : 0;   // Snooze 10 min, from any device
       for (const dev of devs) {
         const lead = LEADS.includes(t.remind) ? t.remind : dev.lead;
-        const fire = zonedMs(t.due, t.time, dev.tz) - lead * 60000;
+        const at = zonedMs(t.due, t.time, dev.tz), fire = at - lead * 60000;
+        if (snz) {
+          const ref = db.doc(`system/reminders/sent/${dev.id}_${doc.id}_snz${snz}`);
+          try { await ref.create({ at: Timestamp.now() }); } catch { continue; }
+          const mins = Math.round((at - now) / 60000);
+          try {
+            await getMessaging().send(message(dev.token, { title: String(t.text || 'Reminder').slice(0, 120),
+              body: mins > 0 ? `Due in ${mins >= 60 ? 'about ' + Math.round(mins / 60) + ' hour' + (mins >= 90 ? 's' : '') : mins + ' min'} · ${fmtTime(t.time)}` : `Was due at ${fmtTime(t.time)}`,
+              tag: `todo-${doc.id}`, todo: doc.id, url: dev.url || '' }));
+            sent++;
+          } catch (err) { if (GONE.includes(err.code)) await dev.ref.delete().catch(() => {}); }
+          continue;
+        }
         if (fire <= from || fire > now) continue;
         const sentRef = db.doc(`system/reminders/sent/${dev.id}_${doc.id}_${t.due}_${t.time.replace(':', '')}_${lead}`);
         try { await sentRef.create({ at: Timestamp.now() }); } catch { continue; }   // already sent

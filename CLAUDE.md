@@ -409,9 +409,12 @@ If they say yes:
   (`system/reminders.lastRun`) per device (device time zone, the to-do's `remind` else the device's
   lead), sends a data-only FCM message once (`system/reminders/sent/…`, pruned after 3 days) and
   drops tokens that stopped working; `sendTestReminder` (callable) sends a test to one of the
-  caller's devices. **`sw.js`** shows each push itself (tag `todo-<id>`) and a tap opens the app at
-  that to-do (`?todo=<id>` or an `open-todo` message; `openWantedTodo` in `app/main.js`); ticking a
-  to-do off closes its notification. Deploy server changes with
+  caller's devices. **`sw.js`** shows each push itself (tag `todo-<id>`); a tap opens the app with
+  that to-do's **reminder card** (`?todo=<id>` or an `open-todo` message; `openWantedTodo` in
+  `app/main.js`), not the edit panel: **Done** ticks it off, **Snooze 10 min** saves `snooze` (ms) on
+  the to-do (rules-checked) so every device reminds again then (the server sends a fresh
+  notification; devices without them show the card), **Change date** opens the due menu, and the
+  to-do's name opens the edit panel. Ticking a to-do off closes its notification. Deploy server changes with
   `npx -y firebase-tools@latest deploy --only functions --project test-app-52149` (needs a Firebase
   sign-in in the session); logs: `functions:log --only sendReminders`.
 - **Sync status line (Issue #87):** the line in the account menu (`#sync-status`, `showStatus()` in `sync.js`) is hidden while everything is saved; it shows for saving, updating, offline and error. The dot on the photo and the button's label always carry the state.

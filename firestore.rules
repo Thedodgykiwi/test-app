@@ -24,6 +24,7 @@ rules_version = '2';
 //   - time:      string|null (optional)      - scheduled time 'HH:MM', 24-hour (Issue #50)
 //   - note:      string|null (optional)      - note, up to 2000 chars (Issue #57)
 //   - archived:  bool (optional)             - archived (hidden, kept) done to-do (Issue #49)
+//   - snooze:    number|null (optional)       - remind again at this time (ms), set by Snooze (Issue #51)
 //   - remind:    'off'|0|15|60|null (optional) - reminder minutes before its time; null = the device default (Issue #51)
 //   - myDay:     string|null (optional)      - day it was added to My Day 'YYYY-MM-DD' (Issue #71)
 //   - list:      string|null (optional)      - id of one of the user's own lists (Issue #72)
@@ -103,7 +104,7 @@ service cloud.firestore {
     function isValidTodo() {
       let data = request.resource.data;
       return hasRequiredFields(['text', 'done', 'p', 'pos', 'createdAt']) &&
-        hasOnlyAllowedFields(['text', 'done', 'p', 'pos', 'createdAt', 'doneAt', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list', 'remind']) &&
+        hasOnlyAllowedFields(['text', 'done', 'p', 'pos', 'createdAt', 'doneAt', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list', 'remind', 'snooze']) &&
         validStringLength('text', 1, 500) &&
         data.done is bool &&
         data.p in ['high', 'med', 'low', 'none'] &&
@@ -120,6 +121,8 @@ service cloud.firestore {
           (data.myDay is string && data.myDay.matches('^20[0-9]{2}-[01][0-9]-[0-3][0-9]$'))) &&   // My Day (Issue #71)
         (!('remind' in data) || data.remind == null || data.remind == 'off' ||
           (data.remind is int && data.remind in [0, 15, 60])) &&   // reminder (Issue #51)
+        (!('snooze' in data) || data.snooze == null ||
+          (data.snooze is number && data.snooze >= 0 && data.snooze <= 10000000000000)) &&   // snoozed until (ms; Issue #51)
         (!('note' in data) || data.note == null || (data.note is string && data.note.size() <= 2000)) &&   // note (Issue #57)   // archived done to-do (Issue #49)
         (!('time' in data) || data.time == null ||
           (data.time is string && data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$'))) &&   // scheduled time (Issue #50)   // "Tonight" (Issue #43)
@@ -165,7 +168,7 @@ service cloud.firestore {
       // time can't change, and the result must still be valid.
       allow update: if isOwner(userId) && isValidStage(stage) &&
         isValidTodo() &&
-        onlyChanges(['done', 'p', 'doneAt', 'text', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list', 'remind']);
+        onlyChanges(['done', 'p', 'doneAt', 'text', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list', 'remind', 'snooze']);
 
       // Owner only: delete one of their own to-dos (Issue #40).
       allow delete: if isOwner(userId) && isValidStage(stage);

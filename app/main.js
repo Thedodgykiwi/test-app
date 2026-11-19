@@ -1310,9 +1310,11 @@ function remCheck() {
   const now = Date.now();
   for (const k of Object.keys(remSeen)) if (now - (remSeen[k].at || 0) > 3 * 864e5) delete remSeen[k];
   const due = todos.value.map((t, i) => [t, i]).filter(([t]) => remOf(t) !== null).map(([t, i]) => {
-    const at = remAt(t), s = remSeen[remKey(t)];
-    return { t, k: keyOf(t, i), at, show: s ? (s.snooze || Infinity) : at - remOf(t) * 6e4 };
-  }).filter((x) => now >= x.show && now <= x.at + 36e5).sort((a, b) => a.at - b.at)[0];
+    const at = remAt(t), s = remSeen[remKey(t)], snz = typeof t.snooze === 'number' ? t.snooze : 0;
+    let show = s ? (s.snooze || Infinity) : at - remOf(t) * 6e4;
+    if (snz > (s?.at || 0)) show = Math.min(show, snz);   // snoozed (maybe on another device): show again then
+    return { t, k: keyOf(t, i), at, show, until: Math.max(at, snz) + 36e5 };
+  }).filter((x) => now >= x.show && now <= x.until).sort((a, b) => a.at - b.at)[0];
   if (due) { remCard.value = { key: remKey(due.t), k: due.k }; remSeen[remKey(due.t)] = { at: now }; saveSeen(); }
 }
 setInterval(remCheck, 20000);
@@ -1328,9 +1330,19 @@ function RemindCard() {
   });
   useEffect(() => { if (c && !t) remCard.value = null; }, [c, t]);
   if (!t) return html`<div ref=${box} popover="manual" class="inapp-rem" hidden></div>`;
-  const mins = Math.round((remAt(t) - Date.now()) / 6e4);
-  const sub = mins >= 60 ? `Due in 1 hour · ${fmtTime(t.time)}` : mins > 0 ? `Due in ${mins} min · ${fmtTime(t.time)}` : mins > -2 ? `Due now · ${fmtTime(t.time)}` : `Was due at ${fmtTime(t.time)}`;
+  const timed = validDue(t.due) && validTime(t.time), mins = timed ? Math.round((remAt(t) - Date.now()) / 6e4) : 0;
+  const sub = !timed ? 'Reminder' : mins >= 60 ? `Due in ${mins >= 90 ? Math.round(mins / 60) + ' hours' : '1 hour'} · ${fmtTime(t.time)}` : mins > 0 ? `Due in ${mins} min · ${fmtTime(t.time)}` : mins > -2 ? `Due now · ${fmtTime(t.time)}` : `Was due at ${fmtTime(t.time)}`;
   const close = () => { remCard.value = null; };
+  const snooze = () => {   // again in 10 minutes: here, and as a notification on devices that have them (saved on the to-do)
+    const when = Date.now() + 6e5;
+    remSeen[c.key] = { at: Date.now(), snooze: when }; saveSeen(); close();
+    if (t.id && ready()) update(t, { snooze: when });
+    window.AppToast?.show(`“${t.text}”: reminding you again in 10 minutes`, { icon: 'bell' });
+  };
+  const changeDate = (e) => {   // the usual quick date menu, where the card was
+    const r = e.currentTarget.getBoundingClientRect(); close();
+    setTimeout(() => { dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom }; }, 50);
+  };
   return html`<div ref=${box} popover="manual" class="inapp-rem" role="alert">
     <span class="ir-ic"><${Icon} name="bell" /></span>
     <div class="ir-text">
@@ -1338,22 +1350,26 @@ function RemindCard() {
       <p class="ir-sub">${sub}</p>
       <div class="ir-btns">
         <button type="button" class="btn sm ir-done" onClick=${() => { close(); if (ready()) markDone(t, k); }}><${Icon} name="check" />Done</button>
-        <button type="button" class="btn sm" onClick=${() => { remSeen[c.key] = { at: Date.now(), snooze: Date.now() + 6e5 }; saveSeen(); close();
-          window.AppToast?.show(`“${t.text}”: reminding you again in 10 minutes`, { icon: 'bell' }); }}>Snooze 10 min</button>
+        <button type="button" class="btn sm" onClick=${snooze}><${Icon} name="clock" />Snooze 10 min</button>
+        <button type="button" class="btn sm" aria-haspopup="menu" onClick=${changeDate}><${Icon} name="calendar-blank" />Change date</button>
       </div>
     </div>
     <button type="button" class="ir-x" aria-label="Dismiss reminder" onClick=${close}><${Icon} name="x" /></button>
   </div>`;
 }
 
-// Tapping a phone notification opens the app at that to-do (?todo=<id>, or a message
+// Tapping a phone notification opens the app with that to-do's reminder card (?todo=<id>, or a message
 // from sw.js when the app is already open). Waits until the list has loaded.
 let openWanted = new URLSearchParams(location.search).get('todo');
 function openWantedTodo() {
   if (!openWanted || loading.value) return;
   const i = todos.value.findIndex((t) => t.id === openWanted); openWanted = null;
   if (location.search.includes('todo=')) { const u = new URL(location.href); u.searchParams.delete('todo'); history.replaceState(null, '', u); }
-  if (i >= 0) { const t = todos.value[i]; setView('all'); setTimeout(() => openEditor(t, keyOf(t, i)), 100); }
+  if (i < 0) return;
+  const t = todos.value[i], k = keyOf(t, i);
+  editing.value = null; dueMenu.value = null;
+  if (validDue(t.due) && validTime(t.time)) { remSeen[remKey(t)] = { at: Date.now() }; saveSeen(); }   // shown now: the in-app check won't repeat it
+  remCard.value = { key: remKey(t), k };   // its actions: Done / Snooze / Change date; tap the name for the full edit panel
 }
 navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data?.type === 'open-todo' && e.data.id) { openWanted = e.data.id; openWantedTodo(); } });
 setInterval(openWantedTodo, 500);
