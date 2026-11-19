@@ -1084,16 +1084,18 @@ dialog#settings[open] { animation: st-drop .22s cubic-bezier(.2,.8,.3,1); }
 .rem-bell { width: .95em; height: .95em; margin-left: .1rem; }
 .rem-chips .chip { padding-block: .4rem; }
 .inapp-rem { position: fixed; z-index: 70; inset: auto 0; top: calc(10px + env(safe-area-inset-top)); width: min(440px, calc(100% - 20px)); height: auto; margin: 0 auto;
-  display: flex; gap: .7rem; align-items: flex-start; padding: .75rem .8rem; color: var(--text); border-radius: 16px; background: var(--surface);
+  display: grid; gap: .6rem; padding: .75rem .8rem; color: var(--text); border-radius: 16px; background: var(--surface);
   border: 1px solid var(--line); border-left: 4px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,.22); animation: st-drop .25s ease; }
 .inapp-rem[popover] { overflow: visible; }
-.inapp-rem:popover-open { display: flex; }
+.inapp-rem:popover-open { display: grid; }
+.ir-top { display: flex; gap: .7rem; align-items: flex-start; }
 .ir-ic { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .ir-ic .ic { width: 20px; height: 20px; }
 .ir-text { flex: 1; min-width: 0; }
 .ir-title { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--text); text-align: left; cursor: pointer; }
-.ir-sub { margin: .1rem 0 .5rem; font-size: .85rem; color: var(--muted); }
-.ir-btns { display: flex; gap: .4rem; flex-wrap: wrap; }
+.ir-sub { margin: .1rem 0 0; font-size: .85rem; color: var(--muted); }
+.ir-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }   /* one row, equal widths (Issue #51) */
+.ir-btns .btn { justify-content: center; white-space: nowrap; min-height: 40px; }
 .ir-btns .btn { border: 1px solid var(--input); background: var(--secondary); }
 .ir-btns .ir-done { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
 .ir-x { flex: none; border: 0; background: none; color: var(--muted); padding: .2rem; min-width: 32px; min-height: 32px; cursor: pointer; }

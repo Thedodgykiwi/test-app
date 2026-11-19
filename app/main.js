@@ -1344,17 +1344,19 @@ function RemindCard() {
     setTimeout(() => { dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom }; }, 50);
   };
   return html`<div ref=${box} popover="manual" class="inapp-rem" role="alert">
-    <span class="ir-ic"><${Icon} name="bell" /></span>
-    <div class="ir-text">
-      <button type="button" class="ir-title" onClick=${() => { close(); openEditor(t, k); }}>${t.text}</button>
-      <p class="ir-sub">${sub}</p>
-      <div class="ir-btns">
-        <button type="button" class="btn sm ir-done" onClick=${() => { close(); if (ready()) markDone(t, k); }}><${Icon} name="check" />Done</button>
-        <button type="button" class="btn sm" onClick=${snooze}><${Icon} name="clock" />Snooze 10 min</button>
-        <button type="button" class="btn sm" aria-haspopup="menu" onClick=${changeDate}><${Icon} name="calendar-blank" />Change date</button>
+    <div class="ir-top">
+      <span class="ir-ic"><${Icon} name="bell" /></span>
+      <div class="ir-text">
+        <button type="button" class="ir-title" onClick=${() => { close(); openEditor(t, k); }}>${t.text}</button>
+        <p class="ir-sub">${sub}</p>
       </div>
+      <button type="button" class="ir-x" aria-label="Dismiss reminder" onClick=${close}><${Icon} name="x" /></button>
     </div>
-    <button type="button" class="ir-x" aria-label="Dismiss reminder" onClick=${close}><${Icon} name="x" /></button>
+    <div class="ir-btns">
+      <button type="button" class="btn sm ir-done" onClick=${() => { close(); if (ready()) markDone(t, k); }}><${Icon} name="check" />Done</button>
+      <button type="button" class="btn sm" aria-label="Snooze 10 minutes" onClick=${snooze}><${Icon} name="clock" />10 min</button>
+      <button type="button" class="btn sm" aria-haspopup="menu" aria-label="Change date" onClick=${changeDate}><${Icon} name="calendar-blank" />Date</button>
+    </div>
   </div>`;
 }
 
