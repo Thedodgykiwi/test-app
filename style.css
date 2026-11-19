@@ -893,7 +893,10 @@ body:not([data-view="all"]) .tagline { display: none; }
 .lists-btn .ic { width: 1.1rem; height: 1.1rem; }
 .view-title .vt { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; font: inherit; color: inherit; }
 .view-title button.vt { background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: left; border-radius: 8px; }
-.view-title .vt-ic { width: 1.4rem; height: 1.4rem; color: var(--accent); flex: none; }
+.view-title .vt-ic { width: 1.9rem; height: 1.9rem; color: var(--accent); flex: none; }
+/* Title icons at about the title's height, the same as All to-dos (Issue #90, option B); the
+   panel's icons stay small. Your own lists: no box around the icon, so it lines up like the views. */
+.view-title .tile.big { width: auto; height: auto; } .view-title .tile.big .ic { width: 1.9rem; height: 1.9rem; }
 .view-title .vt-caret { width: 1rem; height: 1rem; color: var(--muted); flex: none; }
 .lists-scrim { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .2s; }
 .lists-scrim.open { opacity: 1; pointer-events: auto; }

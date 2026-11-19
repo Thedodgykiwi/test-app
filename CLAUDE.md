@@ -348,7 +348,9 @@ If they say yes:
 - **Your own lists (Issue #72):** "+ New list" in the Lists panel (`ListDialog` in
   `app/main.js`): name (≤40), one of 12 colours, one of 16 icons (`LIST_ICONS`); shown
   under "Your lists" with the icon in the list's colour, no background (`.tile.c-<colour>`; Issue #89,
-  option A: the filled squares looked heavy; light theme uses a deeper shade, 3:1+ on white). A list view (`list:<id>`)
+  option A: the filled squares looked heavy; light theme uses a deeper shade, 3:1+ on white).
+  The icon beside a view's title (own lists and My Day / Important / Planned / Completed) is 1.9rem,
+  about the title's height and the same as All to-dos (Issue #90, option B); the Lists panel's icons stay small. A list view (`list:<id>`)
   looks like All to-dos. Put a to-do in a list from the edit panel's list picker (with
   "+ New list…"), by adding while the list is open, or by typing `#name` at the start or
   end (chip under the box). Elsewhere rows show a small coloured dot + the list's name.
