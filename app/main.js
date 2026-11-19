@@ -5,7 +5,7 @@
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, restore, keyOf, LEVELS, LABELS, lists, addList, updateList, removeList, examples, clearExamples } from './store.js';
+import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, restore, keyOf, LEVELS, LABELS, lists, addList, updateList, removeList, examples, clearExamples, signedIn } from './store.js';
 
 // Phosphor icon from icons.js
 const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => {
@@ -457,17 +457,6 @@ function Row({ t, k }) {
     </li>`;
 }
 
-// "Just examples" strip above All to-dos while any starter examples are left (Issue #93).
-function ExamplesStrip() {
-  if (!examples().length) return null;
-  const clear = () => {
-    const undo = clearExamples();
-    window.AppToast?.show('Examples cleared. Over to you.', { icon: 'sparkle', action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick: undo } });
-  };
-  return html`<div class="ex-strip"><${Icon} name="sparkle" cls="ex-ic" />
-    <p><b>Just examples.</b> Have a play, then clear them away.</p>
-    <button type="button" class="ex-clear" onClick=${clear}>Clear examples</button></div>`;
-}
 function DoneSection({ done: allDone, always }) {
   const closed = !always && !collapsed.value.has('done-open');   // Completed view: always open (Issue #71)
   const now = new Date();
@@ -498,7 +487,7 @@ function DoneSection({ done: allDone, always }) {
         onClick=${() => { if (always) return; setTidy(false); toggleCollapsed('done-open'); focusAfter = ['[data-group="done"]']; }}>
         <${Icon} name=${closed ? 'caret-right' : 'caret-down'} cls="chevron" /><${Icon} name="check-circle" cls="done-icon" />Done · ${done.length}
       </button>
-      ${canTidy && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
+      ${canTidy && !tidyStripOn() && html`<button type="button" class="tidy-btn" id="tidy-up" aria-haspopup="menu" aria-expanded=${tidy}
         onClick=${() => setTidy(!tidy)}><${Icon} name="archive" />Tidy up</button>`}</h2>
       ${tidy && canTidy && html`<${TidyMenu} done=${done} now=${now} close=${() => {
         setTidy(false);   // back to the button, or the Done heading if the button has gone (nothing older left)
@@ -817,9 +806,8 @@ function TodoList() {
       ${movedHint.value && html`<p class="moved-hint">Moved to Done ↓</p>`}</div>`;
   }
   return html`
-    ${v === 'all' && html`<${ExamplesStrip} />`}
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
-    ${all.length > 0 && !active.length && v !== 'completed' && html`<p class="empty">All done. Nothing left to do!</p>`}
+    ${all.length > 0 && !active.length && v !== 'completed' && v !== 'all' && html`<p class="empty">All done. Nothing left to do!</p>`}
     ${active.length > 0 && html`<div id="todo-list" class="prio-groups">
       ${shown.map(([p, items]) => html`
         <${Panel} key=${p} p=${p} items=${items} head=${HEAD[p]} />`)}
@@ -1307,8 +1295,89 @@ function Summary() {
   return keep(left ? `${left} to do${dueTxt}${doneTxt}${updTxt}` : `All done!${doneTxt}${updTxt}`);
 }
 
+// ---- Gold strip (Issues #93–#96, #98–#100) -------------------------------------
+// One short line from "the host" above the list: a bold opener, a few words and (mostly) one
+// button, plus × to put it away for a while. At most one at a time, the first that applies:
+// All to-dos: examples, overdue pile-up, back up (sign in), reminders, that's a wrap;
+// Completed: tidy up; My Day: plan your day. What was put away is kept per stage on the device.
+const stripKey = `strip-hide-${window.STAGE || 'local'}`;
+const stripHide = signal((() => { try { return JSON.parse(localStorage.getItem(stripKey)) || {}; } catch { return {}; } })());
+function hideStrip(id, v) {
+  stripHide.value = { ...stripHide.value, [id]: v };
+  try { localStorage.setItem(stripKey, JSON.stringify(stripHide.value)); } catch { /* storage full */ }
+}
+const putAwayFor = (days) => Date.now() + days * 864e5;
+const stillAway = (id) => (stripHide.value[id] || 0) > Date.now();
+// Phone notifications state from sync.js ('off' = could be turned on here).
+const pushNow = signal(window.PUSH_STATE || null);
+addEventListener('pushchange', () => { pushNow.value = window.PUSH_STATE; });
+const deviceWord = () => (matchMedia('(pointer: coarse)').matches ? (Math.min(screen.width, screen.height) < 600 ? 'phone' : 'tablet') : 'computer');
+const WRAP_LINES = [['That’s a wrap.', 'Take a bow.'], ['Clean sweep.', 'Time for the speech.'],
+  ['Every award collected.', 'The after-party awaits.'], ['Standing ovation.', 'Nothing left to do.']];
+const wrapLine = WRAP_LINES[Math.floor(Math.random() * WRAP_LINES.length)];   // one per visit
+const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+// Bulk changes keep each to-do's key, so Undo can put the old values back.
+function bulk(list, change, said, icon) {
+  if (!ready() || !list.length) return;
+  const find = (k) => todos.value.find((x, i) => keyOf(x, i) === k);
+  const was = list.map(([t, i]) => { const ch = change(t); return [keyOf(t, i), ch, Object.fromEntries(Object.keys(ch).map((f) => [f, t[f] ?? null]))]; });
+  was.forEach(([k, ch]) => { const t = find(k); if (t) update(t, ch); });
+  window.AppToast?.show(said, { icon, action: { label: 'Undo', icon: 'arrow-counter-clockwise',
+    onClick() { was.forEach(([k, , old]) => { const t = find(k); if (t) update(t, old); }); } } });
+}
+// Overdue → today: a time that has passed today goes; one still to come keeps "Tonight" right.
+function toToday(t) {
+  const ch = { due: today.value };
+  if (t.evening) ch.evening = false;
+  if (typeof t.snooze === 'number') ch.snooze = null;
+  if (validTime(t.time)) { if (t.time <= nowHM()) ch.time = null; else if (isEveningTime(t.time)) ch.evening = true; }
+  return ch;
+}
+function stripFor(v) {
+  minuteTick.value;   // re-check each minute (reminder times pass)
+  const live = todos.value.map((t, i) => [t, i]).filter(([t]) => !t.archived);
+  const active = live.filter(([t]) => !t.done);
+  if (loading.value) return null;
+  if (v === 'all') {
+    if (examples().length) return { id: 'examples', icon: 'sparkle', bold: 'Just examples.', text: 'Have a play, then clear them away.', btn: 'Clear examples',
+      run() { const undo = clearExamples(); window.AppToast?.show('Examples cleared. Over to you.', { icon: 'sparkle', action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick: undo } }); } };
+    const od = active.filter(([t]) => dueState(t) === 'overdue'), odSig = `${od.length}|${today.value}`;
+    if (od.length >= 2 && stripHide.value.overdue !== odSig) return { id: 'overdue', icon: 'arrow-counter-clockwise', bold: `${od.length} overdue.`, text: 'Fresh start?', btn: 'Move to today',
+      run: () => bulk(od, toToday, `${od.length} moved to today`, 'calendar-blank'), away: () => hideStrip('overdue', odSig) };
+    const own = live.filter(([t]) => !t.sample).length;
+    if (window.FIREBASE_CONFIG && !signedIn.value && own >= 3 && document.getElementById('sign-in') && !stillAway('backup')) return { id: 'backup', icon: 'cloud-arrow-up',
+      bold: `Only on this ${deviceWord()}.`, text: 'Sign in to keep your list safe.', btn: 'Sign in',
+      run: () => document.getElementById('sign-in')?.click(), away: () => hideStrip('backup', putAwayFor(7)) };
+    const next = active.map(([t]) => t).filter((t) => remOf(t) !== null && remAt(t) > Date.now()).sort((a, b) => remAt(a) - remAt(b))[0];
+    if (pushNow.value === 'off' && next && !stillAway('reminders')) return { id: 'reminders', icon: 'bell', bold: `Nudge before ${fmtTime(next.time)}?`, text: 'Reminders can pop up here.', btn: 'Turn on',
+      run: () => document.getElementById('push-on')?.click(), away: () => hideStrip('reminders', putAwayFor(7)) };
+    if (live.length && !active.length) return { id: 'wrap', icon: 'sparkle', bold: wrapLine[0], text: wrapLine[1] };
+  }
+  if (v === 'completed') {
+    const now = new Date(), old = live.filter(([t]) => t.done && doneRange(t, now) === 'older');
+    if (old.length >= 10 && !stillAway('tidy')) return { id: 'tidy', icon: 'archive', bold: `${old.length} done over a month ago.`, text: 'Tidy them away?', btn: 'Tidy up',
+      run: () => archiveDone(old), away: () => hideStrip('tidy', putAwayFor(30)) };
+  }
+  if (v === 'myday' && !active.some(([t]) => inMyDay(t))) {
+    const due = active.filter(([t]) => dueState(t) === 'today');
+    if (due.length && stripHide.value.myday !== today.value) return { id: 'myday', icon: 'sun', bold: `${due.length} due today.`, text: 'Add them to My Day?', btn: 'Add them',
+      run: () => bulk(due, () => ({ myDay: today.value }), `${due.length} added to My Day`, 'sun'), away: () => hideStrip('myday', today.value) };
+  }
+  return null;
+}
+function GoldStrip() {
+  const s = stripFor(curView());
+  if (!s) return null;
+  return html`<div class="ex-strip" data-strip=${s.id} role=${s.btn ? null : 'status'}><${Icon} name=${s.icon} cls="ex-ic" />
+    <p><b>${s.bold}</b> ${s.text}</p>
+    ${s.btn && html`<button type="button" class="ex-clear" onClick=${s.run}>${s.btn}</button>`}
+    ${s.away && html`<button type="button" class="ex-x" aria-label="Not now" title="Not now" onClick=${s.away}><${Icon} name="x" /></button>`}</div>`;
+}
+// Tidy up's small button steps aside while the strip offers the same thing (Issue #98).
+const tidyStripOn = () => stripFor('completed')?.id === 'tidy';
+
 function App() {
-  return html`<${TodoList} />`;
+  return html`<${GoldStrip} /><${TodoList} />`;
 }
 
 render(html`<${App} />`, document.getElementById('todo-groups'));

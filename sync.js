@@ -221,6 +221,7 @@ async function start() {
   function showPush() {
     const s = pushState();
     window.REMIND_CHANNEL = s === 'on' ? 'push' : 'app';
+    window.PUSH_STATE = VAPID ? s : null; dispatchEvent(new Event('pushchange'));   // the gold strip's reminders nudge (Issue #96)
     $('push-setting').hidden = !VAPID;
     $('push-help').textContent = PUSH_TEXT[s];
     $('push-on').hidden = s !== 'off';

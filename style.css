@@ -1128,8 +1128,10 @@ dialog#settings[open] { animation: st-drop .22s cubic-bezier(.2,.8,.3,1); }
 .sum-row .sf-label { font-weight: 600; font-size: .88rem; }
 .sum-time { max-width: 10rem; min-height: 44px; }
 
-/* "Just examples" strip above All to-dos (Issue #93) */
+/* Gold strip above the list ("Just examples", overdue, back up, reminders, tidy, My Day, that's a wrap; Issues #93–#100) */
 .ex-strip { display: flex; align-items: center; gap: .5rem; margin: 0 0 .75rem; padding: .45rem .5rem .45rem .7rem; border-radius: var(--r); background: color-mix(in srgb, var(--gold) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); font-size: .85rem; }
 .ex-strip p { margin: 0; flex: 1; min-width: 0; }
 .ex-strip .ex-ic { color: var(--gold); flex: none; }
 .ex-strip .ex-clear { flex: none; border: 1px solid var(--input); background: var(--surface); color: var(--text); font-weight: 600; padding: .35rem .7rem; border-radius: 999px; white-space: nowrap; }
+.ex-strip .ex-x { flex: none; border: 0; background: none; color: var(--muted); padding: .35rem; margin-left: -.25rem; border-radius: 999px; min-height: 0; }
+.ex-strip .ex-x:hover { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--text); }

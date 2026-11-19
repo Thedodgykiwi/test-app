@@ -459,10 +459,22 @@ If they say yes:
   sort first in this order: Welcome (note explains the idea), Home Screen (checklist; ticked already when
   opened from the Home Screen), guest list = sign in + reminders. Then swipes + typing shortcuts, top
   billing (priority), and jokes that each show a feature (time, Tonight, overdue, note, Low). Each has
-  `sample: true`: the gold "Just examples" strip (`ExamplesStrip`, All to-dos only) clears them all with
+  `sample: true`: the gold "Just examples" strip (the first gold strip, below) clears them all with
   Undo; they never come back. Renaming one or rewriting its note drops the flag (it's theirs). First
   sign-in skips examples (`copyLocalTodos`); the flag is never saved to Firestore (`newDoc` ignores it).
   When features change, keep the notes in `app/starter.js` true (menu paths, gestures, shortcuts).
+- **Gold strip (Issues #93–#96, #98–#100):** one short line above the list (`GoldStrip` / `stripFor()` in
+  `app/main.js`, `.ex-strip` in `style.css`): bold opener + a few words, usually one button, and × ("Not
+  now"). **One at a time**, the first that applies. All to-dos: examples → **overdue** (2+ overdue: "Move to
+  today", times already passed today dropped, evening times keep Tonight; × until the count or day changes)
+  → **back up** (signed out, sign-in available, 3+ own to-dos: "Sign in" clicks `#sign-in`; "this phone /
+  tablet / computer"; × 7 days) → **reminders** (`window.PUSH_STATE === 'off'` from `sync.js` + a to-do
+  whose reminder is still to come: "Nudge before 4pm?", "Turn on" clicks `#push-on` inside the tap; × 7
+  days) → **that's a wrap** (everything done; random line from `WRAP_LINES`, no button, replaces "All
+  done"). Completed: **tidy** (10+ done over 30 days ago: archives them; × 30 days; the small Tidy up
+  button steps aside meanwhile). My Day: **plan your day** (My Day empty, something due today: "Add them";
+  × until tomorrow). Bulk actions go through `bulk()` with one Undo. Put-away times are per stage on the
+  device (`strip-hide-<stage>`). Not built yet: #97 (Add to Home Screen strip).
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
   zooms the page into any box under 16px).

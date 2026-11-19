@@ -36,6 +36,8 @@ export const todos = signal(loadLocal());
 export const loading = signal(!!window.FIREBASE_CONFIG && localStorage.getItem('signed-in') === '1');
 // True while the list on screen is the saved copy, until the server answers ("Updating…").
 export const updating = signal(false);
+// Signed in (to-dos saved to the account)? Set by sync.js through the hooks below.
+export const signedIn = signal(false);
 // Keys of to-dos that changed when the live list replaced the saved copy (briefly highlighted).
 export const fresh = signal(new Set());
 const cacheKey = `cloud-copy-${stage}`;
@@ -168,7 +170,7 @@ window.TodoApp = {
   get updating() { return updating.value; },
   // Signed in: show the account's to-dos and save changes through `api`.
   // Keep the saved copy on screen (if any) until the account's list arrives.
-  useCloud(api) { cloud = api; cloudLists = api; if (!shownCopy) todos.value = []; loading.value = true; },
+  useCloud(api) { cloud = api; cloudLists = api; signedIn.value = true; if (!shownCopy) todos.value = []; loading.value = true; },
   localLists: loadLocalLists,
   // The account's own lists (Issue #72), live from sync.js.
   setLists(list) {
@@ -195,7 +197,7 @@ window.TodoApp = {
   // Signed out (or sign-in couldn't load): back to the to-dos saved on this device.
   // `forget`: really signed out, so also drop the copy of the account's list.
   useLocal({ forget = false } = {}) {
-    cloud = null; cloudLists = null; shownCopy = null; updating.value = false;
+    cloud = null; cloudLists = null; signedIn.value = false; shownCopy = null; updating.value = false;
     if (forget) { localStorage.removeItem(cacheKey); localStorage.removeItem(listsCacheKey); }
     lists.value = loadLocalLists();
     todos.value = loadLocal(); loading.value = false;
