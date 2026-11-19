@@ -5,7 +5,7 @@
 import { html, render } from 'htm/preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, restore, keyOf, LEVELS, LABELS, lists, addList, updateList, removeList } from './store.js';
+import { todos, loading, updating, fresh, ready, collapsed, toggleCollapsed, update, add, remove, restore, keyOf, LEVELS, LABELS, lists, addList, updateList, removeList, examples, clearExamples } from './store.js';
 
 // Phosphor icon from icons.js
 const Icon = ({ name, cls = '' }) => html`<span class="icon-wrap" ref=${(el) => {
@@ -457,6 +457,17 @@ function Row({ t, k }) {
     </li>`;
 }
 
+// "Just examples" strip above All to-dos while any starter examples are left (Issue #93).
+function ExamplesStrip() {
+  if (!examples().length) return null;
+  const clear = () => {
+    const undo = clearExamples();
+    window.AppToast?.show('Examples cleared. Over to you.', { icon: 'sparkle', action: { label: 'Undo', icon: 'arrow-counter-clockwise', onClick: undo } });
+  };
+  return html`<div class="ex-strip"><${Icon} name="sparkle" cls="ex-ic" />
+    <p><b>Just examples.</b> Have a play, then clear them away.</p>
+    <button type="button" class="ex-clear" onClick=${clear}>Clear examples</button></div>`;
+}
 function DoneSection({ done: allDone, always }) {
   const closed = !always && !collapsed.value.has('done-open');   // Completed view: always open (Issue #71)
   const now = new Date();
@@ -806,6 +817,7 @@ function TodoList() {
       ${movedHint.value && html`<p class="moved-hint">Moved to Done ↓</p>`}</div>`;
   }
   return html`
+    ${v === 'all' && html`<${ExamplesStrip} />`}
     ${!all.length && html`<p class="empty">${loading.value ? 'Loading your to-dos…' : 'No to-dos yet. Add one below.'}</p>`}
     ${all.length > 0 && !active.length && v !== 'completed' && html`<p class="empty">All done. Nothing left to do!</p>`}
     ${active.length > 0 && html`<div id="todo-list" class="prio-groups">

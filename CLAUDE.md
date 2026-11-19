@@ -453,6 +453,16 @@ If they say yes:
   (dates as ISO text). The privacy page names APPsolute Studio and its business address
   (published on purpose) and covers the UK / EU GDPR points.
   Test stages get a noindex tag from the shared deploy.
+- **Starter to-dos (Issue #93, option B "Awards season"):** a brand-new visitor (no `todos-<stage>` saved,
+  never signed in on this device, no `starter-<stage>` flag, not `?compare`) gets 10 award-night examples +
+  1 done, from `app/starter.js` (emoji at the start of each title). The three setup ones are starred and
+  sort first in this order: Welcome (note explains the idea), Home Screen (checklist; ticked already when
+  opened from the Home Screen), guest list = sign in + reminders. Then swipes + typing shortcuts, top
+  billing (priority), and jokes that each show a feature (time, Tonight, overdue, note, Low). Each has
+  `sample: true`: the gold "Just examples" strip (`ExamplesStrip`, All to-dos only) clears them all with
+  Undo; they never come back. Renaming one or rewriting its note drops the flag (it's theirs). First
+  sign-in skips examples (`copyLocalTodos`); the flag is never saved to Firestore (`newDoc` ignores it).
+  When features change, keep the notes in `app/starter.js` true (menu paths, gestures, shortcuts).
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
   zooms the page into any box under 16px).

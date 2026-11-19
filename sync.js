@@ -435,7 +435,8 @@ async function start() {
       }
     } catch (err) { failed(err); return; }
     const have = new Set(existing.map((t) => t.text));
-    const toAdd = app.localTodos().filter((t) => t.text && !have.has(String(t.text).slice(0, 500)));
+    // Starter examples (Issue #93) stay on the device unless renamed or rewritten (no `sample` then).
+    const toAdd = app.localTodos().filter((t) => t.text && !t.sample && !have.has(String(t.text).slice(0, 500)));
     if (toAdd.length) {
       const base = Date.now();
       for (let i = 0; i < toAdd.length; i += 400) { // Firestore batches hold up to 500 writes
