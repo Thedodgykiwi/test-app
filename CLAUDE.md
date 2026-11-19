@@ -394,9 +394,26 @@ If they say yes:
   `popover` so it sits above open panels) from the reminder time until an hour after the to-do's
   time, once: Done ticks it off, Snooze 10 min, ✕ dismisses, tapping the title opens the to-do.
   What was shown or snoozed is kept per stage on the device (`reminded-<stage>`, pruned after
-  3 days). Checked every 20 s and when the app comes back to the front. **Part 2 (not built):**
-  iPhone/desktop notifications via Firebase Cloud Messaging + a scheduled Cloud Function (Blaze
-  plan); a device with them on sets `window.REMIND_CHANNEL = 'push'` and stops showing the card.
+  3 days). Checked every 20 s and when the app comes back to the front.
+- **Phone notifications (Issue #51, part 2):** Settings → Reminders → **Phone notifications**
+  (`#push-setting`, code in `sync.js`; hidden until `window.FIREBASE_VAPID_KEY` is set in
+  `firebase-config.js`, the public Web Push key from Firebase console → Project settings → Cloud
+  Messaging → Web Push certificates). Needs sign-in, and on iPhone the Home Screen app. "Turn on"
+  asks permission at once (inside the tap, as iOS requires), gets an FCM token for this stage's
+  service worker and saves `users/{uid}/devices/{id}` = { token, stage, lead, tz, url, updatedAt }
+  (`firestore.rules` checks it; id kept in `push-device-<stage>`, flag `push-on-<stage>`). With it on,
+  `window.REMIND_CHANNEL = 'push'` and the in-app card stays quiet (one channel per device). Signing
+  out or "Turn off" deletes the device record; Delete my account deletes them all; Download my data
+  lists them (token shortened). **Server:** `functions/index.js` (Cloud Functions v2, europe-west2,
+  Blaze plan, £1 budget alert): `sendReminders` runs every minute, finds to-dos due since its last run
+  (`system/reminders.lastRun`) per device (device time zone, the to-do's `remind` else the device's
+  lead), sends a data-only FCM message once (`system/reminders/sent/…`, pruned after 3 days) and
+  drops tokens that stopped working; `sendTestReminder` (callable) sends a test to one of the
+  caller's devices. **`sw.js`** shows each push itself (tag `todo-<id>`) and a tap opens the app at
+  that to-do (`?todo=<id>` or an `open-todo` message; `openWantedTodo` in `app/main.js`); ticking a
+  to-do off closes its notification. Deploy server changes with
+  `npx -y firebase-tools@latest deploy --only functions --project test-app-52149` (needs a Firebase
+  sign-in in the session); logs: `functions:log --only sendReminders`.
 - **Sync status line (Issue #87):** the line in the account menu (`#sync-status`, `showStatus()` in `sync.js`) is hidden while everything is saved; it shows for saving, updating, offline and error. The dot on the photo and the button's label always carry the state.
 - **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
 - **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;

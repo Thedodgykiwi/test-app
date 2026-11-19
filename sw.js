@@ -108,3 +108,29 @@ async function cacheFirst(req, dropOldBuilds = false) {
   }
   return res;
 }
+
+// ---- Phone notifications (Issue #51, part 2) --------------------------------
+// The reminder arrives from Firebase Cloud Messaging as data only; this worker
+// shows it (iPhone requires every push to show a notification). Tag = the to-do,
+// so a newer reminder replaces an older one and the app can clear it when ticked.
+self.addEventListener('push', (event) => {
+  let j = {};
+  try { j = event.data ? event.data.json() : {}; } catch { /* not JSON */ }
+  const d = j.data || j;
+  event.waitUntil(self.registration.showNotification(d.title || 'Reminder', {
+    body: d.body || '', tag: d.tag || undefined, data: { url: d.url || SCOPE, todo: d.todo || '' },
+  }));
+});
+// Tapping it opens the app (or brings it to the front) at that to-do.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const { url, todo } = event.notification.data || {};
+  const target = new URL(url && url.startsWith(SCOPE) ? url : SCOPE);
+  if (todo) target.searchParams.set('todo', todo);
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const win = wins.find((c) => c.url.startsWith(SCOPE) && !OTHER_STAGES.test(c.url.slice(SCOPE.length - 1)));
+    if (win) { await win.focus(); if (todo) win.postMessage({ type: 'open-todo', id: todo }); return; }
+    await self.clients.openWindow(target.href);
+  })());
+});

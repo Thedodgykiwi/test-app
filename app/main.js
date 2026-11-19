@@ -22,6 +22,8 @@ const PREFS_KEY = `prefs:${location.pathname.split('/')[1] || 'app'}`;
 const REM_LEADS = [0, 15, 60];
 const readLead = () => { try { const v = +JSON.parse(localStorage.getItem(PREFS_KEY) || '{}').remindLead; return REM_LEADS.includes(v) ? v : 15; } catch { return 15; } };
 const remLead = signal(readLead());
+// This device's reminder channel: 'push' once phone notifications are on (sync.js keeps it up to date).
+window.REMIND_CHANNEL ??= localStorage.getItem(`push-on-${window.STAGE || 'local'}`) === '1' && window.Notification?.permission === 'granted' ? 'push' : 'app';
 addEventListener('prefschange', () => { remLead.value = readLead(); });
 function remOf(t) {   // minutes before its time, or null for no reminder
   if (!t || t.done || t.archived || !validDue(t.due) || !validTime(t.time) || t.remind === 'off') return null;
@@ -114,6 +116,7 @@ function markDone(t, k) {
   // animation (e.g. sign-in finishing just after the page opens).
   const cur = todos.value.find((x, i) => keyOf(x, i) === k) || t;
   update(cur, { done: true, doneAt: Date.now() });   // when it was ticked, for Done's date groups
+  if (cur.id) navigator.serviceWorker?.ready.then((r) => r.getNotifications({ tag: `todo-${cur.id}` })).then((ns) => ns.forEach((n) => n.close())).catch(() => {});   // Issue #51
   // Day done? If Tonight is folded away, unfold it so what's left shows (Issue #56).
   if (cur.due === today.value && !cur.evening && !cur.starred && collapsed.value.has('tonight')) {
     const left = todos.value.filter((x) => !x.done && !x.archived && !x.starred && x.due === today.value);
@@ -1342,6 +1345,18 @@ function RemindCard() {
     <button type="button" class="ir-x" aria-label="Dismiss reminder" onClick=${close}><${Icon} name="x" /></button>
   </div>`;
 }
+
+// Tapping a phone notification opens the app at that to-do (?todo=<id>, or a message
+// from sw.js when the app is already open). Waits until the list has loaded.
+let openWanted = new URLSearchParams(location.search).get('todo');
+function openWantedTodo() {
+  if (!openWanted || loading.value) return;
+  const i = todos.value.findIndex((t) => t.id === openWanted); openWanted = null;
+  if (location.search.includes('todo=')) { const u = new URL(location.href); u.searchParams.delete('todo'); history.replaceState(null, '', u); }
+  if (i >= 0) { const t = todos.value[i]; setView('all'); setTimeout(() => openEditor(t, keyOf(t, i)), 100); }
+}
+navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data?.type === 'open-todo' && e.data.id) { openWanted = e.data.id; openWantedTodo(); } });
+setInterval(openWantedTodo, 500);
 
 const extras = document.createElement('div');
 document.body.append(extras);

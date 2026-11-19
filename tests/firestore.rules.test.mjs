@@ -108,6 +108,25 @@ await t('parent user doc not writable', () => assertFails(setDoc(doc(alice, 'use
 await t('other collections denied', () => assertFails(setDoc(doc(alice, 'other', 'x'), { a: 1 })));
 
 // ---- Own lists (Issue #72) ----
+// Phone notifications: one record per device (Issue #51)
+const dev = (db, user = 'alice', id = 'abcdef1234567890') => doc(db, 'users', user, 'devices', id);
+const goodDev = () => ({ token: 'fcm-token-123', stage: 'dev', lead: 15, tz: 'Europe/London', url: 'https://thedodgykiwi.github.io/test-app/dev/', updatedAt: serverTimestamp() });
+await t('owner can save a device for notifications', () => assertSucceeds(setDoc(dev(alice), goodDev())));
+await t('owner can read own device', () => assertSucceeds(getDoc(dev(alice))));
+await t('owner can change the default lead', () => assertSucceeds(updateDoc(dev(alice), { lead: 60, updatedAt: serverTimestamp() })));
+await t('device lead must be 0, 15 or 60', () => assertFails(setDoc(dev(alice), { ...goodDev(), lead: 5 })));
+await t('device stage must be a real stage', () => assertFails(setDoc(dev(alice), { ...goodDev(), stage: 'prod' })));
+await t('device needs a token', () => assertFails(setDoc(dev(alice), { ...goodDev(), token: '' })));
+await t('device has no extra fields', () => assertFails(setDoc(dev(alice), { ...goodDev(), email: 'x@y.z' })));
+await t('device time must be the server time', () => assertFails(setDoc(dev(alice), { ...goodDev(), updatedAt: Timestamp.fromMillis(0) })));
+await t('device id must be a short id', () => assertFails(setDoc(dev(alice, 'alice', 'bad id!'), goodDev())));
+await t('device url must be a web address', () => assertFails(setDoc(dev(alice), { ...goodDev(), url: 'javascript:alert(1)' })));
+await t('other user cannot read a device', () => assertFails(getDoc(dev(bob))));
+await t('other user cannot save a device for someone else', () => assertFails(setDoc(dev(bob), goodDev())));
+await t('other user cannot delete a device', () => assertFails(deleteDoc(dev(bob))));
+await t('owner can delete own device', () => assertSucceeds(deleteDoc(dev(alice))));
+await t('nobody can read the sent-reminders log', () => assertFails(getDoc(doc(alice, 'system/reminders'))));
+
 const goodList = () => ({ name: 'Home', color: 'green', icon: 'house', pos: Date.now(), createdAt: serverTimestamp() });
 const L = (db, id = 'home', user = 'alice') => doc(db, 'users', user, 'stages', 'dev', 'lists', id);
 await t('owner can create a list', () => assertSucceeds(setDoc(L(alice), goodList())));

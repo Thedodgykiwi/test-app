@@ -132,6 +132,25 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // Phone notifications (Issue #51, part 2): one record per device that turned them on.
+    // The owner writes it (token, stage, default lead, time zone, the app's address);
+    // the sendReminders Cloud Function reads it with admin access. Nothing else can.
+    function isValidDevice() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['token', 'stage', 'lead', 'tz', 'url', 'updatedAt']) &&
+        d.keys().hasOnly(['token', 'stage', 'lead', 'tz', 'url', 'updatedAt']) &&
+        d.token is string && d.token.size() > 0 && d.token.size() <= 4096 &&
+        isValidStage(d.stage) &&
+        d.lead in [0, 15, 60] &&
+        d.tz is string && d.tz.size() > 0 && d.tz.size() <= 64 &&
+        d.url is string && d.url.size() <= 300 && d.url.matches('^https?://[^ ]+$') &&
+        d.updatedAt == request.time;
+    }
+    match /users/{userId}/devices/{deviceId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && deviceId.matches('^[A-Za-z0-9_-]{8,40}$') && isValidDevice();
+    }
+
     match /users/{userId}/stages/{stage}/todos/{todoId} {
       // Owner only: read their own list (the app queries it ordered by pos).
       allow read: if isOwner(userId) && isValidStage(stage);

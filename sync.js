@@ -88,7 +88,11 @@ async function start() {
       if (msg !== null) toast(msg || `Sign-in didn't work (${err.code || err.message}).`, 6000);
     }
   });
-  ui.signOut.addEventListener('click', () => { setMenu(false); authLib.signOut(auth); });
+  ui.signOut.addEventListener('click', async () => {
+    setMenu(false);
+    if (localStorage.getItem(pushKey) === '1') await pushOff(auth.currentUser);   // this device stops getting this account's reminders (Issue #51)
+    authLib.signOut(auth);
+  });
 
   // ---- Download my data (Settings → Your account, Issue #80) ------------------
   // A JSON copy of the to-dos and lists in the account, every stage (the right to a
@@ -109,6 +113,8 @@ async function start() {
           (out.stages[stage] ||= {})[name] = snap.docs.map((d) => ({ id: d.id, ...plain(d.data()) }));
         }
       }
+      const devs = await fs.getDocs(fs.collection(db, 'users', user.uid, 'devices'));   // phone notifications (Issue #51)
+      if (devs.size) out.devices = devs.docs.map((d) => { const v = plain(d.data()); return { id: d.id, ...v, token: `…${String(v.token).slice(-8)}` }; });
       const json = JSON.stringify(out, null, 2);
       const a = Object.assign(document.createElement('a'), {
         href: URL.createObjectURL(new Blob([json], { type: 'application/json' })),
@@ -142,6 +148,8 @@ async function start() {
           }
         }
       }
+      for (const d of (await fs.getDocs(fs.collection(db, 'users', user.uid, 'devices'))).docs) await fs.deleteDoc(d.ref);   // Issue #51
+      localStorage.removeItem(pushKey);
       deleting = true;
       try { await authLib.deleteUser(user); } catch (err) {
         if (err.code !== 'auth/requires-recent-login') throw err;
@@ -158,6 +166,97 @@ async function start() {
       delErr.hidden = false;
     } finally { delGo.disabled = false; delGo.textContent = 'Delete my account'; }
   });
+
+  // ---- Phone notifications (Settings → Reminders, Issue #51 part 2) -----------
+  // One reminder channel per device: with them on, this device gets reminders from
+  // the server (Firebase Cloud Messaging, sent by the sendReminders Cloud Function,
+  // see functions/) and the app stops showing its own reminder card. Needs a Web
+  // Push key (window.FIREBASE_VAPID_KEY in firebase-config.js) and, on iPhone, the
+  // app opened from the Home Screen.
+  const VAPID = window.FIREBASE_VAPID_KEY;
+  const pushKey = `push-on-${app.stage}`, devKey = `push-device-${app.stage}`;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installed = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const canPush = () => 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+  let msgLib = null, messaging = null;
+  async function useMessaging() {
+    if (!messaging) {
+      msgLib = await import(`${SDK}/firebase-messaging.js`);
+      if (!(await msgLib.isSupported())) throw new Error('not supported in this browser');
+      messaging = msgLib.getMessaging(fbApp);
+    }
+    return msgLib;
+  }
+  const deviceId = () => {
+    let id = localStorage.getItem(devKey);
+    if (!id) { id = crypto.randomUUID().replace(/-/g, '').slice(0, 24); localStorage.setItem(devKey, id); }
+    return id;
+  };
+  const leadPref = () => { try { const v = +JSON.parse(localStorage.getItem(`prefs:${location.pathname.split('/')[1] || 'app'}`) || '{}').remindLead; return [0, 15, 60].includes(v) ? v : 15; } catch { return 15; } };
+  const devRef = (uid) => fs.doc(db, 'users', uid, 'devices', deviceId());
+  const saveDevice = (user, token) => fs.setDoc(devRef(user.uid), {
+    token, stage: app.stage, lead: leadPref(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/London',
+    url: location.origin + location.pathname, updatedAt: fs.serverTimestamp(),
+  });
+  const pushToken = async () => { const lib = await useMessaging(); return lib.getToken(messaging, { vapidKey: VAPID, serviceWorkerRegistration: await navigator.serviceWorker.ready }); };
+  function pushState() {
+    if (!VAPID || !canPush()) return isIOS && !installed() ? 'needs-install' : 'unsupported';
+    if (isIOS && !installed()) return 'needs-install';
+    if (!auth.currentUser) return 'signed-out';
+    if (Notification.permission === 'denied') return 'denied';
+    return localStorage.getItem(pushKey) === '1' && Notification.permission === 'granted' ? 'on' : 'off';
+  }
+  const PUSH_TEXT = {
+    unsupported: "This browser can't show notifications. You're reminded in the app while it's open.",
+    'needs-install': "On iPhone, notifications only work in the app on your Home Screen: add it from Account and app, then open it from there. Until then you're reminded in the app while it's open.",
+    'signed-out': "Sign in to get notifications (they're sent from your account). Until then you're reminded in the app while it's open.",
+    denied: 'Notifications are blocked for this app. To allow them on iPhone: Settings → Notifications → The Shortlist.',
+    off: "Get a notification when a to-do is due, even when the app is closed. While it's off, you're reminded in the app while it's open.",
+    on: "On for this device: reminders arrive as notifications, even when the app is closed.",
+  };
+  function showPush() {
+    const s = pushState();
+    window.REMIND_CHANNEL = s === 'on' ? 'push' : 'app';
+    $('push-setting').hidden = !VAPID;
+    $('push-help').textContent = PUSH_TEXT[s];
+    $('push-on').hidden = s !== 'off';
+    $('push-test').hidden = $('push-off').hidden = s !== 'on';
+  }
+  async function pushOff(user) {
+    localStorage.removeItem(pushKey);
+    try { if (user) await fs.deleteDoc(devRef(user.uid)); } catch { /* offline: the server drops it once the token stops working */ }
+    try { await useMessaging(); await msgLib.deleteToken(messaging); } catch { /* nothing to remove */ }
+    showPush();
+  }
+  $('push-on').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const asked = Notification.requestPermission();   // ask straight away, while the tap still counts (iPhone)
+    btn.disabled = true;
+    try {
+      if ((await asked) !== 'granted') return;
+      await saveDevice(auth.currentUser, await pushToken());
+      localStorage.setItem(pushKey, '1');
+      toast('Notifications are on for this device.');
+    } catch (err) {
+      toast(`Couldn't turn on notifications (${err.code || err.message}).`, 6000);
+    } finally { btn.disabled = false; showPush(); }
+  });
+  $('push-off').addEventListener('click', () => pushOff(auth.currentUser).then(() => toast('Notifications are off for this device.')));
+  $('push-test').addEventListener('click', async (e) => {
+    const btn = e.currentTarget; btn.disabled = true;
+    try {
+      const fns = await import(`${SDK}/firebase-functions.js`);
+      await fns.httpsCallable(fns.getFunctions(fbApp, 'europe-west2'), 'sendTestReminder')({ device: deviceId() });
+      toast('Test sent: it should arrive in a few seconds.');
+    } catch (err) {
+      toast(`Couldn't send a test (${err.message || err.code}).`, 6000);
+    } finally { btn.disabled = false; }
+  });
+  addEventListener('prefschange', () => {   // the default "remind me" changed: tell the server
+    const u = auth.currentUser;
+    if (u && pushState() === 'on') fs.updateDoc(devRef(u.uid), { lead: leadPref(), updatedAt: fs.serverTimestamp() }).catch(() => {});
+  });
+  showPush();
 
   // ---- Sync status --------------------------------------------------------
   let pending = false;
@@ -196,6 +295,8 @@ async function start() {
     ui.signOut.hidden = !user;
     ui.who.hidden = !user;
     $('account-setting').hidden = !user;
+    showPush();
+    if (user && pushState() === 'on') pushToken().then((tk) => saveDevice(user, tk)).catch(() => {});   // keep this device's token fresh (Issue #51)
     if (!user) {
       ui.avatarImg.hidden = true; ui.avatar.hidden = false;
       ui.avatar.innerHTML = signedOutAvatar; ui.avatar.classList.remove('letter');
