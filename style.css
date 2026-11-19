@@ -554,15 +554,14 @@ body.has-banner.is-offline { padding-top: 6rem; }
 body { padding-bottom: 8rem; }
 .install-tip, .update-bar { bottom: 6.8rem; }
 
-/* Ticking off (Issue #20): green "Done" chip + Undo note */
+/* Ticking off (Issue #20): a "🏆 Winner!" chip pops up where the row was and drops to Done, + Undo note.
+   Soft gold like the gold strip (Issue #101, option B): the trophy stands out on pale gold, not on solid gold. */
 .done-chip {
   position: fixed; z-index: 9; display: flex; align-items: center; gap: .35rem; height: 34px; padding: 0 .9rem;
-  border-radius: 999px; background: var(--ok); color: #fff; font-weight: 700; font-size: .9rem;
-  box-shadow: 0 6px 16px rgba(0,0,0,.18); pointer-events: none;
+  border-radius: 999px; background: var(--gold-bg); color: var(--text); font-weight: 700; font-size: .95rem;
+  box-shadow: 0 6px 16px rgba(0,0,0,.18), inset 0 0 0 1.5px var(--gold); pointer-events: none;
 }
-:root[data-theme="dark"] .done-chip { color: #0b2610; }
-@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .done-chip { color: #0b2610; } }
-.done-chip .ic { width: 1.1em; height: 1.1em; }
+.done-chip .trophy { font-size: 1.15em; line-height: 1; }
 
 
 /* Toasts sit above the add bar */

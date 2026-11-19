@@ -240,6 +240,10 @@ If they say yes:
   `style.css`); every colour/text pair is checked at 4.5:1 or better, light and dark, so keep it that
   way when adding one. The colour layer is only as wide as the drag (140px max), so swipe
   labels must stay short (the My Day swipe says "Remove", not "Out of My Day").
+- **Ticking off (Issues #20, #101):** `animateDone()` in `app/main.js`: the row closes up while a
+  "🏆 Winner!" chip (`.done-chip`, soft gold like the gold strip: `--gold-bg` + gold edge, option B)
+  pops in where it was, then drops to the Done heading; then the "moved to Done · Undo" note. Solid gold
+  was tried: the gold trophy disappeared into it. A swipe set to Done skips the chip (its own layer).
 - **Delete (Issue #40):** red Delete on the left of Cancel / Save in the edit
   sheet; first tap arms it ("Tap again"), disarms after 3 s. `remove()` in
   `app/store.js`; `firestore.rules` allows owner-only deletes.

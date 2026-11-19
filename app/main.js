@@ -154,7 +154,8 @@ async function animateDone(li, t, k) {
   const chip = document.createElement('div');
   chip.className = 'done-chip';
   chip.setAttribute('aria-hidden', 'true');
-  chip.append(icon('check'), 'Done');
+  const cup = document.createElement('span'); cup.className = 'trophy'; cup.textContent = '🏆';   // award night (Issue #101)
+  chip.append(cup, 'Winner!');
   Object.assign(chip.style, { left: `${r.left + 12}px`, top: `${r.top + (r.height - 34) / 2}px` });
   document.body.append(chip);
   // 1. The row fades and closes up while the chip pops in where it was.
