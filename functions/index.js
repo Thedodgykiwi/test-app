@@ -41,6 +41,27 @@ function zonedMs(day, time, tz) {
 const dayIn = (ms, tz) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
 const safeTz = (tz) => { try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); return tz; } catch { return 'Europe/London'; } };
 const fmtTime = (t) => { const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}${m ? ':' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
+// ---- The Shortlist's award-night lines (Issue #92) ---------------------------
+// One picked at random per notification, like the add box's hints. The joke is only ever the
+// title (or a little aside); the to-do's name and time always stay plain in the body. Titles are
+// kept to about 30 characters with the emoji, so they aren't cut off on a phone.
+const LINES = {
+  reminder: ["🎬 You're up next", '🏆 And the nominee is…', '🎭 Places, please!', '⭐ Coming up on stage', '🎟️ Your cue is coming', '📣 Nominee alert'],
+  now: ["🎤 It's your moment", '🎬 Curtain up!', '🏆 The envelope, please…', "🌟 You're on!", '🎭 Lights, camera, to-do'],
+  snoozed: ['🔁 Encore!', '👏 Back by popular demand', '🎬 Take two', '🎭 Second act', '⏰ The nominee returns'],
+  summary: ["☀️ Today's shortlist: {n}", "🌟 Today's line-up: {n} to do", '🎬 Running order: {n} today', '🏆 {n} nominees today', '☀️ Morning! {n} on the list'],
+  overdue: ['still waiting in the wings', 'missed its cue', 'overdue', 'running late'],
+  nothing: [['🍿 No nominees today', 'Nothing due. Enjoy the show.'], ['🛋️ A night off', 'Nothing due today.'], ['🎉 Clear stage today', 'Nothing due today.'], ['🌴 Intermission', 'Nothing due today.']],
+  test: ['🎙️ Testing, testing…', '🎬 Sound check!', '🎤 Is this thing on?', '🏆 Rehearsal time'],
+};
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+const inWords = (mins) => (mins >= 60 ? (mins >= 90 ? `in about ${Math.round(mins / 60)} hours` : 'in 1 hour') : `in ${mins} min`);
+// A reminder: "🎬 You're up next" / "Call the venue · 4pm (in 15 min)".
+function reminderMsg(t, at, now, snoozed = false) {
+  const mins = Math.round((at - now) / 60000), name = String(t.text || 'Your to-do').slice(0, 120), time = fmtTime(t.time);
+  if (snoozed) return { title: pick(LINES.snoozed), body: mins > 0 ? `${name} · ${time} (${inWords(mins)})` : mins > -2 ? `${name} · now (${time})` : `${name} · was due at ${time}` };
+  return mins > 0 ? { title: pick(LINES.reminder), body: `${name} · ${time} (${inWords(mins)})` } : { title: pick(LINES.now), body: `${name} · now (${time})` };
+}
 const bodyFor = (lead, time) => (lead === 0 ? `Due now · ${fmtTime(time)}` : `Due in ${lead === 60 ? '1 hour' : `${lead} min`} · ${fmtTime(time)}`);
 
 // ---- Daily summary (Issue #91, option B) ---------------------------------------
@@ -54,11 +75,12 @@ async function summaryFor(uid, stage, tz, now) {
   const overdue = open.filter((t) => t.due < today).sort((a, b) => a.due.localeCompare(b.due));
   const due = open.filter((t) => t.due === today).sort((a, b) => ((a.evening ? 1 : 0) - (b.evening ? 1 : 0)) || (TIME_RE.test(a.time || '') ? a.time : '99').localeCompare(TIME_RE.test(b.time || '') ? b.time : '99'));
   const cut = (s) => (s.length > 42 ? s.slice(0, 41) + '…' : s);
-  const lines = [...overdue.map((t) => `⚠️ ${cut(t.text)} (overdue)`),
+  const late = pick(LINES.overdue);   // one aside per summary (Issue #92)
+  const lines = [...overdue.map((t) => `⚠️ ${cut(t.text)} (${late})`),
     ...due.map((t) => (TIME_RE.test(t.time || '') ? `⏰ ${fmtTime(t.time)} ${cut(t.text)}` : t.evening ? `🌙 ${cut(t.text)}` : `• ${cut(t.text)}`))];
   const n = lines.length;
-  return { n, title: n ? `☀️ Today: ${n} to do` : '☀️ Nothing due today',
-    body: n ? lines.slice(0, 3).join('\n') + (n > 3 ? `\n+${n - 3} more` : '') : 'Enjoy your day.' };
+  if (!n) { const [title, body] = pick(LINES.nothing); return { n, title, body }; }
+  return { n, title: pick(LINES.summary).replace('{n} nominees', n === 1 ? '1 nominee' : '{n} nominees').replace('{n}', n), body: lines.slice(0, 3).join('\n') + (n > 3 ? `\n+${n - 3} more` : '') };
 }
 
 // Data-only message: the app's own service worker (sw.js) shows it, so it looks the
@@ -117,10 +139,8 @@ exports.sendReminders = onSchedule({ schedule: 'every 1 minutes', timeZone: 'Eur
         if (snz) {
           const ref = db.doc(`system/reminders/sent/${dev.id}_${doc.id}_snz${snz}`);
           try { await ref.create({ at: Timestamp.now() }); } catch { continue; }
-          const mins = Math.round((at - now) / 60000);
           try {
-            await getMessaging().send(message(dev.token, { title: String(t.text || 'Reminder').slice(0, 120),
-              body: mins > 0 ? `Due in ${mins >= 60 ? 'about ' + Math.round(mins / 60) + ' hour' + (mins >= 90 ? 's' : '') : mins + ' min'} · ${fmtTime(t.time)}` : `Was due at ${fmtTime(t.time)}`,
+            await getMessaging().send(message(dev.token, { ...reminderMsg(t, at, now, true),
               tag: `todo-${doc.id}`, todo: doc.id, url: dev.url || '' }));
             sent++;
           } catch (err) { if (GONE.includes(err.code)) await dev.ref.delete().catch(() => {}); }
@@ -131,7 +151,7 @@ exports.sendReminders = onSchedule({ schedule: 'every 1 minutes', timeZone: 'Eur
         try { await sentRef.create({ at: Timestamp.now() }); } catch { continue; }   // already sent
         try {
           await getMessaging().send(message(dev.token, {
-            title: String(t.text || 'Reminder').slice(0, 120), body: bodyFor(lead, t.time),
+            ...reminderMsg(t, zonedMs(t.due, t.time, dev.tz), now),
             tag: `todo-${doc.id}`, todo: doc.id, url: dev.url || '',
           }));
           sent++;
@@ -158,7 +178,7 @@ exports.sendTestReminder = onCall(async (req) => {
   if (!snap.exists) throw new HttpsError('not-found', 'Phone notifications are not on for this device.');
   const d = snap.data();
   try {
-    await getMessaging().send(message(d.token, { title: 'Test reminder', body: "Reminders will arrive like this, even when the app is closed.", tag: 'test', todo: '', url: d.url || '' }));
+    await getMessaging().send(message(d.token, { title: pick(LINES.test), body: 'Reminders will arrive like this, even when the app is closed.', tag: 'test', todo: '', url: d.url || '' }));
   } catch (err) {
     if (GONE.includes(err.code)) await ref.delete().catch(() => {});
     throw new HttpsError('unavailable', `Couldn't send (${err.code || err.message}).`);

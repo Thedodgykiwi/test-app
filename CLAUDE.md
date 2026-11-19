@@ -432,6 +432,11 @@ If they say yes:
   "⏰ 9:30am …", "🌙 …", "• …"), at most 3 + "+n more" (fits the Lock Screen). `sendSummaryNow` (callable)
   sends today's summary on demand. Tapping it opens **All to-dos** (`view` in the push → `?view=all` /
   `open-view` message / noted tap; `openView()` in `app/main.js`).
+- **Notification wording (Issue #92):** award-night lines picked at random (`LINES` in
+  `functions/index.js`: reminder, due now, snoozed, summary title, overdue aside, nothing due, test), like
+  the add box's `HINTS`. The joke is only the title (or the overdue aside); the to-do's name and time stay
+  plain in the body ("Call the venue · 4pm (in 15 min)"). Keep titles to about 30 characters with the emoji.
+  Server-only: changing them needs a functions deploy, no app release.
 - **Sync status line (Issue #87):** the line in the account menu (`#sync-status`, `showStatus()` in `sync.js`) is hidden while everything is saved; it shows for saving, updating, offline and error. The dot on the photo and the button's label always carry the state.
 - **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
 - **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;
