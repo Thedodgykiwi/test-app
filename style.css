@@ -896,6 +896,8 @@ body:not([data-view="all"]) .tagline { display: none; }
 .view-title .vt-ic { width: 1.9rem; height: 1.9rem; color: var(--accent); flex: none; }
 /* Title icons at about the title's height, the same as All to-dos (Issue #90, option B); the
    panel's icons stay small. Your own lists: no box around the icon, so it lines up like the views. */
+/* In the Lists panel, your lists' icons match the views' (1.25rem, no box), so names line up (Issue #89). */
+.lv-item .tile { width: 1.25rem; height: 1.25rem; } .lv-item .tile .ic { width: 1.25rem; height: 1.25rem; }
 .view-title .tile.big { width: auto; height: auto; } .view-title .tile.big .ic { width: 1.9rem; height: 1.9rem; }
 .view-title .vt-caret { width: 1rem; height: 1rem; color: var(--muted); flex: none; }
 .lists-scrim { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .2s; }
