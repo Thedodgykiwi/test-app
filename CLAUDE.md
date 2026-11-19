@@ -411,7 +411,7 @@ If they say yes:
   drops tokens that stopped working; `sendTestReminder` (callable) sends a test to one of the
   caller's devices. **`sw.js`** shows each push itself (tag `todo-<id>`); a tap opens the app with
   that to-do's **reminder card** (`?todo=<id>` or an `open-todo` message; `openWantedTodo` in
-  `app/main.js`), not the edit panel: **Done** ticks it off, **Snooze 10 min** saves `snooze` (ms) on
+  `app/main.js`; sw.js also notes the tap in its cache as `__tapped`, which the app picks up on open / coming to the front, because iOS may refuse `focus()` + `postMessage` when the app is in the background), not the edit panel: **Done** ticks it off, **Snooze 10 min** saves `snooze` (ms) on
   the to-do (rules-checked) so every device reminds again then (the server sends a fresh
   notification; devices without them show the card), **Change date** opens the due menu, and the
   to-do's name opens the edit panel. Ticking a to-do off closes its notification. Deploy server changes with

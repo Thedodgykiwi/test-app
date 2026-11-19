@@ -128,9 +128,15 @@ self.addEventListener('notificationclick', (event) => {
   const target = new URL(url && url.startsWith(SCOPE) ? url : SCOPE);
   if (todo) target.searchParams.set('todo', todo);
   event.waitUntil((async () => {
+    // Note the tap first: the app reads it when it opens or comes to the front, so the card
+    // shows even if iOS won't let us focus the app or pass the message on (Issue #51).
+    if (todo) await (await caches.open(CACHE)).put(SCOPE + '__tapped', new Response(JSON.stringify({ id: todo, at: Date.now() }))).catch(() => {});
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const win = wins.find((c) => c.url.startsWith(SCOPE) && !OTHER_STAGES.test(c.url.slice(SCOPE.length - 1)));
-    if (win) { await win.focus(); if (todo) win.postMessage({ type: 'open-todo', id: todo }); return; }
-    await self.clients.openWindow(target.href);
+    if (win) {
+      if (todo) win.postMessage({ type: 'open-todo', id: todo });
+      try { await win.focus(); return; } catch { /* not allowed here: open it instead */ }
+    }
+    await self.clients.openWindow(target.href).catch(() => {});
   })());
 });

@@ -1374,6 +1374,20 @@ function openWantedTodo() {
   remCard.value = { key: remKey(t), k };   // its actions: Done / Snooze / Change date; tap the name for the full edit panel
 }
 navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data?.type === 'open-todo' && e.data.id) { openWanted = e.data.id; openWantedTodo(); } });
+// The service worker also notes each tap (sw.js, '__tapped' in its cache): pick it up when the app
+// opens or comes to the front, in case iOS didn't pass the message on.
+async function checkTapped() {
+  try {
+    const reg = await navigator.serviceWorker?.ready; if (!reg) return;
+    const scope = reg.scope, cache = await caches.open('app-' + new URL(scope).pathname);
+    const res = await cache.match(scope + '__tapped'); if (!res) return;
+    await cache.delete(scope + '__tapped');
+    const { id, at } = await res.json();
+    if (id && Date.now() - at < 5 * 60000) { openWanted = id; openWantedTodo(); }
+  } catch { /* no service worker or storage: the ?todo= link still works */ }
+}
+checkTapped();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkTapped(); });
 setInterval(openWantedTodo, 500);
 
 const extras = document.createElement('div');
