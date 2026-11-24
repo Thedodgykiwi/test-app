@@ -30,6 +30,7 @@ These examples stay on this device when you sign in, apart from any you've renam
 const SWIPES = `Swipe right: star it (starred ones walk the red carpet at the top).
 Swipe left: send it to tomorrow (or bring a "due tomorrow" one back to today).
 Choose what each swipe does in Menu → Settings → Swipe actions.
+Not doing one after all? Press and hold its tick box: it's withdrawn, not won.
 
 Tap a to-do to change its date, time, priority, checklist, note or list. Tap a date label like "Due today" for quick dates.
 

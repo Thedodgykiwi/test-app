@@ -567,6 +567,8 @@ body { padding-bottom: 8rem; }
 :root[data-theme="dark"] .done-chip.green { color: #0b2610; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] .done-chip.green { color: #0b2610; } }
 .done-chip .ic { width: 1.1em; height: 1.1em; }
+/* "Not done" (Issue #103): plain white chip ("🎟️ Withdrawn" / "✕ Not done"), not gold or green */
+.done-chip.grey { background: var(--surface); color: var(--text); box-shadow: 0 6px 16px rgba(0,0,0,.18), inset 0 0 0 1.5px var(--input); }
 /* "Just a tick": the title is crossed off left to right (line by line: .t-words is inline) and greys out */
 li.ticking .text { color: var(--muted); transition: color .3s; }
 li.ticking .t-words { background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 2px; animation: strike .35s ease-out forwards; }
@@ -1143,3 +1145,15 @@ dialog#settings[open] { animation: st-drop .22s cubic-bezier(.2,.8,.3,1); }
 .ex-strip .ex-clear { flex: none; border: 1px solid var(--input); background: var(--surface); color: var(--text); font-weight: 600; padding: .35rem .7rem; border-radius: 999px; white-space: nowrap; }
 .ex-strip .ex-x { flex: none; border: 0; background: none; color: var(--muted); padding: .35rem; margin-left: -.25rem; border-radius: 999px; min-height: 0; }
 .ex-strip .ex-x:hover { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--text); }
+
+/* "Not done" (Issue #103): hold the tick box; a grey ring grows while you hold. In Done: grey ✕ box,
+   italic title, and a "✕ Withdrawn" / "Not done" pill the same size as the Note and checklist pills. */
+.todo input[type="checkbox"] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+li.holding input[type="checkbox"] { animation: hold-ring .55s linear forwards; }
+@keyframes hold-ring { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--muted) 55%, transparent); } to { box-shadow: 0 0 0 7px color-mix(in srgb, var(--muted) 55%, transparent); transform: scale(.92); } }
+li.cancelling input[type="checkbox"]:checked, li.cancelled input[type="checkbox"]:checked { background: var(--muted); border-color: var(--muted); }
+li.cancelling input[type="checkbox"]:checked::after, li.cancelled input[type="checkbox"]:checked::after {
+  width: .7rem; height: .7rem; border: 0; transform: none;
+  background: linear-gradient(45deg, transparent 43%, var(--surface) 43% 57%, transparent 57%), linear-gradient(-45deg, transparent 43%, var(--surface) 43% 57%, transparent 57%); }
+li.cancelled .text { font-style: italic; }
+.sub-pill.not-tag { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 28%, transparent); cursor: default; }

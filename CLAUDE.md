@@ -248,6 +248,12 @@ If they say yes:
   (default) / Done (the earlier green chip, `.done-chip.green`) / Just a tick (`quietDone()`: no chip; the
   box bounces, a line crosses the title off left to right via `li.ticking .t-words`, an inline span inside
   `.t-main` so it crosses each wrapped line, then the row folds away after 0.8 s). Reduce Motion skips all three.
+  **Not done (Issue #103, wording A):** press and hold the tick box ~0.55 s (grey ring grows; `holdStart` in
+  `Row`), or Shift+Space from a keyboard, to mark it withdrawn: `done: true` + `cancelled: true` (only written
+  when used, so older rules weren't hit; `firestore.rules` allows bool|null, rules tests too). Chip: plain white
+  "🎟️ Withdrawn" (Winner!) / "✕ Not done" (Done) / grey ✕ + crossed-off title (Just a tick). In Done: grey ✕
+  box, italic title, a `.sub-pill.not-tag` ("Withdrawn" / "Not done") sized like the Note pill. Unticking or
+  Undo clears it. The starter swipes note mentions the hold.
 - **Delete (Issue #40):** red Delete on the left of Cancel / Save in the edit
   sheet; first tap arms it ("Tap again"), disarms after 3 s. `remove()` in
   `app/store.js`; `firestore.rules` allows owner-only deletes.

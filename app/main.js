@@ -127,13 +127,16 @@ const DUE_ICON = { overdue: 'warning', today: 'clock', tomorrow: 'calendar-blank
 // (whose count bumps), and an Undo note appears for a few seconds in case of a
 // mis-tap. With Reduce Motion switched on: no movement, just the Undo note.
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// "Not done" (Issue #103): hold the tick box (or Shift+Space) to mark a to-do withdrawn. It
+// moves to Done with `cancelled: true`; the Winner! style calls it "Withdrawn".
+const notLabel = () => ((window.AppPrefs?.get('tickStyle') || 'winner') === 'winner' ? 'Withdrawn' : 'Not done');
 const busy = new Set();   // rows mid-animation (ignore extra taps)
 
-function markDone(t, k) {
+function markDone(t, k, cancelled = false) {
   // Use the to-do as it is now: the list may have been re-read during the
   // animation (e.g. sign-in finishing just after the page opens).
   const cur = todos.value.find((x, i) => keyOf(x, i) === k) || t;
-  update(cur, { done: true, doneAt: Date.now() });   // when it was ticked, for Done's date groups
+  update(cur, { done: true, doneAt: Date.now(), ...(cancelled ? { cancelled: true } : cur.cancelled ? { cancelled: null } : {}) });   // `cancelled` only when used (Issue #103)   // when it was ticked, for Done's date groups
   if (cur.id) navigator.serviceWorker?.ready.then((r) => r.getNotifications({ tag: `todo-${cur.id}` })).then((ns) => ns.forEach((n) => n.close())).catch(() => {});   // Issue #51
   // Day done? If Tonight is folded away, unfold it so what's left shows (Issue #56).
   if (cur.due === today.value && !cur.evening && !cur.starred && collapsed.value.has('tonight')) {
@@ -145,31 +148,35 @@ function markDone(t, k) {
     requestAnimationFrame(() => document.querySelector('#todo-groups [data-group="done"]')
       ?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' }));
   }
-  showUndo(t.text, k);
+  showUndo(t.text, k, cancelled);
 }
 
 // "Just a tick" (Issue #102): no pop-up. The tick bounces in the to-do's own box, a line crosses
 // the title off (CSS `li.ticking`), then the row folds away into Done.
-async function quietDone(li, t, k) {
-  li.classList.add('ticking');
+async function quietDone(li, t, k, cancelled = false) {
+  li.classList.add('ticking'); if (cancelled) li.classList.add('cancelling');
   li.querySelector('input[type=checkbox]')?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'ease-out' });
   await new Promise((res) => setTimeout(res, 800));
   const h = li.getBoundingClientRect().height;
   li.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
   await li.animate([{ height: `${h}px` }, { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginTop: '-0.4rem' }],
     { duration: 240, easing: 'ease-in', fill: 'forwards' }).finished;
-  markDone(t, k);
+  markDone(t, k, cancelled);
   busy.delete(k);
 }
-async function animateDone(li, t, k) {
+async function animateDone(li, t, k, cancelled = false) {
   busy.add(k);
   const r = li.getBoundingClientRect();
   const chip = document.createElement('div');
   chip.className = 'done-chip';
   chip.setAttribute('aria-hidden', 'true');
   const style = window.AppPrefs?.get('tickStyle') || 'winner';   // Settings → Ticking off (Issue #102)
-  if (style === 'tick') { await quietDone(li, t, k); return; }
-  if (style === 'done') { chip.classList.add('green'); chip.append(icon('check'), 'Done'); }
+  if (style === 'tick') { await quietDone(li, t, k, cancelled); return; }
+  if (cancelled && style === 'done') { chip.classList.add('grey'); chip.append(icon('x'), 'Not done'); }
+  else if (cancelled) {   // award night: the nominee pulled out (Issue #103, wording A)
+    const tk = document.createElement('span'); tk.className = 'trophy'; tk.textContent = '🎟️';
+    chip.classList.add('grey'); chip.append(tk, 'Withdrawn');
+  } else if (style === 'done') { chip.classList.add('green'); chip.append(icon('check'), 'Done'); }
   else {
     const cup = document.createElement('span'); cup.className = 'trophy'; cup.textContent = '🏆';   // award night (Issue #101)
     chip.append(cup, 'Winner!');
@@ -184,7 +191,7 @@ async function animateDone(li, t, k) {
     { duration: 300, easing: 'ease-out', fill: 'forwards' }).finished;
   await new Promise((res) => setTimeout(res, 120));
   // 2. Move it to Done; the chip drops down to the Done heading (or the bottom of the screen) and fades.
-  markDone(t, k);
+  markDone(t, k, cancelled);
   await new Promise((res) => requestAnimationFrame(res));
   const target = document.querySelector('#todo-groups [data-group="done"]')?.getBoundingClientRect();
   const floor = (document.getElementById('todo-form')?.getBoundingClientRect().top || innerHeight) - 40;
@@ -196,16 +203,16 @@ async function animateDone(li, t, k) {
 }
 
 // "Moved to Done · Undo" toast (the playbook's shared toast.js).
-function showUndo(text, k) {
-  window.AppToast?.show(`“${text}” moved to Done`, {
-    icon: 'check-circle',
+function showUndo(text, k, cancelled) {
+  window.AppToast?.show(cancelled ? `“${text}” marked not done` : `“${text}” moved to Done`, {
+    icon: cancelled ? 'x' : 'check-circle',
     duration: 4500,
     action: {
       label: 'Undo', icon: 'arrow-counter-clockwise',
       onClick() {
         // Use the to-do as it is now (the list may have been re-read since).
         const cur = todos.value.find((x, i) => keyOf(x, i) === k);
-        if (cur) update(cur, { done: false, doneAt: null });
+        if (cur) update(cur, { done: false, doneAt: null, ...(cur.cancelled ? { cancelled: null } : {}) });
         focusAfter = [`#todo-${k}`];
       },
     },
@@ -417,12 +424,28 @@ function DueMenu() {
 
 function Row({ t, k }) {
   const id = `todo-${k}`;
+  // Hold the box (about half a second) to mark it not done instead (Issue #103); Shift+Space from a keyboard.
+  const hold = useRef(null);
+  const withdraw = (li) => { navigator.vibrate?.(15); if (reduceMotion()) markDone(t, k, true); else animateDone(li, t, k, true); };
+  const holdStart = (e) => {
+    if (t.done || busy.has(k) || !ready() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const li = e.currentTarget.closest('li'), x = e.clientX, y = e.clientY;
+    li.classList.add('holding');
+    hold.current = { x, y, li, fired: false, timer: setTimeout(() => { hold.current.fired = true; li.classList.remove('holding'); withdraw(li); }, 550) };
+  };
+  const holdEnd = () => { const h = hold.current; if (h && !h.fired) { clearTimeout(h.timer); h.li.classList.remove('holding'); hold.current = null; } };
+  const holdMove = (e) => { const h = hold.current; if (h && !h.fired && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 8) holdEnd(); };
+  const holdKey = (e) => {
+    if (!e.shiftKey || (e.key !== ' ' && e.key !== 'Enter') || t.done || busy.has(k) || !ready()) return;
+    e.preventDefault(); withdraw(e.currentTarget.closest('li'));
+  };
   const tick = (e) => {
     const done = e.target.checked;
     if (busy.has(k)) return;
     if (!ready()) { e.target.checked = !done; return; }   // still connecting (Issue #36)
+    if (hold.current?.fired) { e.target.checked = false; hold.current = null; return; }   // the hold already marked it not done
     if (!done) {   // unticking: straight back, no fuss
-      update(t, { done: false, doneAt: null });
+      update(t, { done: false, doneAt: null, ...(t.cancelled ? { cancelled: null } : {}) });
       focusAfter = [`#${id}`];
       return;
     }
@@ -436,12 +459,15 @@ function Row({ t, k }) {
   const { row, handlers } = useSwipe(t, k);
   const ds = dueState(t);
   return html`
-    <li class=${`todo${t.done ? ' done' : ''}${t.starred && !t.done ? ' starred' : ''}${hl ? ' just-edited' : ''}`}>
+    <li class=${`todo${t.done ? ' done' : ''}${t.done && t.cancelled ? ' cancelled' : ''}${t.starred && !t.done ? ' starred' : ''}${hl ? ' just-edited' : ''}`}>
       ${!t.done && (() => { const R = swipePrefs.value.right, L = swipePrefs.value.left, fr = swipeFace(R, t), fl = swipeFace(L, t);
         return html`<div class=${`swipe-under act-${R}`} aria-hidden="true"><${Icon} name=${fr.icon} />${fr.label}</div>
           <div class=${`swipe-under left act-${L}`} aria-hidden="true">${fl.label}<${Icon} name=${fl.icon} /></div>`; })()}
       <div class="todo-row" ref=${row} ...${handlers}>
-        <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}`} />
+        <input type="checkbox" id=${id} checked=${t.done} onChange=${tick} aria-label=${`Done: ${t.text}${t.done && t.cancelled ? ` (${notLabel().toLowerCase()})` : ''}`}
+          title=${t.done ? null : 'Tap: done · Hold: not done (Shift+Space)'}
+          onPointerDown=${holdStart} onPointerUp=${holdEnd} onPointerLeave=${holdEnd} onPointerCancel=${holdEnd} onPointerMove=${holdMove}
+          onKeyDown=${holdKey} onContextMenu=${(e) => e.preventDefault()} />
         <div class="text-col">
           <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}${ds ? `, ${withTime(dueLabel(t.due), t)}` : ''}`}
             onClick=${() => { if (swallowClick || !ready()) return; openEditor(t, k); }}>
@@ -454,6 +480,7 @@ function Row({ t, k }) {
               const r = e.currentTarget.getBoundingClientRect();
               dueMenu.value = { key: k, left: r.left, top: r.top, bottom: r.bottom };
             }}><${Icon} name=${ds === 'today' && t.evening ? 'moon' : DUE_ICON[ds]} />${withTime(ds === 'today' && t.evening ? 'Tonight' : dueLabel(t.due), t)}${remOf(t) !== null && html`<${Icon} name="bell" cls="rem-bell" />${snoozedUntil(t) ? html`<span class="snz">${clockOf(snoozedUntil(t))}</span>` : ''}`}<${Icon} name="caret-down" cls="caret" /></button>`}
+          ${t.done && t.cancelled && html`<span class="sub-pill not-tag"><${Icon} name="x" />${notLabel()}</span>`}
           ${itemsOf(t).length > 0 && html`<button type="button" class=${`sub-pill${expanded.value.has(k) ? ' open' : ''}`}
             aria-expanded=${expanded.value.has(k)} aria-label=${`Checklist, ${progress(t)} done. ${expanded.value.has(k) ? 'Hide' : 'Show'} it`}
             onClick=${() => { if (swallowClick) return; const s = new Set(expanded.value); s.has(k) ? s.delete(k) : s.add(k); expanded.value = s; }}>
