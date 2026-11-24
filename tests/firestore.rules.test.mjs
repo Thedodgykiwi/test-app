@@ -80,6 +80,15 @@ await t('take out of My Day', () => assertSucceeds(updateDoc(p(alice), { myDay: 
 await t('create in My Day', () => assertSucceeds(setDoc(p(alice, 'dev', 'md1'), { ...good(), myDay: '2026-11-18' })));
 await t('My Day must be a date', () => assertFails(updateDoc(p(alice), { myDay: true })));
 await t('other user cannot add to My Day', () => assertFails(updateDoc(p(bob), { myDay: '2026-11-18' })));
+await t('set a reminder (15 min before)', () => assertSucceeds(updateDoc(p(alice), { remind: 15 })));
+await t('turn a reminder off', () => assertSucceeds(updateDoc(p(alice), { remind: 'off' })));
+await t('reminder back to the default', () => assertSucceeds(updateDoc(p(alice), { remind: null })));
+await t('reminder must be 0, 15 or 60', () => assertFails(updateDoc(p(alice), { remind: 5 })));
+await t('reminder must not be other text', () => assertFails(updateDoc(p(alice), { remind: 'soon' })));
+await t('snooze a reminder', () => assertSucceeds(updateDoc(p(alice), { snooze: Date.now() + 600000 })));
+await t('clear a snooze', () => assertSucceeds(updateDoc(p(alice), { snooze: null })));
+await t('snooze must be a time', () => assertFails(updateDoc(p(alice), { snooze: 'later' })));
+await t('other user cannot set a reminder', () => assertFails(updateDoc(p(bob), { remind: 60 })));
 await t('put a to-do in a list', () => assertSucceeds(updateDoc(p(alice), { list: 'home' })));
 await t('take a to-do out of its list', () => assertSucceeds(updateDoc(p(alice), { list: null })));
 await t('list id must be a short id', () => assertFails(updateDoc(p(alice), { list: 'not a valid id!' })));
@@ -102,6 +111,29 @@ await t('parent user doc not writable', () => assertFails(setDoc(doc(alice, 'use
 await t('other collections denied', () => assertFails(setDoc(doc(alice, 'other', 'x'), { a: 1 })));
 
 // ---- Own lists (Issue #72) ----
+// Phone notifications: one record per device (Issue #51)
+const dev = (db, user = 'alice', id = 'abcdef1234567890') => doc(db, 'users', user, 'devices', id);
+const goodDev = () => ({ token: 'fcm-token-123', stage: 'dev', lead: 15, tz: 'Europe/London', url: 'https://thedodgykiwi.github.io/test-app/dev/', updatedAt: serverTimestamp() });
+await t('owner can save a device for notifications', () => assertSucceeds(setDoc(dev(alice), goodDev())));
+await t('owner can turn on the daily summary', () => assertSucceeds(setDoc(dev(alice), { ...goodDev(), sumOn: true, sumTime: '08:00', sumDays: 'week', sumSkip: true })));
+await t('summary time must be HH:MM', () => assertFails(setDoc(dev(alice), { ...goodDev(), sumTime: '8am' })));
+await t('summary days must be all or week', () => assertFails(setDoc(dev(alice), { ...goodDev(), sumDays: 'weekends' })));
+await t('summary on must be true/false', () => assertFails(setDoc(dev(alice), { ...goodDev(), sumOn: 'yes' })));
+await t('owner can read own device', () => assertSucceeds(getDoc(dev(alice))));
+await t('owner can change the default lead', () => assertSucceeds(updateDoc(dev(alice), { lead: 60, updatedAt: serverTimestamp() })));
+await t('device lead must be 0, 15 or 60', () => assertFails(setDoc(dev(alice), { ...goodDev(), lead: 5 })));
+await t('device stage must be a real stage', () => assertFails(setDoc(dev(alice), { ...goodDev(), stage: 'prod' })));
+await t('device needs a token', () => assertFails(setDoc(dev(alice), { ...goodDev(), token: '' })));
+await t('device has no extra fields', () => assertFails(setDoc(dev(alice), { ...goodDev(), email: 'x@y.z' })));
+await t('device time must be the server time', () => assertFails(setDoc(dev(alice), { ...goodDev(), updatedAt: Timestamp.fromMillis(0) })));
+await t('device id must be a short id', () => assertFails(setDoc(dev(alice, 'alice', 'bad id!'), goodDev())));
+await t('device url must be a web address', () => assertFails(setDoc(dev(alice), { ...goodDev(), url: 'javascript:alert(1)' })));
+await t('other user cannot read a device', () => assertFails(getDoc(dev(bob))));
+await t('other user cannot save a device for someone else', () => assertFails(setDoc(dev(bob), goodDev())));
+await t('other user cannot delete a device', () => assertFails(deleteDoc(dev(bob))));
+await t('owner can delete own device', () => assertSucceeds(deleteDoc(dev(alice))));
+await t('nobody can read the sent-reminders log', () => assertFails(getDoc(doc(alice, 'system/reminders'))));
+
 const goodList = () => ({ name: 'Home', color: 'green', icon: 'house', pos: Date.now(), createdAt: serverTimestamp() });
 const L = (db, id = 'home', user = 'alice') => doc(db, 'users', user, 'stages', 'dev', 'lists', id);
 await t('owner can create a list', () => assertSucceeds(setDoc(L(alice), goodList())));

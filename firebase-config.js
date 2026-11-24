@@ -11,3 +11,8 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: '245899552801',
   appId: '1:245899552801:web:698ea4d0a5a8c9d852db60',
 };
+
+// Web Push key (public half of the key pair) for phone notifications (Issue #51).
+// From Firebase console → Project settings → Cloud Messaging → Web Push certificates.
+// Not secret: browsers need it to subscribe. While it's missing, phone notifications stay hidden.
+window.FIREBASE_VAPID_KEY = 'BJJfzn5UACWNuPDwnEeGazdjMpHCx1u3PlH98veMWleaHLTIczwXNTV-c7vWdEIvDK0TTKPxJRsSsBM_ynrqBt0';

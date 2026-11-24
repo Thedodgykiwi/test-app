@@ -240,6 +240,14 @@ If they say yes:
   `style.css`); every colour/text pair is checked at 4.5:1 or better, light and dark, so keep it that
   way when adding one. The colour layer is only as wide as the drag (140px max), so swipe
   labels must stay short (the My Day swipe says "Remove", not "Out of My Day").
+- **Ticking off (Issues #20, #101):** `animateDone()` in `app/main.js`: the row closes up while a
+  "🏆 Winner!" chip (`.done-chip`, soft gold like the gold strip: `--gold-bg` + gold edge, option B)
+  pops in where it was, then drops to the Done heading; then the "moved to Done · Undo" note. Solid gold
+  was tried: the gold trophy disappeared into it. A swipe set to Done skips the chip (its own layer).
+  **Settings → Lists and swiping → Ticking off** (`tickStyle` pref in `menu.js`, Issue #102): Winner!
+  (default) / Done (the earlier green chip, `.done-chip.green`) / Just a tick (`quietDone()`: no chip; the
+  box bounces, a line crosses the title off left to right via `li.ticking .t-words`, an inline span inside
+  `.t-main` so it crosses each wrapped line, then the row folds away after 0.8 s). Reduce Motion skips all three.
 - **Delete (Issue #40):** red Delete on the left of Cancel / Save in the edit
   sheet; first tap arms it ("Tap again"), disarms after 3 s. `remove()` in
   `app/store.js`; `firestore.rules` allows owner-only deletes.
@@ -300,7 +308,7 @@ If they say yes:
   longer fit. **No past times today:** passed times are greyed out in the
   sheet ("Add a time" starts at the next free quarter-hour); typed "tod 6am"
   after 6am keeps Today, drops the time and shows a "6am has passed" chip; a
-  time alone that has passed ("6am") means tomorrow. Reminders: not built (Issue #51).
+  time alone that has passed ("6am") means tomorrow. Reminders: Issue #51 (below).
 - **Archive done to-dos (Issue #49, option B):** "Tidy up" on the Done heading
   (only while Done is open and there are done to-dos older than today; small and quiet, Issue #59) opens `TidyMenu`: Older
   than 30 days / Older than 7 days / Everything except today, each with a
@@ -347,8 +355,11 @@ If they say yes:
   Completed `--ok` green, All to-dos the accent.
 - **Your own lists (Issue #72):** "+ New list" in the Lists panel (`ListDialog` in
   `app/main.js`): name (≤40), one of 12 colours, one of 16 icons (`LIST_ICONS`); shown
-  under "Your lists" with a filled colour tile behind the icon (`.tile.c-<colour>`, bright
-  colour with a white or dark icon, so the hues can be vivid). A list view (`list:<id>`)
+  under "Your lists" with the icon in the list's colour, no background (`.tile.c-<colour>`; Issue #89,
+  option A: the filled squares looked heavy; light theme uses a deeper shade, 3:1+ on white). In the Lists
+  panel they're the same size as the views' icons (1.25rem) so the names line up.
+  The icon beside a view's title (own lists and My Day / Important / Planned / Completed) is 1.9rem,
+  about the title's height and the same as All to-dos (Issue #90, option B); the Lists panel's icons stay small. A list view (`list:<id>`)
   looks like All to-dos. Put a to-do in a list from the edit panel's list picker (with
   "+ New list…"), by adding while the list is open, or by typing `#name` at the start or
   end (chip under the box). Elsewhere rows show a small coloured dot + the list's name.
@@ -383,6 +394,57 @@ If they say yes:
   To add a setting, put its `<section class="setting">` inside the right `.st-body`. **Add to Home
   Screen / Install app** now lives in the Account section (`#install-btn`, still driven by
   `pwa.js`); its section is hidden by CSS (`:has`) while the app can't be installed.
+- **Account buttons (Issue #88):** Download my data, Delete my account… and Add to Home Screen stack at full width (2.7rem high) with a clear `--input` outline; Delete keeps a red outline (`.account-actions`).
+- **Reminders (Issue #51, option C, part 1 of 2):** a to-do with a date and a time reminds you at
+  the default from **Settings → Reminders** (`remindLead` pref in `menu.js`: 0 / 15 / 60 minutes
+  before, default 15), unless its own **Remind me** chips in the edit panel say otherwise:
+  optional `remind` = `'off'` | 0 | 15 | 60 (null = follow the default; choosing the default stores
+  null). `remOf(t)` in `app/main.js`; rows with a reminder show a small bell on the due label.
+  `firestore.rules` checks the field (rules tests too). **One reminder channel per device:** while
+  this device has no phone notifications, the app shows its own card (`RemindCard`, a top-layer
+  `popover` so it sits above open panels) from the reminder time until an hour after the to-do's
+  time, once: Done ticks it off, Snooze 10 min, ✕ dismisses, tapping the title opens the to-do.
+  What was shown or snoozed is kept per stage on the device (`reminded-<stage>`, pruned after
+  3 days). Checked every 20 s and when the app comes back to the front.
+- **Phone notifications (Issue #51, part 2):** Settings → Reminders → **Phone notifications**
+  (`#push-setting`, code in `sync.js`; hidden until `window.FIREBASE_VAPID_KEY` is set in
+  `firebase-config.js`, the public Web Push key from Firebase console → Project settings → Cloud
+  Messaging → Web Push certificates). Needs sign-in, and on iPhone the Home Screen app. "Turn on"
+  asks permission at once (inside the tap, as iOS requires), gets an FCM token for this stage's
+  service worker and saves `users/{uid}/devices/{id}` = { token, stage, lead, tz, url, updatedAt }
+  (`firestore.rules` checks it; id kept in `push-device-<stage>`, flag `push-on-<stage>`). With it on,
+  `window.REMIND_CHANNEL = 'push'` and the in-app card stays quiet (one channel per device). Signing
+  out or "Turn off" deletes the device record; Delete my account deletes them all; Download my data
+  lists them (token shortened). **Server:** `functions/index.js` (Cloud Functions v2, europe-west2,
+  Blaze plan, £1 budget alert): `sendReminders` runs every minute, finds to-dos due since its last run
+  (`system/reminders.lastRun`) per device (device time zone, the to-do's `remind` else the device's
+  lead), sends a data-only FCM message once (`system/reminders/sent/…`, pruned after 3 days) and
+  drops tokens that stopped working; `sendTestReminder` (callable) sends a test to one of the
+  caller's devices. **`sw.js`** shows each push itself (tag `todo-<id>`); a tap opens the app with
+  that to-do's **reminder card** (`?todo=<id>` or an `open-todo` message; `openWantedTodo` in
+  `app/main.js`; sw.js also notes the tap in its cache as `__tapped`, which the app picks up on open / coming to the front, because iOS may refuse `focus()` + `postMessage` when the app is in the background), not the edit panel: **Done** ticks it off, **Snooze 10 min** saves `snooze` (ms) on
+  the to-do (rules-checked) so every device reminds again then (the server sends a fresh
+  notification; devices without them show the card), **Change date** opens the due menu, and the
+  to-do's name opens the edit panel. Snoozing keeps the to-do's own time; while snoozed, the row's
+  bell shows when it rings again ("🔔 1am", `snoozedUntil()`, redrawn each minute) and the edit panel
+  says "Snoozed until 1am · Cancel"; a new date or time clears the snooze. Ticking a to-do off closes its notification. Deploy server changes with
+  `npx -y firebase-tools@latest deploy --only functions --project test-app-52149` (needs a Firebase
+  sign-in in the session); logs: `functions:log --only sendReminders`.
+- **Daily summary (Issue #91, option B):** Settings → Reminders → **Daily summary** (switch, Time 5am–10pm
+  in half hours, Days: Every day / Weekdays, "Skip days with nothing due", "Send me today's summary now").
+  Needs phone notifications on this device (the switch is disabled otherwise). Prefs `summaryOn/Time/Days/Skip`
+  in `menu.js` (other scripts use `window.AppPrefs.get/set`, so the one prefs copy stays in step); `sync.js`
+  copies them onto the device record (`sumOn`, `sumTime`, `sumDays`, `sumSkip`; optional, rules-checked).
+  `sendReminders` sends it at the device's time in its time zone, once a day (`…_sum_<day>` in the sent log);
+  `summaryFor()` builds it: "☀️ Today: n to do", then one line each, overdue first ("⚠️ … (overdue)",
+  "⏰ 9:30am …", "🌙 …", "• …"), at most 3 + "+n more" (fits the Lock Screen). `sendSummaryNow` (callable)
+  sends today's summary on demand. Tapping it opens **All to-dos** (`view` in the push → `?view=all` /
+  `open-view` message / noted tap; `openView()` in `app/main.js`).
+- **Notification wording (Issue #92):** award-night lines picked at random (`LINES` in
+  `functions/index.js`: reminder, due now, snoozed, summary title, overdue aside, nothing due, test), like
+  the add box's `HINTS`. The joke is only the title (or the overdue aside); the to-do's name and time stay
+  plain in the body ("Call the venue · 4pm (in 15 min)"). Keep titles to about 30 characters with the emoji.
+  Server-only: changing them needs a functions deploy, no app release.
 - **Sync status line (Issue #87):** the line in the account menu (`#sync-status`, `showStatus()` in `sync.js`) is hidden while everything is saved; it shows for saving, updating, offline and error. The dot on the photo and the button's label always carry the state.
 - **Sign in always asks which Google account (Issue #85):** the sign-in popup sets `prompt: 'select_account'` (`sync.js`), so Google's account chooser shows even with one account on the device. Re-checking your identity before Delete my account is left as it was.
 - **Sign in from the menu (Issue #78, option A):** no Sign in button in the header;
@@ -399,6 +461,28 @@ If they say yes:
   (dates as ISO text). The privacy page names APPsolute Studio and its business address
   (published on purpose) and covers the UK / EU GDPR points.
   Test stages get a noindex tag from the shared deploy.
+- **Starter to-dos (Issue #93, option B "Awards season"):** a brand-new visitor (no `todos-<stage>` saved,
+  never signed in on this device, no `starter-<stage>` flag, not `?compare`) gets 10 award-night examples +
+  1 done, from `app/starter.js` (emoji at the start of each title). The three setup ones are starred and
+  sort first in this order: Welcome (note explains the idea), Home Screen (checklist; ticked already when
+  opened from the Home Screen), guest list = sign in + reminders. Then swipes + typing shortcuts, top
+  billing (priority), and jokes that each show a feature (time, Tonight, overdue, note, Low). Each has
+  `sample: true`: the gold "Just examples" strip (the first gold strip, below) clears them all with
+  Undo; they never come back. Renaming one or rewriting its note drops the flag (it's theirs). First
+  sign-in skips examples (`copyLocalTodos`); the flag is never saved to Firestore (`newDoc` ignores it).
+  When features change, keep the notes in `app/starter.js` true (menu paths, gestures, shortcuts).
+- **Gold strip (Issues #93–#96, #98–#100):** one short line above the list (`GoldStrip` / `stripFor()` in
+  `app/main.js`, `.ex-strip` in `style.css`): bold opener + a few words, usually one button, and × ("Not
+  now"). **One at a time**, the first that applies. All to-dos: examples → **overdue** (2+ overdue: "Move to
+  today", times already passed today dropped, evening times keep Tonight; × until the count or day changes)
+  → **back up** (signed out, sign-in available, 3+ own to-dos: "Sign in" clicks `#sign-in`; "this phone /
+  tablet / computer"; × 7 days) → **reminders** (`window.PUSH_STATE === 'off'` from `sync.js` + a to-do
+  whose reminder is still to come: "Nudge before 4pm?", "Turn on" clicks `#push-on` inside the tap; × 7
+  days) → **that's a wrap** (everything done; random line from `WRAP_LINES`, no button, replaces "All
+  done"). Completed: **tidy** (10+ done over 30 days ago: archives them; × 30 days; the small Tidy up
+  button steps aside meanwhile). My Day: **plan your day** (My Day empty, something due today: "Add them";
+  × until tomorrow). Bulk actions go through `bulk()` with one Undo. Put-away times are per stage on the
+  device (`strip-hide-<stage>`). Not built yet: #97 (Add to Home Screen strip).
 - **Text size (Issue #73):** Small (93.75%) / Regular (value `standard`, 100%) /
   Large (112.5%) on `:root`. With Small, typing boxes stay at 16px (iPhone Safari
   zooms the page into any box under 16px).

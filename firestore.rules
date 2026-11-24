@@ -24,6 +24,8 @@ rules_version = '2';
 //   - time:      string|null (optional)      - scheduled time 'HH:MM', 24-hour (Issue #50)
 //   - note:      string|null (optional)      - note, up to 2000 chars (Issue #57)
 //   - archived:  bool (optional)             - archived (hidden, kept) done to-do (Issue #49)
+//   - snooze:    number|null (optional)       - remind again at this time (ms), set by Snooze (Issue #51)
+//   - remind:    'off'|0|15|60|null (optional) - reminder minutes before its time; null = the device default (Issue #51)
 //   - myDay:     string|null (optional)      - day it was added to My Day 'YYYY-MM-DD' (Issue #71)
 //   - list:      string|null (optional)      - id of one of the user's own lists (Issue #72)
 //   - evening:   bool (optional)             - "Tonight": due today, sorted after the day's others (Issue #43)
@@ -102,7 +104,7 @@ service cloud.firestore {
     function isValidTodo() {
       let data = request.resource.data;
       return hasRequiredFields(['text', 'done', 'p', 'pos', 'createdAt']) &&
-        hasOnlyAllowedFields(['text', 'done', 'p', 'pos', 'createdAt', 'doneAt', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list']) &&
+        hasOnlyAllowedFields(['text', 'done', 'p', 'pos', 'createdAt', 'doneAt', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list', 'remind', 'snooze']) &&
         validStringLength('text', 1, 500) &&
         data.done is bool &&
         data.p in ['high', 'med', 'low', 'none'] &&
@@ -117,6 +119,10 @@ service cloud.firestore {
           (data.list is string && data.list.matches('^[A-Za-z0-9_-]{1,40}$'))) &&   // own list (Issue #72)
         (!('myDay' in data) || data.myDay == null ||
           (data.myDay is string && data.myDay.matches('^20[0-9]{2}-[01][0-9]-[0-3][0-9]$'))) &&   // My Day (Issue #71)
+        (!('remind' in data) || data.remind == null || data.remind == 'off' ||
+          (data.remind is int && data.remind in [0, 15, 60])) &&   // reminder (Issue #51)
+        (!('snooze' in data) || data.snooze == null ||
+          (data.snooze is number && data.snooze >= 0 && data.snooze <= 10000000000000)) &&   // snoozed until (ms; Issue #51)
         (!('note' in data) || data.note == null || (data.note is string && data.note.size() <= 2000)) &&   // note (Issue #57)   // archived done to-do (Issue #49)
         (!('time' in data) || data.time == null ||
           (data.time is string && data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$'))) &&   // scheduled time (Issue #50)   // "Tonight" (Issue #43)
@@ -128,6 +134,29 @@ service cloud.firestore {
     // ===============================================================
     // Rules
     // ===============================================================
+
+    // Phone notifications (Issue #51, part 2): one record per device that turned them on.
+    // The owner writes it (token, stage, default lead, time zone, the app's address);
+    // the sendReminders Cloud Function reads it with admin access. Nothing else can.
+    function isValidDevice() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['token', 'stage', 'lead', 'tz', 'url', 'updatedAt']) &&
+        d.keys().hasOnly(['token', 'stage', 'lead', 'tz', 'url', 'updatedAt', 'sumOn', 'sumTime', 'sumDays', 'sumSkip']) &&
+        (!('sumOn' in d) || d.sumOn is bool) &&   // daily summary (Issue #91)
+        (!('sumTime' in d) || (d.sumTime is string && d.sumTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$'))) &&
+        (!('sumDays' in d) || d.sumDays in ['all', 'week']) &&
+        (!('sumSkip' in d) || d.sumSkip is bool) &&
+        d.token is string && d.token.size() > 0 && d.token.size() <= 4096 &&
+        isValidStage(d.stage) &&
+        d.lead in [0, 15, 60] &&
+        d.tz is string && d.tz.size() > 0 && d.tz.size() <= 64 &&
+        d.url is string && d.url.size() <= 300 && d.url.matches('^https?://[^ ]+$') &&
+        d.updatedAt == request.time;
+    }
+    match /users/{userId}/devices/{deviceId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && deviceId.matches('^[A-Za-z0-9_-]{8,40}$') && isValidDevice();
+    }
 
     match /users/{userId}/stages/{stage}/todos/{todoId} {
       // Owner only: read their own list (the app queries it ordered by pos).
@@ -143,7 +172,7 @@ service cloud.firestore {
       // time can't change, and the result must still be valid.
       allow update: if isOwner(userId) && isValidStage(stage) &&
         isValidTodo() &&
-        onlyChanges(['done', 'p', 'doneAt', 'text', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list']);
+        onlyChanges(['done', 'p', 'doneAt', 'text', 'starred', 'due', 'evening', 'time', 'items', 'archived', 'note', 'myDay', 'list', 'remind', 'snooze']);
 
       // Owner only: delete one of their own to-dos (Issue #40).
       allow delete: if isOwner(userId) && isValidStage(stage);
