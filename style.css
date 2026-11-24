@@ -224,6 +224,8 @@ body.has-banner .account { top: 2.8rem; }
   flex: 1; background: none; color: var(--text); font-size: .82rem; padding: .4rem .3rem; border-radius: 8px; gap: .25rem;
 }
 .seg button:hover { background: var(--surface); }
+/* Remind me: longer labels ("15 min before"); size to the words so none wraps unless the text is Large on a small phone. */
+#remind-setting .seg button { flex: 1 1 auto; padding-inline: .2rem; }
 .seg button[aria-checked="true"] { background: var(--surface); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .seg .ic { width: 1em; height: 1em; }
 .chips .ic { width: 1.1em; height: 1.1em; }
@@ -552,15 +554,23 @@ body.has-banner.is-offline { padding-top: 6rem; }
 body { padding-bottom: 8rem; }
 .install-tip, .update-bar { bottom: 6.8rem; }
 
-/* Ticking off (Issue #20): green "Done" chip + Undo note */
+/* Ticking off (Issue #20): a "🏆 Winner!" chip pops up where the row was and drops to Done, + Undo note.
+   Soft gold like the gold strip (Issue #101, option B): the trophy stands out on pale gold, not on solid gold. */
 .done-chip {
   position: fixed; z-index: 9; display: flex; align-items: center; gap: .35rem; height: 34px; padding: 0 .9rem;
-  border-radius: 999px; background: var(--ok); color: #fff; font-weight: 700; font-size: .9rem;
-  box-shadow: 0 6px 16px rgba(0,0,0,.18); pointer-events: none;
+  border-radius: 999px; background: var(--gold-bg); color: var(--text); font-weight: 700; font-size: .95rem;
+  box-shadow: 0 6px 16px rgba(0,0,0,.18), inset 0 0 0 1.5px var(--gold); pointer-events: none;
 }
-:root[data-theme="dark"] .done-chip { color: #0b2610; }
-@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .done-chip { color: #0b2610; } }
+.done-chip .trophy { font-size: 1.15em; line-height: 1; }
+/* "Done" choice: the earlier green chip (Settings → Ticking off, Issue #102) */
+.done-chip.green { background: var(--ok); color: #fff; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+:root[data-theme="dark"] .done-chip.green { color: #0b2610; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .done-chip.green { color: #0b2610; } }
 .done-chip .ic { width: 1.1em; height: 1.1em; }
+/* "Just a tick": the title is crossed off left to right (line by line: .t-words is inline) and greys out */
+li.ticking .text { color: var(--muted); transition: color .3s; }
+li.ticking .t-words { background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 2px; animation: strike .35s ease-out forwards; }
+@keyframes strike { to { background-size: 100% 2px; } }
 
 
 /* Toasts sit above the add bar */
@@ -893,7 +903,12 @@ body:not([data-view="all"]) .tagline { display: none; }
 .lists-btn .ic { width: 1.1rem; height: 1.1rem; }
 .view-title .vt { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; font: inherit; color: inherit; }
 .view-title button.vt { background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: left; border-radius: 8px; }
-.view-title .vt-ic { width: 1.4rem; height: 1.4rem; color: var(--accent); flex: none; }
+.view-title .vt-ic { width: 1.9rem; height: 1.9rem; color: var(--accent); flex: none; }
+/* Title icons at about the title's height, the same as All to-dos (Issue #90, option B); the
+   panel's icons stay small. Your own lists: no box around the icon, so it lines up like the views. */
+/* In the Lists panel, your lists' icons match the views' (1.25rem, no box), so names line up (Issue #89). */
+.lv-item .tile { width: 1.25rem; height: 1.25rem; } .lv-item .tile .ic { width: 1.25rem; height: 1.25rem; }
+.view-title .tile.big { width: auto; height: auto; } .view-title .tile.big .ic { width: 1.9rem; height: 1.9rem; }
 .view-title .vt-caret { width: 1rem; height: 1rem; color: var(--muted); flex: none; }
 .lists-scrim { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .2s; }
 .lists-scrim.open { opacity: 1; pointer-events: auto; }
@@ -973,7 +988,12 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .c-grape { --lc: #cc5de8; --lfg: #fff; } .c-pink { --lc: #f06595; --lfg: #fff; } .c-graphite { --lc: #868e96; --lfg: #fff; }
 :root { --lc-red: #fa5252; --lc-orange: #fd7e14; --lc-yellow: #fcc419; --lc-lime: #94d82d; --lc-green: #40c057; --lc-teal: #20c997;
   --lc-cyan: #22b8cf; --lc-blue: #4c6ef5; --lc-purple: #845ef7; --lc-grape: #cc5de8; --lc-pink: #f06595; --lc-graphite: #868e96; }
-.tile { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px; background: var(--lc); color: var(--lfg); flex: none; }
+.tile { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px; flex: none;
+  /* Plain icon in the list's colour, like the built-in views (Issue #89, option A; was a filled square).
+     Light theme: a deeper shade so yellow and lime still show on white (3:1+); dark: the bright colour. */
+  background: none; color: color-mix(in srgb, var(--lc) 65%, #000); }
+:root[data-theme="dark"] .tile { color: var(--lc); }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .tile { color: var(--lc); } }
 .tile .ic { width: 1.05rem; height: 1.05rem; }
 .tile.big { width: 2.1rem; height: 2.1rem; border-radius: 10px; } .tile.big .ic { width: 1.3rem; height: 1.3rem; }
 .lv-head { margin: .7rem .7rem .2rem; padding-top: .7rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
@@ -1025,8 +1045,10 @@ body[data-view="completed"] .group-done > h2 .chevron { display: none; }   /* al
 .notice.danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
 .delete-actions { justify-content: flex-end; gap: .5rem; flex-wrap: wrap; margin-top: .4rem; }
 #delete-account > p { margin: .3rem 0 .7rem; }
-.account-actions { gap: .5rem; flex-wrap: wrap; }
-.account-actions #download-data { background: var(--secondary); border: 1px solid var(--line); }
+.account-actions { flex-direction: column; align-items: stretch; gap: .5rem; }
+/* Settings → Account and app (Issue #88): the buttons stack, same width and height, each with a clear outline */
+.account-actions .btn { width: 100%; height: 2.7rem; justify-content: center; background: var(--secondary); border: 1px solid var(--input); }
+.account-actions .btn.danger-ghost { background: none; border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
 .setting-help a { color: var(--accent); }
 
 /* ---- Swipe actions (Issue #81): one colour per action; every pair is 4.5:1 or better.
@@ -1077,4 +1099,47 @@ dialog#settings[open] { animation: st-drop .22s cubic-bezier(.2,.8,.3,1); }
 .st-body > .setting:first-child { border-top: 0; padding-top: .2rem; }
 #home-setting:has(#install-btn[hidden]) { display: none; }
 #install-btn { color: var(--accent); }
-.account-actions #install-btn { background: var(--secondary); border: 1px solid var(--line); }
+
+/* ---- Reminders (Issue #51) ---- */
+.rem-bell { width: .95em; height: .95em; margin-left: .1rem; }
+.rem-chips .chip { padding-block: .4rem; }
+.inapp-rem { position: fixed; z-index: 70; inset: auto 0; top: calc(10px + env(safe-area-inset-top)); width: min(440px, calc(100% - 20px)); height: auto; margin: 0 auto;
+  display: grid; gap: .6rem; padding: .75rem .8rem; color: var(--text); border-radius: 16px; background: var(--surface);
+  border: 1px solid var(--line); border-left: 4px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,.22); animation: st-drop .25s ease; }
+.inapp-rem[popover] { overflow: visible; }
+.inapp-rem:popover-open { display: grid; }
+.ir-top { display: flex; gap: .7rem; align-items: flex-start; }
+.ir-ic { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.ir-ic .ic { width: 20px; height: 20px; }
+.ir-text { flex: 1; min-width: 0; }
+.ir-title { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--text); text-align: left; cursor: pointer; }
+.ir-sub { margin: .1rem 0 0; font-size: .85rem; color: var(--muted); }
+.ir-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }   /* one row, equal widths (Issue #51) */
+.ir-btns .btn { justify-content: center; white-space: nowrap; min-height: 40px; }
+.ir-btns .btn { border: 1px solid var(--input); background: var(--secondary); }
+.ir-btns .ir-done { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.ir-x { flex: none; border: 0; background: none; color: var(--muted); padding: .2rem; min-width: 32px; min-height: 32px; cursor: pointer; }
+.ir-x .ic { width: 1.1em; height: 1.1em; }
+@media (prefers-reduced-motion: reduce) { .inapp-rem { animation: none; } }
+.rem-bell + .snz { font-variant-numeric: tabular-nums; }   /* snoozed: the bell shows when it rings again (Issue #51) */
+.rem-snoozed { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; margin: .45rem 0 0; font-size: .85rem; color: var(--muted); }
+.rem-snoozed .ic { width: 1em; height: 1em; }
+.link-btn { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* ---- Daily summary (Issue #91) ---- */
+.sum-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.sum-head .setting-name { margin: 0; }
+.sum-head + .setting-help { margin-top: .35rem; }
+.sum-opts { display: grid; gap: .7rem; margin-top: .4rem; }
+.sum-opts[hidden] { display: none; }
+.sum-row { display: grid; gap: .3rem; }
+.sum-row .sf-label { font-weight: 600; font-size: .88rem; }
+.sum-time { max-width: 10rem; min-height: 44px; }
+
+/* Gold strip above the list ("Just examples", overdue, back up, reminders, tidy, My Day, that's a wrap; Issues #93–#100) */
+.ex-strip { display: flex; align-items: center; gap: .5rem; margin: 0 0 .75rem; padding: .45rem .5rem .45rem .7rem; border-radius: var(--r); background: color-mix(in srgb, var(--gold) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); font-size: .85rem; }
+.ex-strip p { margin: 0; flex: 1; min-width: 0; }
+.ex-strip .ex-ic { color: var(--gold); flex: none; }
+.ex-strip .ex-clear { flex: none; border: 1px solid var(--input); background: var(--surface); color: var(--text); font-weight: 600; padding: .35rem .7rem; border-radius: 999px; white-space: nowrap; }
+.ex-strip .ex-x { flex: none; border: 0; background: none; color: var(--muted); padding: .35rem; margin-left: -.25rem; border-radius: 999px; min-height: 0; }
+.ex-strip .ex-x:hover { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--text); }

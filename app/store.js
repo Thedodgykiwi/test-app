@@ -3,6 +3,7 @@
 // sync.js signs the user in, then their Firebase account (window.TodoApp hooks).
 // Screens read the signals below and re-draw when they change.
 import { signal } from '@preact/signals';
+import { starterTodos } from './starter.js';
 
 const stage = window.STAGE || 'local';
 const storageKey = `todos-${stage}`;   // stages share one origin, so keep each stage's data separate
@@ -15,6 +16,18 @@ export const LABELS = { high: 'High', med: 'Medium', low: 'Low', none: 'No prior
 const loadLocal = () => JSON.parse(localStorage.getItem(storageKey) || '[]')
   .map((t) => ({ ...t, p: LEVELS.includes(t.p) ? t.p : 'none' }));
 
+// A brand-new visitor (nothing saved for this stage, not signed in before, never had
+// the starters) gets the award-night examples once (Issue #93). Clearing or deleting
+// them never brings them back: the saved list then exists (even if empty) and the flag is set.
+try {
+  const starterFlag = `starter-${stage}`;
+  if (localStorage.getItem(storageKey) === null && !localStorage.getItem('signed-in')
+      && !localStorage.getItem(starterFlag) && !window.COMPARE) {
+    localStorage.setItem(storageKey, JSON.stringify(starterTodos()));
+    localStorage.setItem(starterFlag, '1');
+  }
+} catch { /* storage blocked: just start empty */ }
+
 export const todos = signal(loadLocal());
 // Signed in last time? Show the account's list from last time straight away
 // (a copy kept on this device, Issue #36), then swap in the live list once
@@ -23,6 +36,8 @@ export const todos = signal(loadLocal());
 export const loading = signal(!!window.FIREBASE_CONFIG && localStorage.getItem('signed-in') === '1');
 // True while the list on screen is the saved copy, until the server answers ("Updating…").
 export const updating = signal(false);
+// Signed in (to-dos saved to the account)? Set by sync.js through the hooks below.
+export const signedIn = signal(false);
 // Keys of to-dos that changed when the live list replaced the saved copy (briefly highlighted).
 export const fresh = signal(new Set());
 const cacheKey = `cloud-copy-${stage}`;
@@ -59,8 +74,23 @@ export const keyOf = (t, i) => t.id || i;
 // Change a to-do and save it wherever it lives.
 export function update(t, changes) {
   if (!ready()) return;
-  todos.value = todos.value.map((x) => (x === t ? { ...x, ...changes } : x));
+  todos.value = todos.value.map((x) => {
+    if (x !== t) return x;
+    const n = { ...x, ...changes };
+    // Renaming an example or rewriting its note makes it the visitor's own (Issue #93).
+    if (n.sample && ('text' in changes || 'note' in changes)) delete n.sample;
+    return n;
+  });
   if (cloud) cloud.update(t, changes); else save();
+}
+// The starter examples still on this device (Issue #93); "Clear examples" removes them
+// all (done ones too) and Undo puts them back where they were.
+export const examples = () => (cloud || loading.value ? [] : todos.value.filter((t) => t.sample));
+export function clearExamples() {
+  const before = todos.value, after = before.filter((t) => !t.sample);
+  todos.value = after; save();
+  // Undo: back exactly as before, or (if something changed meanwhile) the examples added back.
+  return () => { todos.value = todos.value === after ? before : [...todos.value, ...before.filter((t) => t.sample)]; save(); };
 }
 // Delete a to-do wherever it lives (Issue #40).
 export function remove(t) {
@@ -140,7 +170,7 @@ window.TodoApp = {
   get updating() { return updating.value; },
   // Signed in: show the account's to-dos and save changes through `api`.
   // Keep the saved copy on screen (if any) until the account's list arrives.
-  useCloud(api) { cloud = api; cloudLists = api; if (!shownCopy) todos.value = []; loading.value = true; },
+  useCloud(api) { cloud = api; cloudLists = api; signedIn.value = true; if (!shownCopy) todos.value = []; loading.value = true; },
   localLists: loadLocalLists,
   // The account's own lists (Issue #72), live from sync.js.
   setLists(list) {
@@ -167,7 +197,7 @@ window.TodoApp = {
   // Signed out (or sign-in couldn't load): back to the to-dos saved on this device.
   // `forget`: really signed out, so also drop the copy of the account's list.
   useLocal({ forget = false } = {}) {
-    cloud = null; cloudLists = null; shownCopy = null; updating.value = false;
+    cloud = null; cloudLists = null; signedIn.value = false; shownCopy = null; updating.value = false;
     if (forget) { localStorage.removeItem(cacheKey); localStorage.removeItem(listsCacheKey); }
     lists.value = loadLocalLists();
     todos.value = loadLocal(); loading.value = false;

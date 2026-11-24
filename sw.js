@@ -108,3 +108,37 @@ async function cacheFirst(req, dropOldBuilds = false) {
   }
   return res;
 }
+
+// ---- Phone notifications (Issue #51, part 2) --------------------------------
+// The reminder arrives from Firebase Cloud Messaging as data only; this worker
+// shows it (iPhone requires every push to show a notification). Tag = the to-do,
+// so a newer reminder replaces an older one and the app can clear it when ticked.
+self.addEventListener('push', (event) => {
+  let j = {};
+  try { j = event.data ? event.data.json() : {}; } catch { /* not JSON */ }
+  const d = j.data || j;
+  event.waitUntil(self.registration.showNotification(d.title || 'Reminder', {
+    body: d.body || '', tag: d.tag || undefined, data: { url: d.url || SCOPE, todo: d.todo || '', view: d.view || '' },
+  }));
+});
+// Tapping it opens the app (or brings it to the front) at that to-do.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const { url, todo, view } = event.notification.data || {};
+  const target = new URL(url && url.startsWith(SCOPE) ? url : SCOPE);
+  if (todo) target.searchParams.set('todo', todo);
+  if (view) target.searchParams.set('view', view);   // the daily summary opens a view (Issue #91)
+  event.waitUntil((async () => {
+    // Note the tap first: the app reads it when it opens or comes to the front, so the card
+    // shows even if iOS won't let us focus the app or pass the message on (Issue #51).
+    if (todo || view) await (await caches.open(CACHE)).put(SCOPE + '__tapped', new Response(JSON.stringify({ id: todo, view, at: Date.now() }))).catch(() => {});
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const win = wins.find((c) => c.url.startsWith(SCOPE) && !OTHER_STAGES.test(c.url.slice(SCOPE.length - 1)));
+    if (win) {
+      if (todo) win.postMessage({ type: 'open-todo', id: todo });
+      if (view) win.postMessage({ type: 'open-view', view });
+      try { await win.focus(); return; } catch { /* not allowed here: open it instead */ }
+    }
+    await self.clients.openWindow(target.href).catch(() => {});
+  })());
+});
