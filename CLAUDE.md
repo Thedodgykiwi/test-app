@@ -179,9 +179,15 @@ If they say yes:
   and open `http://localhost:8080/?emulators`.
 - **Fast first load (Issue #36):** while signed in, the last list shown is kept
   in browser storage (`cloud-copy-<stage>`, removed on sign-out) and shown at
-  once on the next open, with "Updating…" in the summary, a blue dot and
-  edits paused ("One moment, connecting…") until Firebase is ready; to-dos
-  that changed meanwhile flash briefly when the live list arrives.
+  once on the next open, with "Updating…" in the summary and a blue dot until
+  Firebase is ready; to-dos that changed meanwhile flash briefly when the live
+  list arrives. **Edits aren't paused (Issue #104):** a restart on a weak or no
+  connection can leave Firebase's sign-in check hanging for ages, so to-do changes
+  made meanwhile go into a queue on the device (`cloud-pending-<stage>`, new to-dos
+  get a `tmp-…` id; survives restarts) and are sent when `useCloud` runs
+  (`sendQueued` in `app/store.js`); sign-out drops it. Own lists still wait
+  ("One moment, connecting…", `readyLists`). Tested with the emulators by making
+  the auth/Firestore requests hang (`page.route` with no reply), then recovering.
 - Sign-in is shared by all stages (one web address), but each stage keeps its
   own to-do list. Never delete users' cloud or device data without asking.
 

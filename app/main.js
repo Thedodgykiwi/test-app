@@ -1098,7 +1098,7 @@ function AddBar() {
     <form id="todo-form" class="add-bar" onSubmit=${submit}>
       <div class="add-inner">
         <div class="entry">
-          <input id="todo-input" ref=${input} onInput=${onInput} onKeyDown=${tabPick(input, onInput)} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder=${loading.value && updating.value ? 'Connecting…' : hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
+          <input id="todo-input" ref=${input} onInput=${onInput} onKeyDown=${tabPick(input, onInput)} class=${`input${shownP === 'none' ? ' no-word' : ''}`} placeholder=${hint} autocomplete="off" aria-label="New to-do" maxlength="500" />
           <button type="button" id="new-priority" ref=${flag} class=${`flag-btn p-${shownP}`}
             aria-label=${`Priority for new to-do: ${LABELS[shownP]}. Tap to change`} title=${`Priority: ${LABELS[shownP]} (tap to change)`}
             onClick=${() => { tapped.current = true; setP(CYCLE[(CYCLE.indexOf(p) + 1) % CYCLE.length]); }}>

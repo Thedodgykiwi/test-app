@@ -59,11 +59,48 @@ if (loading.value) {
   }
 }
 
-// Not ready to save yet (showing the saved copy before Firebase starts)? Say so.
+// Not ready to save yet? Say so. While the saved copy of the account's list is on screen
+// and Firebase hasn't started (a restart on a weak or no connection can take a while),
+// to-do changes still go through: they're kept in a queue on the device and sent to the
+// account as soon as it's ready (Issue #104). Lists still wait (`readyLists`).
 export function ready() {
-  if (!loading.value || cloud) return true;
+  if (!loading.value || cloud || shownCopy) return true;
   window.AppToast?.show('One moment, connecting…', { duration: 1800 });
   return false;
+}
+function readyLists() {
+  if (!loading.value || cloudLists) return true;
+  window.AppToast?.show('One moment, connecting…', { duration: 1800 });
+  return false;
+}
+
+// ---- Changes made before Firebase is ready (Issue #104) ----------------------------
+// [{ op: 'add', item } | { op: 'update', id, changes } | { op: 'remove', id }], kept per stage
+// so they survive the app restarting. New to-dos get a temporary id ('tmp-…') until then.
+const pendingKey = `cloud-pending-${stage}`;
+let queued = (() => { try { const v = JSON.parse(localStorage.getItem(pendingKey)); return Array.isArray(v) ? v : []; } catch { return []; } })();
+const queueing = () => !cloud && loading.value && !!shownCopy;
+const tmpId = () => `tmp-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+function queue(op) {
+  if (op.op === 'update' && op.id.startsWith('tmp-')) {   // still waiting to be added: change the queued copy
+    const a = queued.find((q) => q.op === 'add' && q.item.id === op.id); if (a) Object.assign(a.item, op.changes);
+  } else if (op.op === 'remove' && op.id.startsWith('tmp-')) {
+    queued = queued.filter((q) => !(q.op === 'add' && q.item.id === op.id));
+  } else queued.push(op);
+  shownCopy = todos.value;   // what's on screen now includes the change
+  try {
+    localStorage.setItem(pendingKey, JSON.stringify(queued));
+    localStorage.setItem(cacheKey, JSON.stringify(todos.value));   // a restart shows it too
+  } catch { /* storage full: kept until this page closes */ }
+}
+function sendQueued(api) {
+  if (!queued.length) return;
+  for (const q of queued) {
+    if (q.op === 'add') { const { id, ...item } = q.item; api.add(item); }
+    else if (q.op === 'update') api.update({ id: q.id }, q.changes);
+    else if (q.op === 'remove') api.remove({ id: q.id });
+  }
+  queued = []; localStorage.removeItem(pendingKey);
 }
 
 const save = () => { if (!cloud && !loading.value) localStorage.setItem(storageKey, JSON.stringify(todos.value)); };
@@ -81,7 +118,7 @@ export function update(t, changes) {
     if (n.sample && ('text' in changes || 'note' in changes)) delete n.sample;
     return n;
   });
-  if (cloud) cloud.update(t, changes); else save();
+  if (cloud) cloud.update(t, changes); else if (queueing()) queue({ op: 'update', id: t.id, changes }); else save();
 }
 // The starter examples still on this device (Issue #93); "Clear examples" removes them
 // all (done ones too) and Undo puts them back where they were.
@@ -96,7 +133,7 @@ export function clearExamples() {
 export function remove(t) {
   if (!ready()) return false;
   todos.value = todos.value.filter((x) => x !== t);
-  if (cloud) cloud.remove(t); else save();
+  if (cloud) cloud.remove(t); else if (queueing()) queue({ op: 'remove', id: t.id }); else save();
   return true;
 }
 // Put a deleted to-do back (the Undo after a swipe-delete, Issue #81), whole: checklist,
@@ -104,7 +141,9 @@ export function remove(t) {
 export function restore(t) {
   if (!ready()) return false;
   const { id, ...item } = t;
-  if (cloud) cloud.add(item); else { todos.value = [...todos.value, item]; save(); }
+  if (cloud) cloud.add(item);
+  else if (queueing()) { const q = { ...item, id: tmpId() }; todos.value = [...todos.value, q]; queue({ op: 'add', item: q }); }
+  else { todos.value = [...todos.value, item]; save(); }
   return true;
 }
 // Add a to-do (optionally with a due date, Issue #42). Returns false while
@@ -118,7 +157,9 @@ export function add(text, p, due, evening, time, starred, myDay, list) {
   if (starred) item.starred = true;   // typed S (Issue #53)
   if (myDay) item.myDay = myDay;   // added while My Day was open (Issue #71)
   if (list) item.list = list;   // one of your own lists (Issue #72)
-  if (cloud) cloud.add(item); else { todos.value = [...todos.value, item]; save(); }
+  if (cloud) cloud.add(item);
+  else if (queueing()) { item.id = tmpId(); todos.value = [...todos.value, item]; queue({ op: 'add', item }); }
+  else { todos.value = [...todos.value, item]; save(); }
   return true;
 }
 
@@ -134,19 +175,19 @@ export const lists = signal(loading.value ? (readJSON(listsCacheKey) || []) : lo
 let cloudLists = null;
 const saveLists = () => { if (!cloudLists && !loading.value) localStorage.setItem(listsKey, JSON.stringify(lists.value)); };
 export function addList({ name, color, icon }) {
-  if (!ready()) return null;
+  if (!readyLists()) return null;
   const item = { id: `l${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, name, color, icon, pos: Date.now() };
   lists.value = [...lists.value, item].sort(byPos);
   if (cloudLists) cloudLists.addList(item); else saveLists();
   return item;
 }
 export function updateList(l, changes) {
-  if (!ready()) return;
+  if (!readyLists()) return;
   lists.value = lists.value.map((x) => (x.id === l.id ? { ...x, ...changes } : x)).sort(byPos);
   if (cloudLists) cloudLists.updateList(l, changes); else saveLists();
 }
 export function removeList(l) {
-  if (!ready()) return;
+  if (!readyLists()) return;
   lists.value = lists.value.filter((x) => x.id !== l.id);
   if (cloudLists) cloudLists.removeList(l); else saveLists();
 }
@@ -170,7 +211,7 @@ window.TodoApp = {
   get updating() { return updating.value; },
   // Signed in: show the account's to-dos and save changes through `api`.
   // Keep the saved copy on screen (if any) until the account's list arrives.
-  useCloud(api) { cloud = api; cloudLists = api; signedIn.value = true; if (!shownCopy) todos.value = []; loading.value = true; },
+  useCloud(api) { cloud = api; cloudLists = api; signedIn.value = true; if (!shownCopy) todos.value = []; loading.value = true; sendQueued(api); },
   localLists: loadLocalLists,
   // The account's own lists (Issue #72), live from sync.js.
   setLists(list) {
@@ -198,7 +239,7 @@ window.TodoApp = {
   // `forget`: really signed out, so also drop the copy of the account's list.
   useLocal({ forget = false } = {}) {
     cloud = null; cloudLists = null; signedIn.value = false; shownCopy = null; updating.value = false;
-    if (forget) { localStorage.removeItem(cacheKey); localStorage.removeItem(listsCacheKey); }
+    if (forget) { localStorage.removeItem(cacheKey); localStorage.removeItem(listsCacheKey); localStorage.removeItem(pendingKey); queued = []; }
     lists.value = loadLocalLists();
     todos.value = loadLocal(); loading.value = false;
   },
