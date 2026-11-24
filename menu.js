@@ -9,7 +9,7 @@
 (() => {
   const PREFS_KEY = `prefs:${location.pathname.split('/')[1] || 'app'}`;
   // The app's default accent is the data-accent on <html> in index.html.
-  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills', swipeRight: 'star', swipeLeft: 'tomorrow', remindLead: '15',
+  const DEFAULTS = { theme: 'auto', textSize: 'standard', accent: document.documentElement.dataset.accent || 'blue', listStyle: 'pills', swipeRight: 'star', swipeLeft: 'tomorrow', remindLead: '15', tickStyle: 'winner',
     summaryOn: '0', summaryTime: '08:00', summaryDays: 'all', summarySkip: '1' };   // daily summary (Issue #91)
   const load = () => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch { return { ...DEFAULTS }; } };
   const prefs = load();

@@ -148,14 +148,32 @@ function markDone(t, k) {
   showUndo(t.text, k);
 }
 
+// "Just a tick" (Issue #102): no pop-up. The tick bounces in the to-do's own box, a line crosses
+// the title off (CSS `li.ticking`), then the row folds away into Done.
+async function quietDone(li, t, k) {
+  li.classList.add('ticking');
+  li.querySelector('input[type=checkbox]')?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'ease-out' });
+  await new Promise((res) => setTimeout(res, 800));
+  const h = li.getBoundingClientRect().height;
+  li.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
+  await li.animate([{ height: `${h}px` }, { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginTop: '-0.4rem' }],
+    { duration: 240, easing: 'ease-in', fill: 'forwards' }).finished;
+  markDone(t, k);
+  busy.delete(k);
+}
 async function animateDone(li, t, k) {
   busy.add(k);
   const r = li.getBoundingClientRect();
   const chip = document.createElement('div');
   chip.className = 'done-chip';
   chip.setAttribute('aria-hidden', 'true');
-  const cup = document.createElement('span'); cup.className = 'trophy'; cup.textContent = '🏆';   // award night (Issue #101)
-  chip.append(cup, 'Winner!');
+  const style = window.AppPrefs?.get('tickStyle') || 'winner';   // Settings → Ticking off (Issue #102)
+  if (style === 'tick') { await quietDone(li, t, k); return; }
+  if (style === 'done') { chip.classList.add('green'); chip.append(icon('check'), 'Done'); }
+  else {
+    const cup = document.createElement('span'); cup.className = 'trophy'; cup.textContent = '🏆';   // award night (Issue #101)
+    chip.append(cup, 'Winner!');
+  }
   Object.assign(chip.style, { left: `${r.left + 12}px`, top: `${r.top + (r.height - 34) / 2}px` });
   document.body.append(chip);
   // 1. The row fades and closes up while the chip pops in where it was.
@@ -427,7 +445,7 @@ function Row({ t, k }) {
         <div class="text-col">
           <button type="button" class="text" data-edit=${k} aria-label=${`Edit “${t.text}”${t.starred ? ' (starred)' : ''}${ds ? `, ${withTime(dueLabel(t.due), t)}` : ''}`}
             onClick=${() => { if (swallowClick || !ready()) return; openEditor(t, k); }}>
-            <span class="t-main">${t.text}</span></button>
+            <span class="t-main"><span class="t-words">${t.text}</span></span></button>
           ${ds && html`<button type="button" class=${`due-label due-${ds}${ds === 'today' && t.evening ? ' tn' : ''}`} data-due-btn=${k} aria-haspopup="menu" aria-expanded=${dueMenu.value?.key === k}
             aria-label=${`${withTime(dueLabel(t.due), t)}${remOf(t) !== null ? (snoozedUntil(t) ? `, reminder snoozed until ${clockOf(snoozedUntil(t))}` : ', reminder on') : ''}. Change the due date`}
             onClick=${(e) => {   // tap the label for a quick menu: Tomorrow, Pick a date, No date (Issue #38)

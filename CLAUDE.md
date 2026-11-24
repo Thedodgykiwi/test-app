@@ -244,6 +244,10 @@ If they say yes:
   "🏆 Winner!" chip (`.done-chip`, soft gold like the gold strip: `--gold-bg` + gold edge, option B)
   pops in where it was, then drops to the Done heading; then the "moved to Done · Undo" note. Solid gold
   was tried: the gold trophy disappeared into it. A swipe set to Done skips the chip (its own layer).
+  **Settings → Lists and swiping → Ticking off** (`tickStyle` pref in `menu.js`, Issue #102): Winner!
+  (default) / Done (the earlier green chip, `.done-chip.green`) / Just a tick (`quietDone()`: no chip; the
+  box bounces, a line crosses the title off left to right via `li.ticking .t-words`, an inline span inside
+  `.t-main` so it crosses each wrapped line, then the row folds away after 0.8 s). Reduce Motion skips all three.
 - **Delete (Issue #40):** red Delete on the left of Cancel / Save in the edit
   sheet; first tap arms it ("Tap again"), disarms after 3 s. `remove()` in
   `app/store.js`; `firestore.rules` allows owner-only deletes.

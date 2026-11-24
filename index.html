@@ -150,6 +150,16 @@
           <button type="button" class="swipe-pick" id="pick-l" aria-haspopup="menu" aria-expanded="false" aria-labelledby="sl-label pick-l"></button><small id="help-l"></small></div>
       </div>
     </section>
+    <!-- Ticking off (Issue #102): what shows when a to-do is ticked (app/main.js animateDone). -->
+    <section class="setting" id="tick-setting">
+      <p class="setting-name" id="tick-label">Ticking off</p>
+      <p class="setting-help" id="tick-help">What you see when you tick a to-do, before it moves to Done.</p>
+      <div class="seg" role="radiogroup" aria-labelledby="tick-label" aria-describedby="tick-help" data-pref="tickStyle">
+        <button type="button" role="radio" data-value="winner">Winner!</button>
+        <button type="button" role="radio" data-value="done">Done</button>
+        <button type="button" role="radio" data-value="tick">Just a tick</button>
+      </div>
+    </section>
       </div>
     </div>
     <div class="st-group" id="st-reminders">

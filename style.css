@@ -562,6 +562,15 @@ body { padding-bottom: 8rem; }
   box-shadow: 0 6px 16px rgba(0,0,0,.18), inset 0 0 0 1.5px var(--gold); pointer-events: none;
 }
 .done-chip .trophy { font-size: 1.15em; line-height: 1; }
+/* "Done" choice: the earlier green chip (Settings → Ticking off, Issue #102) */
+.done-chip.green { background: var(--ok); color: #fff; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+:root[data-theme="dark"] .done-chip.green { color: #0b2610; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .done-chip.green { color: #0b2610; } }
+.done-chip .ic { width: 1.1em; height: 1.1em; }
+/* "Just a tick": the title is crossed off left to right (line by line: .t-words is inline) and greys out */
+li.ticking .text { color: var(--muted); transition: color .3s; }
+li.ticking .t-words { background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 2px; animation: strike .35s ease-out forwards; }
+@keyframes strike { to { background-size: 100% 2px; } }
 
 
 /* Toasts sit above the add bar */
